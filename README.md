@@ -1,4 +1,4 @@
-# Aegis - QEC Research Toolkit (by Hamid Bahri)
+﻿# Aegis - QEC Research Toolkit (by Hamid Bahri)
 
 ![CI](https://github.com/hamidbahri92/Aegis/actions/workflows/ci.yml/badge.svg?branch=main)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -25,5 +25,6 @@ Aegis is a modular toolkit for simulated quantum error correction (surface code)
 - Tests: `pytest -q`
 - Outputs saved to `out/` (ignored in git)
 
-� Hamid Bahri
+© Hamid Bahri
+
 
