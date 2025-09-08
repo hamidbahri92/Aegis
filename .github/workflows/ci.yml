@@ -5,7 +5,7 @@ on:
 
 jobs:
   test:
-    name: Tests (Py${{ matrix.python }} · ${{ matrix.os }})
+    name: Tests (Py${{ matrix.python }} Â· ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
