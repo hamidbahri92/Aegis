@@ -26,3 +26,4 @@ Aegis is a modular toolkit for simulated quantum error correction (surface code)
 - Outputs saved to `out/` (ignored in git)
 
 © Hamid Bahri
+
