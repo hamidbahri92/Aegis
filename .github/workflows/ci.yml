@@ -7,6 +7,8 @@ jobs:
   test:
     name: Tests (Py${{ matrix.python }} · ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -39,3 +41,7 @@ jobs:
           name: research-outputs-${{ matrix.os }}-py${{ matrix.python }}
           path: |
             out/
+      - name: Run pre-commit
+        run: |
+          pip install pre-commit
+          pre-commit run --all-files
