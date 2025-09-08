@@ -1,11 +1,13 @@
 # FILE: main_metrics.py
 from __future__ import annotations
-import os
-import numpy as np
-import matplotlib.pyplot as plt
 
-from a3d.sweep import sweep_physical_p
+import os
+
+import matplotlib.pyplot as plt
+import numpy as np
+
 from a3d.export import export_csv, export_parquet
+from a3d.sweep import sweep_physical_p
 
 
 def main():
@@ -27,7 +29,7 @@ def main():
     groups = {}
     for r in rows:
         groups.setdefault((r["distance"], r["p"]), []).append(r["success"])
-    fig, ax = plt.subplots(figsize=(6,4))
+    fig, ax = plt.subplots(figsize=(6, 4))
     for d in distances:
         xs = []
         ys = []

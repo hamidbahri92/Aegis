@@ -1,5 +1,6 @@
 # FILE: main.py
 from __future__ import annotations
+
 import numpy as np
 
 from a3d.config import AegisConfig
@@ -18,7 +19,9 @@ def main():
     sX, sZ = syndromes_from_pauli_errors(lay, cfg.rounds, errs)
 
     resX, resZ = rt.decode_from_syndromes_uniform(sX, sZ)
-    print(f"Decode complete. X(avg_cost)={resX.avg_cost:.3f}, Z(avg_cost)={resZ.avg_cost:.3f}")
+    print(
+        f"Decode complete. X(avg_cost)={resX.avg_cost:.3f}, Z(avg_cost)={resZ.avg_cost:.3f}"
+    )
 
 
 if __name__ == "__main__":

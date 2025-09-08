@@ -1,8 +1,10 @@
 # FILE: a3d/decoder_bposd.py
 from __future__ import annotations
+
 from typing import List, Set, Tuple
+
+from .decoder_greedy import DecodeResult, GreedyMatchingDecoder
 from .graph import DecodingGraph, Edge
-from .decoder_greedy import GreedyMatchingDecoder, DecodeResult
 
 
 def _edge_key(e: Edge) -> Tuple[int, int, str]:
@@ -18,7 +20,13 @@ class OSDDecoder:
       2) Build a **local candidate pool** of low-cost edges incident to current defects.
       3) For each of top-K candidates, force-inclusion and re-solve; return best cost.
     """
-    def __init__(self, primary_decoder: GreedyMatchingDecoder, osd_order: int = 1, k_candidates: int = 32):
+
+    def __init__(
+        self,
+        primary_decoder: GreedyMatchingDecoder,
+        osd_order: int = 1,
+        k_candidates: int = 32,
+    ):
         if osd_order < 0:
             raise ValueError("OSD order must be non-negative")
         self.primary_decoder = primary_decoder
@@ -66,6 +74,8 @@ class OSDDecoder:
             total_cost = eff_cost(e) + sub.log_likelihood
             total_corr = [e] + sub.corrections
             avg_cost = total_cost / max(1, len(total_corr))
-            solutions.append(DecodeResult(total_corr, total_cost, sub.matched_to_boundary, avg_cost))
+            solutions.append(
+                DecodeResult(total_corr, total_cost, sub.matched_to_boundary, avg_cost)
+            )
 
         return min(solutions, key=lambda r: r.log_likelihood)

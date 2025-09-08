@@ -1,5 +1,4 @@
 # FILE: tests/test_syndrome_locality.py
-import numpy as np
 from a3d.graph import RotatedSurfaceLayout
 from a3d.noise_physical import syndromes_from_pauli_errors
 
@@ -10,7 +9,7 @@ def test_single_X_error_flips_two_Z_checks_interior():
     lay = RotatedSurfaceLayout(d)
     # Place a single X error at center data qubit at t=0
     dq = (1, 1)
-    pauli_errors = { (dq, 0): "X" }
+    pauli_errors = {(dq, 0): "X"}
 
     sX, sZ = syndromes_from_pauli_errors(lay, rounds, pauli_errors, p_meas=0.0)
     # first-time-slice block length for Z stabilizers:

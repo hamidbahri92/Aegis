@@ -1,7 +1,8 @@
 # FILE: a3d/config.py
 from __future__ import annotations
-from dataclasses import dataclass
+
 import json
+from dataclasses import dataclass
 
 
 @dataclass
@@ -15,9 +16,9 @@ class AegisConfig:
     avg_cost_threshold: float = 5.0
 
     # noise & weighting
-    p_data: float = 1.0e-3       # data (space) error rate
-    p_meas: float = 1.0e-3       # measurement (time) error rate
-    p_leak: float = 0.0          # reserved for future erase edges
+    p_data: float = 1.0e-3  # data (space) error rate
+    p_meas: float = 1.0e-3  # measurement (time) error rate
+    p_leak: float = 0.0  # reserved for future erase edges
     time_weight_scale: float = 1.0  # multiply time-edge log-odds by this
 
     # decoder selection: "greedy", "osd", "mwpm"

@@ -1,11 +1,13 @@
 # FILE: a3d/metrics.py
 from __future__ import annotations
-from typing import Dict, Any, List, Tuple
+
+from typing import Any, Dict, List, Tuple
+
 import numpy as np
 
-from .graph import RotatedSurfaceLayout, DecodingGraphBuilder, DecodingGraph, Edge
-from .decoder_greedy import GreedyMatchingDecoder
 from .decoder_bposd import OSDDecoder
+from .decoder_greedy import GreedyMatchingDecoder
+from .graph import DecodingGraph, DecodingGraphBuilder, Edge, RotatedSurfaceLayout
 from .noise_physical import generate_pauli_errors, syndromes_from_pauli_errors
 
 
@@ -15,9 +17,9 @@ def _pad_syndrome(s: List[int], graph: DecodingGraph) -> List[int]:
     return s
 
 
-def _apply_corrections_to_syndrome(graph: DecodingGraph,
-                                   syndromes: List[int],
-                                   chosen_edges: List[Edge]) -> List[int]:
+def _apply_corrections_to_syndrome(
+    graph: DecodingGraph, syndromes: List[int], chosen_edges: List[Edge]
+) -> List[int]:
     s = _pad_syndrome(syndromes[:], graph)
     for e in chosen_edges:
         u_role = graph.node_meta[e.u][3]
@@ -56,7 +58,9 @@ class _DSU:
             self.r[ra] += 1
 
 
-def _exact_homology_failure(graph: DecodingGraph, chosen_edges: List[Edge]) -> Tuple[bool, bool]:
+def _exact_homology_failure(
+    graph: DecodingGraph, chosen_edges: List[Edge]
+) -> Tuple[bool, bool]:
     """
     Exact spatial homology via side-aware boundaries:
       - Build per-time components using only SPACE and BOUNDARY edges from corrections.
@@ -83,8 +87,10 @@ def _exact_homology_failure(graph: DecodingGraph, chosen_edges: List[Edge]) -> T
         if t_u != t_v:
             continue
         dsu = ensure_t(t_u)
-        dsu.add(e.u); dsu.add(e.v)
-        nodes_seen_per_t[t_u].append(e.u); nodes_seen_per_t[t_u].append(e.v)
+        dsu.add(e.u)
+        dsu.add(e.v)
+        nodes_seen_per_t[t_u].append(e.u)
+        nodes_seen_per_t[t_u].append(e.v)
         dsu.union(e.u, e.v)
 
     horiz_fail = False
@@ -133,7 +139,7 @@ def apply_correction_and_check_logical(
 
     hz_fail_X, vt_fail_X = _exact_homology_failure(graph_X, chosen_edges_X)
     hz_fail_Z, vt_fail_Z = _exact_homology_failure(graph_Z, chosen_edges_Z)
-    any_fail = (hz_fail_X or vt_fail_X or hz_fail_Z or vt_fail_Z)
+    any_fail = hz_fail_X or vt_fail_X or hz_fail_Z or vt_fail_Z
     return not any_fail
 
 
@@ -142,18 +148,20 @@ def _logodds(p: float) -> float:
     return -np.log(p / (1.0 - p))
 
 
-def build_graphs_for_p(builder: DecodingGraphBuilder, p: float) -> Tuple[DecodingGraph, DecodingGraph]:
+def build_graphs_for_p(
+    builder: DecodingGraphBuilder, p: float
+) -> Tuple[DecodingGraph, DecodingGraph]:
     """Construct and return (gX, gZ) once for a given p."""
     order_X = builder.node_order("X")
     order_Z = builder.node_order("Z")
     T = builder.T
 
     w_space_X = {(coord, t): _logodds(p) for (coord, t) in order_X}
-    w_time_X  = {(coord, t): _logodds(p) for (coord, t) in order_X if t < T - 1}
+    w_time_X = {(coord, t): _logodds(p) for (coord, t) in order_X if t < T - 1}
     p_erase_X = {(coord, t): 0.0 for (coord, t) in order_X if t < T - 1}
 
     w_space_Z = {(coord, t): _logodds(p) for (coord, t) in order_Z}
-    w_time_Z  = {(coord, t): _logodds(p) for (coord, t) in order_Z if t < T - 1}
+    w_time_Z = {(coord, t): _logodds(p) for (coord, t) in order_Z if t < T - 1}
     p_erase_Z = {(coord, t): 0.0 for (coord, t) in order_Z if t < T - 1}
 
     gX = builder.build("X", w_space_X, w_time_X, p_erase_X)
@@ -161,16 +169,20 @@ def build_graphs_for_p(builder: DecodingGraphBuilder, p: float) -> Tuple[Decodin
     return gX, gZ
 
 
-def run_trial_with_graphs(builder: DecodingGraphBuilder,
-                          layout: RotatedSurfaceLayout,
-                          gX: DecodingGraph,
-                          gZ: DecodingGraph,
-                          p: float,
-                          seed: int,
-                          crossmodal: bool = False) -> Dict[str, Any]:
+def run_trial_with_graphs(
+    builder: DecodingGraphBuilder,
+    layout: RotatedSurfaceLayout,
+    gX: DecodingGraph,
+    gZ: DecodingGraph,
+    p: float,
+    seed: int,
+    crossmodal: bool = False,
+) -> Dict[str, Any]:
     rng = np.random.default_rng(seed)
     errors = generate_pauli_errors(layout, builder.T, p, rng)
-    syndX, syndZ = syndromes_from_pauli_errors(layout, builder.T, errors, p_meas=p, rng=rng)
+    syndX, syndZ = syndromes_from_pauli_errors(
+        layout, builder.T, errors, p_meas=p, rng=rng
+    )
 
     uf = GreedyMatchingDecoder()
     osd = OSDDecoder(uf, osd_order=1, k_candidates=32)
@@ -178,7 +190,9 @@ def run_trial_with_graphs(builder: DecodingGraphBuilder,
     resX = osd.decode(gX, syndX)
     resZ = osd.decode(gZ, syndZ)
 
-    success = apply_correction_and_check_logical(layout, builder.T, gX, gZ, syndX, syndZ, resX.corrections, resZ.corrections)
+    success = apply_correction_and_check_logical(
+        layout, builder.T, gX, gZ, syndX, syndZ, resX.corrections, resZ.corrections
+    )
     return {
         "distance": layout.d,
         "rounds": builder.T,
@@ -190,9 +204,12 @@ def run_trial_with_graphs(builder: DecodingGraphBuilder,
     }
 
 
-def run_trial(distance: int, rounds: int, p: float, seed: int, crossmodal: bool) -> Dict[str, Any]:
-    rng = np.random.default_rng(seed)
+def run_trial(
+    distance: int, rounds: int, p: float, seed: int, crossmodal: bool
+) -> Dict[str, Any]:
     layout = RotatedSurfaceLayout(distance)
     builder = DecodingGraphBuilder(layout, rounds, diagonal_adjacency=True)
     gX, gZ = build_graphs_for_p(builder, p)
-    return run_trial_with_graphs(builder, layout, gX, gZ, p, seed, crossmodal=crossmodal)
+    return run_trial_with_graphs(
+        builder, layout, gX, gZ, p, seed, crossmodal=crossmodal
+    )

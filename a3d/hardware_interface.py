@@ -1,9 +1,11 @@
 # FILE: a3d/hardware_interface.py
 from __future__ import annotations
-from typing import Dict, Any, Optional, Tuple
-import numpy as np
-import time
+
 import threading
+import time
+from typing import Any, Dict, Optional, Tuple
+
+import numpy as np
 
 
 class QuantumHardwareInterface:
@@ -33,7 +35,14 @@ class IBMQuantumInterface(QuantumHardwareInterface):
     If the call does not complete within `timeout_s`, returns the cached result
     (or a simulated fallback). The worker thread is not forcibly killed.
     """
-    def __init__(self, backend_name: str, token: str = None, cache_duration: float = 300.0, timeout_s: float = 30.0):
+
+    def __init__(
+        self,
+        backend_name: str,
+        token: str = None,
+        cache_duration: float = 300.0,
+        timeout_s: float = 30.0,
+    ):
         super().__init__(backend_name)
         self.token = token
         self.cache_duration = float(cache_duration)
@@ -49,6 +58,7 @@ class IBMQuantumInterface(QuantumHardwareInterface):
     def _init_ibm_connection(self) -> None:
         try:
             from qiskit_ibm_runtime import QiskitRuntimeService
+
             svc = QiskitRuntimeService(channel="ibm_quantum", token=self.token)
             self.backend = svc.backend(self.backend_name)
         except Exception:
@@ -66,7 +76,11 @@ class IBMQuantumInterface(QuantumHardwareInterface):
                         gerrs.append(float(g.parameters[0].value))
                 except Exception:
                     continue
-            gerrs = np.array(gerrs, dtype=np.float64) if len(gerrs) else np.array([1e-3], dtype=np.float64)
+            gerrs = (
+                np.array(gerrs, dtype=np.float64)
+                if len(gerrs)
+                else np.array([1e-3], dtype=np.float64)
+            )
             crosstalk = np.zeros((n, n), dtype=np.float64)
             if hasattr(config, "coupling_map") and config.coupling_map:
                 est = float(np.mean(gerrs) * 0.01)

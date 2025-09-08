@@ -1,7 +1,9 @@
 # FILE: a3d/export.py
 from __future__ import annotations
-from typing import Dict, Any, Optional, List
+
 import csv
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 
 
@@ -44,6 +46,7 @@ def export_fixed_point_header(
     - arrays: dict of {name: np.ndarray}
     - scales: dict of {name: float} such that real_value ≈ int16_value * scale
     """
+
     def quantize(a: np.ndarray, scale: float) -> np.ndarray:
         q = np.round(a / scale).astype(np.int64)
         q = np.clip(q, -32768, 32767).astype(np.int16)
@@ -64,6 +67,6 @@ def export_fixed_point_header(
             for ax, sz in enumerate(shape):
                 f.write(f"#define {name.upper()}_DIM{ax} {int(sz)}\n")
             f.write(f"static const int16_t {name}[] = {{\n")
-            for i, val in enumerate(flat):
+            for _i, val in enumerate(flat):
                 f.write(f"  {int(val)},\n")
             f.write("};\n\n")

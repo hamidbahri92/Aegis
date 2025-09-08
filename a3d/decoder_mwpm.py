@@ -1,9 +1,11 @@
 from __future__ import annotations
+
 from typing import List, Set
+
 import networkx as nx
 
-from .graph import DecodingGraph, Edge
 from .decoder_greedy import DecodeResult
+from .graph import DecodingGraph, Edge
 
 
 def _effective_cost(edge: Edge) -> float:
@@ -53,8 +55,8 @@ class MWPMDecoder:
 
         W = max(costs)
         # ????? ????? ???? ??????????
-        for u, v, data in G.edges(data=True):
-            data["w"] = (W - data["cost"])
+        for _u, _v, data in G.edges(data=True):
+            data["w"] = W - data["cost"]
 
         matching = nx.algorithms.matching.max_weight_matching(
             G, maxcardinality=True, weight="w"

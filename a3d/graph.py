@@ -1,7 +1,8 @@
 # FILE: a3d/graph.py
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 from .layouts import CodeLayout
 
@@ -46,6 +47,7 @@ class RotatedSurfaceLayout(CodeLayout):
     Rotated surface-code toy layout: checkerboard stabilizers, implicit data-qubit grid.
     Single data-qubit errors typically connect **diagonal** like-type checks.
     """
+
     def __init__(self, distance: int):
         super().__init__(distance)
         self._build_stabs()
@@ -76,7 +78,10 @@ class DecodingGraphBuilder:
     Adds per-time virtual boundary nodes (Left/Right & Top/Bottom) to allow defect→boundary matches
     and enable **exact homology** checks post-decoding.
     """
-    def __init__(self, layout: CodeLayout, rounds: int, diagonal_adjacency: bool = True):
+
+    def __init__(
+        self, layout: CodeLayout, rounds: int, diagonal_adjacency: bool = True
+    ):
         self.layout = layout
         self.T = int(rounds)
         self.diagonal_adjacency = bool(diagonal_adjacency)
@@ -95,17 +100,21 @@ class DecodingGraphBuilder:
         i, j = coord
         stabs = set(self.layout.stabilizer_coords()[sector])
         if self.diagonal_adjacency:
-            cands = [(i+1, j+1), (i+1, j-1)]
+            cands = [(i + 1, j + 1), (i + 1, j - 1)]
         else:
-            cands = [(i+1, j), (i, j+1)]
+            cands = [(i + 1, j), (i, j + 1)]
         return [nb for nb in cands if nb in stabs]
 
     def build(
         self,
         sector: str,
-        w_space: Dict[Tuple[Tuple[int, int], int], float],      # keys: (coord, t)
-        w_time: Dict[Tuple[Tuple[int, int], int], float],       # keys: (coord, t) with t in [0..T-2]
-        p_erase_time: Dict[Tuple[Tuple[int, int], int], float], # keys: (coord, t) with t in [0..T-2]
+        w_space: Dict[Tuple[Tuple[int, int], int], float],  # keys: (coord, t)
+        w_time: Dict[
+            Tuple[Tuple[int, int], int], float
+        ],  # keys: (coord, t) with t in [0..T-2]
+        p_erase_time: Dict[
+            Tuple[Tuple[int, int], int], float
+        ],  # keys: (coord, t) with t in [0..T-2]
     ) -> DecodingGraph:
         stabs = self.layout.stabilizer_coords()[sector]
 
@@ -169,8 +178,8 @@ class DecodingGraphBuilder:
                 for nb in self._neighbors(sector, coord):
                     v = nid_of[(nb, t)]
                     wt = 0.5 * (
-                        float(w_space.get((coord, t), 1.0)) +
-                        float(w_space.get((nb, t), 1.0))
+                        float(w_space.get((coord, t), 1.0))
+                        + float(w_space.get((nb, t), 1.0))
                     )
                     edges.append(Edge(u, v, wt, "space", 0.0))
 

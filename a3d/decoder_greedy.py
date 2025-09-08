@@ -1,7 +1,8 @@
 from __future__ import annotations
+
+import heapq
 from dataclasses import dataclass
 from typing import List, Set, Tuple
-import heapq
 
 from .graph import DecodingGraph, Edge
 
@@ -59,9 +60,14 @@ class GreedyMatchingDecoder:
             v_is_b = self._is_boundary_node(graph, v)
 
             if not u_is_b and not v_is_b:
-                if (u in defects and v in defects) and (u not in matched) and (v not in matched):
+                if (
+                    (u in defects and v in defects)
+                    and (u not in matched)
+                    and (v not in matched)
+                ):
                     chosen.append(edge)
-                    matched.add(u); matched.add(v)
+                    matched.add(u)
+                    matched.add(v)
                     total_cost += cost
             else:
                 s = v if u_is_b else u

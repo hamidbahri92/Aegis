@@ -1,5 +1,6 @@
 # FILE: tests/test_runtime_logging.py
 import logging
+
 from a3d.config import AegisConfig
 from a3d.graph import RotatedSurfaceLayout
 from a3d.runtime import DecoderRuntime

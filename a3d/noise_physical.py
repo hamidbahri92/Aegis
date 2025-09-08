@@ -1,15 +1,15 @@
 # FILE: a3d/noise_physical.py
 from __future__ import annotations
-from typing import Dict, Tuple, List, Any, Optional
+
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
+
 from .graph import RotatedSurfaceLayout
 
 
 def generate_pauli_errors(
-    layout: RotatedSurfaceLayout,
-    rounds: int,
-    p_phys: float,
-    rng: np.random.Generator
+    layout: RotatedSurfaceLayout, rounds: int, p_phys: float, rng: np.random.Generator
 ) -> Dict[Tuple[Tuple[int, int], int], str]:
     """IID per-qubit-per-round Pauli errors with bias Z>X>Y."""
     errors: Dict[Tuple[Tuple[int, int], int], str] = {}
@@ -109,7 +109,7 @@ def generate_correlated_pauli_errors(
 
     base_rate = float(noise_params.get("base_error_rate", 1e-3))
     corr_len = float(noise_params.get("correlation_length", 2.0))
-    use_dense = (n_qubits <= 256)
+    use_dense = n_qubits <= 256
 
     if use_dense:
         kernel = np.zeros((n_qubits, n_qubits), dtype=np.float64)
@@ -125,7 +125,9 @@ def generate_correlated_pauli_errors(
         kernel += np.eye(n_qubits) * 1e-6
         prev = np.zeros(n_qubits, dtype=np.float64)
         for t in range(rounds):
-            vec = rng.multivariate_normal(mean=np.zeros(n_qubits), cov=kernel * base_rate)
+            vec = rng.multivariate_normal(
+                mean=np.zeros(n_qubits), cov=kernel * base_rate
+            )
             if t > 0:
                 vec += 0.25 * prev * rng.normal(0, 0.1, size=n_qubits)
             prev = vec
@@ -142,7 +144,7 @@ def generate_correlated_pauli_errors(
     def gauss_kernel(sigma=1.0, size=5):
         ax = np.arange(-(size // 2), size // 2 + 1)
         xx, yy = np.meshgrid(ax, ax)
-        k = np.exp(-(xx ** 2 + yy ** 2) / (2 * sigma ** 2))
+        k = np.exp(-(xx**2 + yy**2) / (2 * sigma**2))
         k /= k.sum()
         return k
 
@@ -155,7 +157,7 @@ def generate_correlated_pauli_errors(
         smooth = np.zeros_like(white)
         for i in range(d):
             for j in range(d):
-                block = padded[i:i + 5, j:j + 5]
+                block = padded[i : i + 5, j : j + 5]
                 smooth[i, j] = float((block * K).sum())
 
         sigma = float(np.std(smooth)) + 1e-12

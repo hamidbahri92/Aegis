@@ -1,14 +1,16 @@
 # FILE: a3d/runtime.py
 from __future__ import annotations
-from typing import Dict, Tuple, List
+
 import logging
+from typing import Dict, List, Tuple
+
 import numpy as np
 
 from .config import AegisConfig
-from .graph import RotatedSurfaceLayout, DecodingGraphBuilder, DecodingGraph
-from .decoder_greedy import GreedyMatchingDecoder, DecodeResult
 from .decoder_bposd import OSDDecoder
+from .decoder_greedy import DecodeResult, GreedyMatchingDecoder
 from .decoder_mwpm import MWPMDecoder
+from .graph import DecodingGraph, DecodingGraphBuilder, RotatedSurfaceLayout
 
 logger = logging.getLogger("a3d.runtime")
 
@@ -20,6 +22,7 @@ def _logodds(p: float) -> float:
 
 class DecoderRuntime:
     """Core runtime: build graphs, decode with chosen algorithm, optional ML rescore."""
+
     def __init__(self, cfg: AegisConfig, layout: RotatedSurfaceLayout):
         self.cfg = cfg
         self.layout = layout
@@ -47,17 +50,31 @@ class DecoderRuntime:
         order = self.builder.node_order(sector)
         T = self.cfg.rounds
         w_space = {(coord, t): _logodds(self.cfg.p_data) for (coord, t) in order}
-        w_time  = {(coord, t): _logodds(self.cfg.p_meas) * self.cfg.time_weight_scale for (coord, t) in order if t < T - 1}
-        p_erase = {(coord, t): min(max(self.cfg.p_leak, 0.0), 0.99) for (coord, t) in order if t < T - 1}
+        w_time = {
+            (coord, t): _logodds(self.cfg.p_meas) * self.cfg.time_weight_scale
+            for (coord, t) in order
+            if t < T - 1
+        }
+        p_erase = {
+            (coord, t): min(max(self.cfg.p_leak, 0.0), 0.99)
+            for (coord, t) in order
+            if t < T - 1
+        }
         return w_space, w_time, p_erase
 
-    def _decode_with_choice(self, graph: DecodingGraph, syn: List[int], axis: str) -> DecodeResult:
+    def _decode_with_choice(
+        self, graph: DecodingGraph, syn: List[int], axis: str
+    ) -> DecodeResult:
         dtype = self.cfg.decoder_type
         if dtype == "greedy":
             res = self.uf.decode(graph, syn)
             if res.avg_cost > self.cfg.uf_confidence_threshold:
-                logger.warning("UF %s avg_cost=%.3f > threshold=%.3f; OSD fallback",
-                               axis, res.avg_cost, self.cfg.uf_confidence_threshold)
+                logger.warning(
+                    "UF %s avg_cost=%.3f > threshold=%.3f; OSD fallback",
+                    axis,
+                    res.avg_cost,
+                    self.cfg.uf_confidence_threshold,
+                )
                 res = self.bposd.decode(graph, syn)
             return res
         elif dtype == "osd":
@@ -88,6 +105,7 @@ class DecoderRuntime:
         if getattr(self, "_ml", None) is not None:
             try:
                 from .decoder_ml import decode_with_gnn
+
                 logitsX = self._ml_logits(graph_X)
                 logitsZ = self._ml_logits(graph_Z)
                 mresX = decode_with_gnn(graph_X, logitsX, threshold=0.6)
@@ -109,9 +127,14 @@ class DecoderRuntime:
         w_space_X, w_time_X, p_erase_X = self._weight_dicts_from_cfg("X")
         w_space_Z, w_time_Z, p_erase_Z = self._weight_dicts_from_cfg("Z")
         return self.decode_window(
-            w_space_X, w_time_X, p_erase_X,
-            w_space_Z, w_time_Z, p_erase_Z,
-            syndromes_X, syndromes_Z
+            w_space_X,
+            w_time_X,
+            p_erase_X,
+            w_space_Z,
+            w_time_Z,
+            p_erase_Z,
+            syndromes_X,
+            syndromes_Z,
         )
 
     def decode_from_syndromes_uniform(
@@ -127,17 +150,30 @@ class DecoderRuntime:
         T = self.cfg.rounds
 
         w_space_X = {(coord, t): float(weight_space) for (coord, t) in order_X}
-        w_time_X  = {(coord, t): float(weight_time) for (coord, t) in order_X if t < T - 1}
-        p_erase_X = {(coord, t): float(perase_time) for (coord, t) in order_X if t < T - 1}
+        w_time_X = {
+            (coord, t): float(weight_time) for (coord, t) in order_X if t < T - 1
+        }
+        p_erase_X = {
+            (coord, t): float(perase_time) for (coord, t) in order_X if t < T - 1
+        }
 
         w_space_Z = {(coord, t): float(weight_space) for (coord, t) in order_Z}
-        w_time_Z  = {(coord, t): float(weight_time) for (coord, t) in order_Z if t < T - 1}
-        p_erase_Z = {(coord, t): float(perase_time) for (coord, t) in order_Z if t < T - 1}
+        w_time_Z = {
+            (coord, t): float(weight_time) for (coord, t) in order_Z if t < T - 1
+        }
+        p_erase_Z = {
+            (coord, t): float(perase_time) for (coord, t) in order_Z if t < T - 1
+        }
 
         return self.decode_window(
-            w_space_X, w_time_X, p_erase_X,
-            w_space_Z, w_time_Z, p_erase_Z,
-            syndromes_X, syndromes_Z
+            w_space_X,
+            w_time_X,
+            p_erase_X,
+            w_space_Z,
+            w_time_Z,
+            p_erase_Z,
+            syndromes_X,
+            syndromes_Z,
         )
 
     def attach_ml_model(self, model, logits_fn) -> None:
