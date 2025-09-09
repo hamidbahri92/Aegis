@@ -1,0 +1,11 @@
+[run]
+branch = True
+source = a3d
+omit =
+    tests/*
+    .venv/*
+
+[report]
+skip_empty = True
+show_missing = True
+precision = 1
