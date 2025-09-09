@@ -1,7 +1,6 @@
-# FILE: pyproject.toml
 [project]
 name = "aegis-qec"
-version = "1.0.3"
+version = "1.0.4"
 description = "Aegis: Hardware-Aware Quantum Error Correction Platform"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -9,21 +8,21 @@ requires-python = ">=3.9"
 authors = [{ name = "Hamid bahri" }]
 dependencies = [
   "numpy>=1.21",
+  "networkx>=3.0,<4.0",
 ]
 
 [project.optional-dependencies]
 full = [
   "matplotlib>=3.5",
   "pyarrow>=10.0",
-  "networkx>=3.0",
   "pytest>=7.0",
 ]
 mwpm = [
-  "networkx>=3.0"
+  "networkx>=3.0,<4.0"
 ]
 
 [project.urls]
-Repository = "https://github.com/your-username/aegis"
+Repository = "https://github.com/hamidbahri92/Aegis"
 
 [project.scripts]
 aegis-run = "main:main"
