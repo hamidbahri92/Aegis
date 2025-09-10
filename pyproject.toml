@@ -1,6 +1,6 @@
 [project]
 name = "aegis-qec"
-version = "1.0.5"
+version = "1.0.6"
 description = "Aegis: Hardware-Aware Quantum Error Correction Platform"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -31,7 +31,7 @@ aegis-metrics = "main_metrics:main"
 aegis-threshold = "main_threshold:main"
 aegis-export-header = "main_export_header:main"
 
-# تضمین اینکه a3d بهعنوان پکیج و اسکریپتهای سطح-ریشه داخل wheel بیایند
+# ØªØ¶Ù…ÛŒÙ† Ø§ÛŒÙ†Ú©Ù‡ a3d Ø¨Ù‡Ø¹Ù†ÙˆØ§Ù† Ù¾Ú©ÛŒØ¬ Ùˆ Ø§Ø³Ú©Ø±ÛŒÙ¾ØªÙ‡Ø§ÛŒ Ø³Ø·Ø­-Ø±ÛŒØ´Ù‡ Ø¯Ø§Ø®Ù„ wheel Ø¨ÛŒØ§ÛŒÙ†Ø¯
 [tool.setuptools]
 include-package-data = true
 py-modules = ["main", "main_metrics", "main_threshold", "main_export_header"]
