@@ -1,0 +1,23 @@
+name: V13 Release Only
+
+on:
+  push:
+    tags:
+      - 'v13.*'
+
+jobs:
+  release-v13:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    - run: pip install build twine
+    - run: python -m build
+    - run: twine check dist/*
+    - name: Upload to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: twine upload dist/*
