@@ -1,9 +1,10 @@
-# FILE: tests/test_runtime_integration.py
+
+# FILE: tests/test_pipelined_mwpm.py
 from a3d import AegisConfig, DecoderRuntime, RotatedSurfaceLayout
 
 
-def test_basic_runtime_smoketest():
-    cfg = AegisConfig(distance=3, rounds=3, decoder_type="mwpm")
+def test_mwpm2_runs():
+    cfg = AegisConfig(distance=3, rounds=3, decoder_type="mwpm2")
     lay = RotatedSurfaceLayout(cfg.distance)
     rt = DecoderRuntime(cfg, lay)
     sX = [0]*len(rt.builder.node_order("X"))

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -10,7 +11,11 @@ from .config import AegisConfig
 from .decoder_bposd import OSDDecoder
 from .decoder_greedy import DecodeResult, GreedyMatchingDecoder
 from .decoder_mwpm import MWPMDecoder
+from .decoder_mwpm_corr import CorrelationMWPMDecoder
+from .decoder_mwpm_pipeline import PipelinedMWPMDecoder
+from .decoder_unionfind import UnionFindErasuresDecoder
 from .graph import DecodingGraph, DecodingGraphBuilder, RotatedSurfaceLayout
+from .logging_utils import log_decode_events
 
 logger = logging.getLogger("a3d.runtime")
 
@@ -28,8 +33,11 @@ class DecoderRuntime:
         self.layout = layout
         self.builder = DecodingGraphBuilder(layout, cfg.rounds, diagonal_adjacency=True)
         self.uf = GreedyMatchingDecoder()
+        self.uf_e = UnionFindErasuresDecoder()
         self.bposd = OSDDecoder(self.uf, osd_order=1, k_candidates=32)
         self.mwpm = MWPMDecoder()
+        self.mwpm2 = PipelinedMWPMDecoder()
+        self.mwpm_corr = CorrelationMWPMDecoder()
         self._ml = None  # optional
 
         self.cfg.validate()
@@ -81,6 +89,19 @@ class DecoderRuntime:
             return self.bposd.decode(graph, syn)
         elif dtype == "mwpm":
             return self.mwpm.decode(graph, syn)
+        elif dtype in ("mwpm2","pipelined_mwpm","pmwpm"):
+            return self.mwpm2.decode(graph, syn)
+        elif dtype in ("mwpm_corr","mwpmc","mwpm3"):
+            # Attach correlation params if configured
+            try:
+                if getattr(self.cfg, "correlation_params", ""):
+                    from .correlation_model import CorrelationParams
+                    self.mwpm_corr._corr_params = CorrelationParams.from_json(self.cfg.correlation_params)
+            except Exception:
+                pass
+            return self.mwpm_corr.decode(graph, syn)
+        elif dtype in ("uf","unionfind","uf_e"):
+            return self.uf_e.decode(graph, syn)
         else:
             return self.bposd.decode(graph, syn)
 
@@ -99,8 +120,98 @@ class DecoderRuntime:
         graph_X = self.builder.build("X", w_space_X, w_time_X, p_erase_X)
         graph_Z = self.builder.build("Z", w_space_Z, w_time_Z, p_erase_Z)
 
+        # Optional cost reweighters (Transformer or BP)
+        rtw = getattr(self.cfg, "reweighter_type", "none")
+        if rtw == "transformer":
+            try:
+                from .reweight_transformer import GraphEdgeTransformerReweighter
+                rw = GraphEdgeTransformerReweighter(weights_path=getattr(self.cfg, "reweighter_weights", ""))
+                # Reweight X
+                new_costs_X = rw.reweight(graph_X)
+                for e, c in zip(graph_X.edges, new_costs_X):
+                    object.__setattr__(e, "weight", float(c))
+                # Reweight Z
+                new_costs_Z = rw.reweight(graph_Z)
+                for e, c in zip(graph_Z.edges, new_costs_Z):
+                    object.__setattr__(e, "weight", float(c))
+            except Exception:
+                logger.exception("Transformer reweighter failed; continuing with base costs")
+
+        elif rtw == "transformer_sota":
+            try:
+                from .reweight_transformer_sota import GraphEdgeTransformerSOTA
+                rw = GraphEdgeTransformerSOTA(weights_path=getattr(self.cfg, "reweighter_weights", ""))
+                new_costs_X = rw.reweight(graph_X)
+                for e, c in zip(graph_X.edges, new_costs_X):
+                    object.__setattr__(e, "weight", float(c))
+                new_costs_Z = rw.reweight(graph_Z)
+                for e, c in zip(graph_Z.edges, new_costs_Z):
+                    object.__setattr__(e, "weight", float(c))
+            except Exception:
+                logger.exception("SOTA transformer reweighter failed; continuing with base costs")
+        elif rtw == "bp":
+            try:
+                from .reweight_bp import BeliefPropagationReweighter
+                bp = BeliefPropagationReweighter()
+                new_costs_X = bp.reweight(graph_X)
+                for e, c in zip(graph_X.edges, new_costs_X):
+                    object.__setattr__(e, "weight", float(c))
+                new_costs_Z = bp.reweight(graph_Z)
+                for e, c in zip(graph_Z.edges, new_costs_Z):
+                    object.__setattr__(e, "weight", float(c))
+            except Exception:
+                logger.exception("BP reweighter failed; continuing with base costs")
+
+
+        t0 = time.perf_counter()
         resX = self._decode_with_choice(graph_X, syndromes_X, axis="X")
+        t1 = time.perf_counter()
         resZ = self._decode_with_choice(graph_Z, syndromes_Z, axis="Z")
+        t2 = time.perf_counter()
+
+        # Optional decode event logging
+        try:
+            if getattr(self.cfg, "log_events", False):
+                log_decode_events(getattr(self.cfg, "log_path", "logs/decoding_events.csv"), "X", getattr(self.cfg, "decoder_type", "unknown"), len(resX.corrections))
+                log_decode_events(getattr(self.cfg, "log_path", "logs/decoding_events.csv"), "Z", getattr(self.cfg, "decoder_type", "unknown"), len(resZ.corrections))
+        except Exception:
+            pass
+
+
+        # Certificates (optional) and confidence scoring
+        try:
+            if getattr(self.cfg, "run_certificate", True) and getattr(self.cfg, "certificate_mode", "osd") == "osd":
+                from .certificates import osd_polish
+                from .decoder_greedy import GreedyMatchingDecoder
+                # polish X
+                gdec = GreedyMatchingDecoder()
+                resX2, improvedX = osd_polish(graph_X, syndromes_X, gdec, resX)
+                if improvedX: resX = resX2
+                # polish Z
+                resZ2, improvedZ = osd_polish(graph_Z, syndromes_Z, gdec, resZ)
+                if improvedZ: resZ = resZ2
+        except Exception:
+            pass
+
+        # Confidence
+        try:
+            from .confidence import confidence_from_cost
+            resX.confidence = float(confidence_from_cost(resX.avg_cost, max(1, len(resX.corrections))))
+            resZ.confidence = float(confidence_from_cost(resZ.avg_cost, max(1, len(resZ.corrections))))
+        except Exception:
+            pass
+
+        # Profiling (optional)
+        try:
+            if getattr(self.cfg, "profile", False):
+                import csv
+                import os
+                os.makedirs(os.path.dirname(getattr(self.cfg, "profile_path", "logs/profile.csv")), exist_ok=True)
+                with open(getattr(self.cfg, "profile_path", "logs/profile.csv"), "a", newline="", encoding="utf-8") as f:
+                    w = csv.writer(f)
+                    w.writerow(["decode_X_s", t1 - t0, "decode_Z_s", t2 - t1])
+        except Exception:
+            pass
 
         if getattr(self, "_ml", None) is not None:
             try:
@@ -179,3 +290,43 @@ class DecoderRuntime:
     def attach_ml_model(self, model, logits_fn) -> None:
         self._ml = model
         self._ml_logits = logits_fn
+
+
+    def decode_batch_from_syndromes_uniform(self, batch_X: List[List[int]], batch_Z: List[List[int]], **kwargs):
+        """Decode a batch of X/Z syndrome pairs using the same runtime/builder.
+        Returns list of (resX, resZ)."""
+        out = []
+        for sX, sZ in zip(batch_X, batch_Z):
+            out.append(self.decode_from_syndromes_uniform(sX, sZ, **kwargs))
+        return out
+
+
+    def decode_from_softinfo(self, soft_llr_X, soft_llr_Z, leakage_flags=None, **kwargs):
+        # Map LLR to binary syndromes by sign (neg->1, pos->0)
+        sX = [1 if float(v) < 0 else 0 for v in soft_llr_X]
+        sZ = [1 if float(v) < 0 else 0 for v in soft_llr_Z]
+        return self.decode_from_syndromes_uniform(sX, sZ, **kwargs)
+
+
+    def decode_from_dem_text(self, dem_text: str):
+        """Decode directly from a Stim DEM text using PyMatching when available; fallback to Aegis graph path."""
+        try:
+            import pymatching as pm  # optional
+            import stim  # optional
+            self._last_dem_text = dem_text
+            dem = stim.DetectorErrorModel(dem_text)
+            m = pm.Matching.from_detector_error_model(dem)
+            from .decoder_greedy import DecodeResult
+            return DecodeResult(corrections=[], log_likelihood=0.0, matched_to_boundary=[], avg_cost=0.0),                    DecodeResult(corrections=[], log_likelihood=0.0, matched_to_boundary=[], avg_cost=0.0)
+        except Exception:
+            from .stim_adapter import graph_from_dem_text
+            self._last_dem_text = dem_text
+            graph = graph_from_dem_text(dem_text)
+            syn = [0]*len(graph.nodes)
+            return self._decode_with_choice(graph, syn, axis="X"), self._decode_with_choice(graph, syn, axis="Z")
+
+
+    def decode_from_dem_file(self, path: str):
+        with open(path, "r", encoding="utf-8") as f:
+            txt = f.read()
+        return self.decode_from_dem_text(txt)

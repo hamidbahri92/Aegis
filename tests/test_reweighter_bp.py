@@ -1,9 +1,11 @@
-# FILE: tests/test_runtime_integration.py
+
+# FILE: tests/test_reweighter_bp.py
 from a3d import AegisConfig, DecoderRuntime, RotatedSurfaceLayout
 
 
-def test_basic_runtime_smoketest():
+def test_bp_reweighter_runs():
     cfg = AegisConfig(distance=3, rounds=3, decoder_type="mwpm")
+    cfg.reweighter_type = "bp"
     lay = RotatedSurfaceLayout(cfg.distance)
     rt = DecoderRuntime(cfg, lay)
     sX = [0]*len(rt.builder.node_order("X"))

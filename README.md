@@ -275,3 +275,76 @@ git commit -m "docs: English README (install, CLI, dev, release)"
 git push -u origin HEAD
 
 
+
+
+### New in this build
+- **Union‑Find‑with‑Erasures decoder (UF‑E)**: fast baseline with erasure‑aware edge ordering.
+- **LLR/NLL weighting** for Greedy & MWPM via a shared stats module.
+
+
+### Transformer reweighter (optional, no hard dependency)
+Set `reweighter_type="transformer"` in `AegisConfig` to enable an **edge-cost reweighting** pass using a compact Transformer.
+If PyTorch is unavailable, Aegis silently falls back to base costs.
+
+
+## New features
+- **UF‑E decoder** with erasure peeling.
+- **Pipelined MWPM** (two-pass with local correlation reweighting).
+- **Stim/DEM adapter** for minimal detector-error-model demos.
+- **Transformer reweighter** and **tiny training script** (optional Torch).
+- **One‑click CI** via `KITTY_RUN_CI.py` and `aegis-ci` console script.
+- **Dockerfile** for containerized runs.
+
+### Quick starts
+- UF‑E: set `decoder_type="uf"`.
+
+- Pipelined MWPM: set `decoder_type="mwpm2"`.
+
+- Transformer reweighter: `cfg.reweighter_type="transformer"`.
+
+- Bench: `python bench/run_threshold.py`.
+
+- Train transformer (optional Torch): `python -m scripts.train_transformer`.
+
+
+
+## Advanced features
+- **Correlation-aware MWPM** (`decoder_type="mwpm_corr"`) applying motif-based local correlation costs before MWPM.
+- **Fuller Stim/DEM adapter** with `shift_detectors` time-slicing for demos.
+- **Educational Notebook**: `notebooks/educational_demo.ipynb`.
+
+- **BP reweighter**: `cfg.reweighter_type="bp"` for Torch-free, principled cost refinement.
+
+
+## Certificates, Confidence & Profiling
+- Enable post-decode **OSD polish** with `cfg.run_certificate=True` (default) and `cfg.certificate_mode="osd"`.
+- Each `DecodeResult` now has a `confidence` field derived from avg cost (logit mapping).
+- Set `cfg.profile=True` to log per-decode timing to `logs/profile.csv`.
+- **Batch API:** `DecoderRuntime.decode_batch_from_syndromes_uniform([...],[...])` for throughput benchmarks.
+- **Plots:** `python -m bench.generate_plots` writes CSVs and PNGs (if matplotlib is available).
+- **DEM cross-validation:** `python -m scripts.dem_cross_validate path/to/model.dem` (uses optional PyMatching/Stim).
+
+
+## GUI Dashboard
+- Launch with `aegis-gui` (after `pip install ".[gui]"`) or `python -m scripts.run_gui`.
+- Adjust decoders/reweighters; run demo decodes and see quick sweep charts inline.
+
+## Soft Information (LLR) & Leakage
+- Use `a3d.llr_schema.SoftSyndrome` and `validate_soft()`.
+- Decode via `DecoderRuntime.decode_from_softinfo(llr_X, llr_Z, ...)`.
+- Leakage adaptivity is applied via boundary-friendly pregrowth.
+
+
+### Unified benchmarking CLI
+Use `aegis-bench` for all sweeps and plots. Legacy scripts delegate to it internally.
+
+
+### Speed path (optional)
+- Set `cfg.prefer_pymatching = True` and use `decode_from_dem_text(...)` to leverage PyMatching+Stim when available.
+- For general graphs, our internal decoders run; DEM interop path uses PyMatching's optimized kernels if present.
+
+### Acceleration
+- Optional **Numba** jit is used for small hot kernels in UF‑E when installed (`pip install numba`).
+
+### DEM parity
+- When `stim` and `pymatching` are installed, `tests/test_dem_structural_parity_optional.py` performs structural sanity checks.

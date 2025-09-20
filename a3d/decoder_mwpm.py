@@ -6,14 +6,11 @@ import networkx as nx
 
 from .decoder_greedy import DecodeResult
 from .graph import DecodingGraph, Edge
+from .stats import effective_cost_from_edge
 
 
 def _effective_cost(edge: Edge) -> float:
-    pe = float(edge.p_erase)
-    if pe >= 1.0:
-        return 0.0
-    pe = min(max(pe, 0.0), 0.999999)
-    return edge.weight * (1.0 - pe)
+    return effective_cost_from_edge(edge)
 
 
 def _is_boundary_node(graph: DecodingGraph, nid: int) -> bool:
