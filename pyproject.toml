@@ -1,6 +1,6 @@
-[project]
+﻿[project]
 name = "aegis-qec"
-version = "1.0.6"
+version = "1.0.13"
 description = "Aegis: Hardware-Aware Quantum Error Correction Platform"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -13,6 +13,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+accel = [
+  "numba>=0.58",
+]
+
+ml = [
+  "torch>=2.1; platform_system!='Emscripten'",
+]
+
 full = [
   "matplotlib>=3.5",
   "pyarrow>=10.0",
@@ -26,12 +34,17 @@ mwpm = [
 Repository = "https://github.com/hamidbahri92/Aegis"
 
 [project.scripts]
+aegis-gui = "scripts.run_gui:main"
+aegis-autobench = "bench.auto_bench:main"
+aegis-bench = "bench.cli:main"
+aegis-train-transformer = "scripts.train_transformer:main"
+aegis-ci = "ci_runner:main"
 aegis-run = "main:main"
 aegis-metrics = "main_metrics:main"
 aegis-threshold = "main_threshold:main"
 aegis-export-header = "main_export_header:main"
 
-# ØªØ¶Ù…ÛŒÙ† Ø§ÛŒÙ†Ú©Ù‡ a3d Ø¨Ù‡Ø¹Ù†ÙˆØ§Ù† Ù¾Ú©ÛŒØ¬ Ùˆ Ø§Ø³Ú©Ø±ÛŒÙ¾ØªÙ‡Ø§ÛŒ Ø³Ø·Ø­-Ø±ÛŒØ´Ù‡ Ø¯Ø§Ø®Ù„ wheel Ø¨ÛŒØ§ÛŒÙ†Ø¯
+# Ã˜ÂªÃ˜Â¶Ã™â€¦Ã›Å’Ã™â€  Ã˜Â§Ã›Å’Ã™â€ ÃšÂ©Ã™â€¡ a3d Ã˜Â¨Ã™â€¡Ã˜Â¹Ã™â€ Ã™Ë†Ã˜Â§Ã™â€  Ã™Â¾ÃšÂ©Ã›Å’Ã˜Â¬ Ã™Ë† Ã˜Â§Ã˜Â³ÃšÂ©Ã˜Â±Ã›Å’Ã™Â¾Ã˜ÂªÃ™â€¡Ã˜Â§Ã›Å’ Ã˜Â³Ã˜Â·Ã˜Â­-Ã˜Â±Ã›Å’Ã˜Â´Ã™â€¡ Ã˜Â¯Ã˜Â§Ã˜Â®Ã™â€ž wheel Ã˜Â¨Ã›Å’Ã˜Â§Ã›Å’Ã™â€ Ã˜Â¯
 [tool.setuptools]
 include-package-data = true
 py-modules = ["main", "main_metrics", "main_threshold", "main_export_header"]
