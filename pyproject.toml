@@ -1,6 +1,6 @@
 ﻿[project]
 name = "aegis-qec"
-version = "1.0.13"
+version = "1.0.14"
 description = "Aegis: Hardware-Aware Quantum Error Correction Platform"
 readme = "README.md"
 license = { file = "LICENSE" }
