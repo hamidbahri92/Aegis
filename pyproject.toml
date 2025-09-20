@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aegis-qec"
-version = "1.0.20"
+version = "1.0.21"
 description = "Research-grade, hardware-aware QEC stack for surface codes."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -21,10 +21,10 @@ classifiers = [
 Homepage = "https://github.com/hamidbahri92/Aegis"
 
 [project.scripts]
-aegis-run = "a3d.main:main"
-aegis-metrics = "a3d.main_metrics:main"
-aegis-threshold = "a3d.main_threshold:main"
-aegis-export-header = "a3d.main_export_header:main"
+aegis-run = "main:main"
+aegis-metrics = "main_metrics:main"
+aegis-threshold = "main_threshold:main"
+aegis-export-header = "main_export_header:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
