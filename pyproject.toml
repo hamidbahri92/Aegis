@@ -40,5 +40,5 @@ py-modules = ["main", "main_metrics", "main_threshold", "main_export_header"]
 include = ["a3d*"]
 
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=82.0.1", "wheel"]
 build-backend = "setuptools.build_meta"
