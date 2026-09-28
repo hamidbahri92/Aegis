@@ -103,4 +103,4 @@ class GraphEdgeTransformerSOTA:
             x = torch.tensor(feats, dtype=torch.float32).unsqueeze(0)
             logits = self.model(x)[0]
             adj = torch.sigmoid(logits).tolist()
-        return [max(1e-6, c + self.alpha*float(a)) for c,a in zip(costs, adj)]
+        return [max(1e-6, c + self.alpha*float(a)) for c,a in zip(costs, adj, strict=True)]
