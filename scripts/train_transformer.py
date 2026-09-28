@@ -23,10 +23,11 @@ except Exception:
     TORCH_OK = False
 
 from a3d import AegisConfig, DecoderRuntime, RotatedSurfaceLayout
+from a3d.graph import DecodingGraph
 from a3d.reweight_transformer import _TinyEdgeTransformer  # type: ignore
 
 
-def _make_batch(cfg) -> List[float]:
+def _make_batch(cfg: AegisConfig) -> tuple[DecodingGraph, List[float]]:
     layout = RotatedSurfaceLayout(cfg.distance)
     runtime = DecoderRuntime(cfg, layout)
     w_space_x, w_time_x, p_erase_x = runtime._weight_dicts_from_cfg("X")
