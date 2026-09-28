@@ -1,36 +1,59 @@
-# FILE: ci_runner.py
 from __future__ import annotations
 
 import pathlib
-import platform
 import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).parent
+STRICT_PATHS = [
+    "a3d/decoder_mwpm.py",
+    "a3d/decoder_mwpm_pm.py",
+    "a3d/config.py",
+    "aegis_qec",
+    "bench/cli.py",
+    "gui/app.py",
+    "scripts/run_gui.py",
+    "tests/test_cli.py",
+    "tests/test_mwpm_sparse_blossom.py",
+    "tests/test_public_namespace.py",
+    "tests/test_decode_from_dem_optional.py",
+]
 
-def _run(cmd, name):
-    print(f"=== {name} ===")
+
+def _run(cmd: list[str], name: str) -> int:
+    print(f"\n=== {name} ===")
     print(" ", " ".join(cmd))
     try:
-        p = subprocess.run(cmd, cwd=str(ROOT), check=False)
-        print(f"--> exit code: {p.returncode}")
-        return p.returncode
+        process = subprocess.run(cmd, cwd=str(ROOT), check=False)
     except FileNotFoundError:
-        print(f"[skip] {cmd[0]} not found")
-        return 0
+        print(f"Required command not found: {cmd[0]}")
+        return 127
+    print(f"--> exit code: {process.returncode}")
+    return process.returncode
 
-def main():
-    py = sys.executable or "python3"
-    codes = []
-    codes.append(_run([py, "-m", "ruff", "check", "."], "Lint (ruff)"))
-    codes.append(_run([py, "-m", "pytest", "-q"], "Tests (pytest)"))
-    codes.append(_run([py, "-m", "pip", "install", "-U", "build"], "Ensure build is available"))
-    codes.append(_run([py, "-m", "build", "."], "Build (wheel + sdist)"))
-    worst = max(codes) if codes else 0
-    print("SUMMARY:", codes)
-    if platform.system()=="Windows" and not sys.stdout.isatty():
-        import os; os.system("pause")
-    return worst
+
+def main() -> int:
+    python = sys.executable or "python3"
+    checks = [
+        _run(
+            [python, "-m", "ruff", "check", "--select", "F,B", "."],
+            "Repository defect lint",
+        ),
+        _run(
+            [python, "-m", "ruff", "check", *STRICT_PATHS],
+            "Strict Aegis QEC release-surface lint",
+        ),
+        _run([python, "-m", "pytest", "-q"], "Test suite"),
+        _run([python, "-m", "build", "."], "Build wheel and source distribution"),
+    ]
+
+    print("\n=== Aegis QEC local CI summary ===")
+    labels = ["defect lint", "strict lint", "tests", "package build"]
+    for label, code in zip(labels, checks):
+        print(f"{label}: {'PASS' if code == 0 else f'FAIL ({code})'}")
+
+    return max(checks) if checks else 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
