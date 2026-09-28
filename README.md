@@ -150,6 +150,8 @@ On Windows PowerShell, activate the environment with `.\.venv\Scripts\Activate.p
 
 Hosted CI and `aegis-ci` both enforce a repository-wide real-defect Ruff gate, stricter linting on the Aegis QEC release surfaces, the test suite, and package build validation. Hosted CI additionally builds the distribution, checks its long description with Twine, installs the built wheel, and exercises the user-facing commands.
 
+Maintainers can follow the [PyPI release and Trusted Publishing guide](docs/RELEASING.md) for the tag-triggered release procedure, exact publisher identity, and legacy credential cleanup.
+
 ## Release identity
 
 Use **Aegis QEC** as the product name in prose. Use `aegis-qec` for the PyPI distribution and `aegis_qec` for the public Python import. `a3d` is a compatibility namespace.
