@@ -20,8 +20,6 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
-  "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering :: Physics",
 ]
 
@@ -34,7 +32,6 @@ dependencies = [
 [project.optional-dependencies]
 full = [
   "pyarrow>=10.0.0",
-  "pytest>=7.0.0",
   "stim>=1.16,<2",
 ]
 dev = [
