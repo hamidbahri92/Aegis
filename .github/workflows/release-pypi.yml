@@ -9,8 +9,11 @@ permissions:
   contents: read
 
 jobs:
-  build-publish:
+  build:
+    name: Build and validate distributions
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -29,9 +32,35 @@ jobs:
           python -m pip install --force-reinstall dist/*.whl
           aegis --version
           aegis doctor --json
-          python -c "import aegis_qec; assert aegis_qec.__version__ == '1.1.0'"
-      - name: Publish to PyPI
+      - name: Verify tag matches package version
         env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: python -m twine upload dist/*
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: >-
+          python -c
+          "import importlib.metadata as m, os;
+          expected = os.environ['RELEASE_TAG'].removeprefix('v');
+          actual = m.version('aegis-qec');
+          assert actual == expected, f'tag {expected} != package {actual}'"
+      - name: Preserve validated distributions for the publish job
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-package-distributions
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish validated distributions to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Retrieve validated distributions
+        uses: actions/download-artifact@v7
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
