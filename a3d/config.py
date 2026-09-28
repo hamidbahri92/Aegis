@@ -13,7 +13,7 @@ class AegisConfig:
     rounds: int = 6
 
     # greedy | osd | mwpm | mwpm2 | mwpm_corr | uf | unionfind | uf_e
-    decoder_type: str = "osd"
+    decoder_type: str = "mwpm"
 
     p_data: float = 0.02
     p_meas: float = 0.03
@@ -31,7 +31,7 @@ class AegisConfig:
     log_events: bool = False
     log_path: str = "logs/decoding_events.csv"
 
-    run_certificate: bool = True
+    run_certificate: bool = False
     certificate_mode: str = "osd"
     profile: bool = False
     profile_path: str = "logs/profile.csv"
