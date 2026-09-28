@@ -101,7 +101,9 @@ Aegis does not silently replace sparse blossom with the historical NetworkX MWPM
 
 ## Performance evidence
 
-Aegis keeps upstream algorithm benchmarks, Aegis end-to-end latency, structural stress tests, and circuit-level logical-error measurements separate. See the [benchmarking documentation](https://github.com/hamidbahri92/Aegis/blob/main/docs/BENCHMARKING.md) for definitions, provenance, and the relevant PyMatching references.
+Aegis keeps upstream algorithm benchmarks, Aegis end-to-end latency, structural stress tests, controlled calibration experiments, and circuit-level logical-error measurements separate. See the [benchmarking documentation](https://github.com/hamidbahri92/Aegis/blob/main/docs/BENCHMARKING.md) for definitions, provenance, and the relevant PyMatching references.
+
+A controlled graph-level experiment is available with `aegis-bench calibration-advantage`. It compares a uniform-weight baseline with correctly calibrated non-uniform weights on identical sampled physical error chains and evaluates the homology of physical-error XOR correction. It demonstrates the value of informative weights in that controlled model; it is not evidence that real IBM calibration data are already mapped into production surface-code weights.
 
 ## Interactive workbench
 
