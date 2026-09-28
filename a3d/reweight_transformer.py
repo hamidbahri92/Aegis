@@ -11,7 +11,9 @@ try:
 except Exception:  # pragma: no cover - optional dependency
     TORCH_OK = False
     torch = None
-    nn = object  # type: ignore
+    nn = None  # type: ignore[assignment]
+
+_ModuleBase = nn.Module if TORCH_OK else object
 
 from .graph import DecodingGraph
 from .stats import effective_cost_from_edge
@@ -48,7 +50,7 @@ def _edge_features(graph: DecodingGraph) -> List[List[float]]:
         feats.append([base, is_time, is_bnd, is_space, pe, float(du), float(dv), float(tu), float(tv), float(dist)])
     return feats
 
-class _TinyEdgeTransformer(nn.Module):  # type: ignore[misc]
+class _TinyEdgeTransformer(_ModuleBase):
     def __init__(self, d_model: int = 32, nhead: int = 4, nlayers: int = 2):
         super().__init__()
         self.inp = nn.Linear(10, d_model)
