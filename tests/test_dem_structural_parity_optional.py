@@ -8,7 +8,7 @@ def test_dem_structural_parity_optional():
         import stim
     except Exception:
         pytest.skip("stim/pymatching not installed")
-    from a3d.stim_adapter import graph_from_dem_text
+    from a3d.stim_adapter import graph_from_dem_text_approximate
     dem = """
 # simple two-round model
 error(0.01) D0 D1 L0
@@ -16,7 +16,7 @@ shift_detectors 1
 error(0.02) D0 D1 L1
 """
     # Our graph
-    g = graph_from_dem_text(dem)
+    g = graph_from_dem_text_approximate(dem)
     assert len(g.nodes) > 0 and len(g.edges) > 0
     # PyMatching build to compare basic properties (will succeed if DEM is valid)
     import pymatching as pm
