@@ -94,6 +94,6 @@ class GraphEdgeTransformerReweighter:
             logits = self.model(x)[0]  # (E,)
             adj = torch.sigmoid(logits).tolist()
         new_costs: List[float] = []
-        for c,a in zip(costs, adj):
+        for c,a in zip(costs, adj, strict=True):
             new_costs.append(max(1e-6, c + self.alpha*float(a)))
         return new_costs
