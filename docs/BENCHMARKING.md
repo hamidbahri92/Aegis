@@ -80,10 +80,10 @@ The default experiment uses boundary-edge error probabilities of 0.18 and a midd
 Example:
 
 ```bash
-aegis-bench calibration-advantage --shots 10000 --seed 20260928
+aegis-bench calibration-advantage --shots 10000 --seed 20260928 --out-json bench_out/calibration.json --plot bench_out/calibration.png
 ```
 
-The command reports graph-level logical failure rates, paired discordant failure counts, relative reduction, and the uniform-to-calibrated failure ratio. The implementation also reports the analytically expected failure rates for this three-edge model so the Monte Carlo result can be checked against a closed-form reference.
+The command reports graph-level logical failure rates with Wilson ninety-five-percent confidence intervals, paired discordant failure counts, an exact two-sided paired-binomial p-value, relative reduction, and the uniform-to-calibrated failure ratio. The implementation also reports analytically expected failure rates for this three-edge model so the Monte Carlo result can be checked against a closed-form reference. Optional JSON and PNG outputs make the evidence reproducible and easy to plot.
 
 This experiment proves that Aegis's non-uniform graph-weight plumbing can improve decoding when the supplied calibration is informative. It does **not** prove that Aegis currently converts IBM or other device calibration records into correct surface-code edge probabilities. The current hardware interface can acquire calibration-like arrays, while the production runtime still requires graph weights to be supplied through its weight dictionaries. Building and validating that calibration-to-decoding-graph mapping remains separate work.
 
