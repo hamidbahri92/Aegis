@@ -50,7 +50,7 @@ jobs:
           aegis demo --distance 3 --rounds 3 --error-probability 0
           aegis-bench --help
           aegis-bench circuit-acceptance --distance 3 --rounds 3 --shots 32 --p 0.02 --seed 1234
-          aegis-bench calibration-advantage --shots 2000 --seed 20260928
+          aegis-bench calibration-advantage --shots 2000 --seed 20260928 --out-json bench_out/calibration_advantage.json --plot bench_out/calibration_advantage.png
 
   package:
     runs-on: ubuntu-latest
