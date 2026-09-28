@@ -61,7 +61,9 @@ def test_correction_chain_detects_horizontal_boundary_span():
     eR = _first_boundary_edge_from(gX, stab_nodes[2], "boundary-H-E")
     assert eL is not None and eR is not None
 
-    horiz_span, vert_span = _correction_spans_opposite_boundaries(gX, [e01, e12, eL, eR])
+    horiz_span, vert_span = _correction_spans_opposite_boundaries(
+        gX, [e01, e12, eL, eR]
+    )
     assert horiz_span is True
     assert vert_span is False
 
