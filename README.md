@@ -105,7 +105,7 @@ The greater-than-100,000-times figure is **not an Aegis-wide performance claim**
 
 Aegis uses that PyMatching implementation, but Aegis end-to-end execution can also include graph construction, result reconstruction, optional reweighting, logging, and other work. When quoting performance, name the workload, code distance, number of rounds, decoder, dependency versions, hardware, and whether the measurement is kernel-only or end-to-end.
 
-See [docs/BENCHMARKING.md](docs/BENCHMARKING.md) for the evidence policy and benchmark definitions.
+See [benchmarking documentation](https://github.com/hamidbahri92/Aegis/blob/main/docs/BENCHMARKING.md) for the evidence policy and benchmark definitions.
 
 Reference: Oscar Higgott and Craig Gidney, *Sparse Blossom: correcting a million errors per core second with minimum-weight matching*, Quantum 9, 1600 (2025), DOI 10.22331/q-2025-01-20-1600.
 
@@ -154,12 +154,12 @@ Use **Aegis QEC** as the product name in prose. Use `aegis-qec` for the PyPI dis
 
 Version 1.1.0 is the release that establishes this identity, makes sparse-blossom MWPM the true default path, and introduces the unified `aegis` command.
 
-See [CHANGELOG.md](CHANGELOG.md) for release notes.
+See [the changelog](https://github.com/hamidbahri92/Aegis/blob/main/CHANGELOG.md) for release notes.
 
 ## Citation
 
-If Aegis QEC contributes to published work, cite Aegis and the underlying decoder implementation used by the experiment. Sparse-blossom algorithm and performance claims should credit Higgott and Gidney. Machine-readable citation metadata is provided in [CITATION.cff](CITATION.cff).
+If Aegis QEC contributes to published work, cite Aegis and the underlying decoder implementation used by the experiment. Sparse-blossom algorithm and performance claims should credit Higgott and Gidney. Machine-readable citation metadata is provided in [CITATION.cff](https://github.com/hamidbahri92/Aegis/blob/main/CITATION.cff).
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](https://github.com/hamidbahri92/Aegis/blob/main/LICENSE).
