@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/aegis-qec.svg)](https://pypi.org/project/aegis-qec/)
 ![Python](https://img.shields.io/pypi/pyversions/aegis-qec.svg)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/hamidbahri92/Aegis/blob/main/LICENSE)
 ![CI](https://github.com/hamidbahri92/Aegis/actions/workflows/ci.yml/badge.svg)
 
 **Aegis QEC is a hardware-aware quantum error-correction research toolkit built around PyMatching sparse-blossom minimum-weight perfect matching.** It adds surface-code graph construction, calibrated weights, erasure and leakage information, correlation-aware experiments, Stim detector-error-model interoperability, benchmarking tools, and an optional interactive workbench.
