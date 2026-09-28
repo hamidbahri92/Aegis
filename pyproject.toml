@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,13 +8,13 @@ version = "1.1.0"
 description = "Hardware-aware quantum error-correction research toolkit with sparse-blossom MWPM."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Hamid Bahri" }]
 keywords = ["quantum-error-correction", "qec", "surface-code", "mwpm", "pymatching"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
@@ -51,6 +51,7 @@ Issues = "https://github.com/hamidbahri92/Aegis/issues"
 PyPI = "https://pypi.org/project/aegis-qec/"
 
 [project.scripts]
+aegis = "aegis_qec.cli:main"
 aegis-run = "main:main"
 aegis-metrics = "main_metrics:main"
 aegis-threshold = "main_threshold:main"
