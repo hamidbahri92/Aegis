@@ -308,25 +308,25 @@ class DecoderRuntime:
         return self.decode_from_syndromes_uniform(sX, sZ, **kwargs)
 
 
-    def decode_from_dem_text(self, dem_text: str):
-        """Decode directly from a Stim DEM text using PyMatching when available; fallback to Aegis graph path."""
-        try:
-            import pymatching as pm  # optional
-            import stim  # optional
-            self._last_dem_text = dem_text
-            dem = stim.DetectorErrorModel(dem_text)
-            m = pm.Matching.from_detector_error_model(dem)
-            from .decoder_greedy import DecodeResult
-            return DecodeResult(corrections=[], log_likelihood=0.0, matched_to_boundary=[], avg_cost=0.0),                    DecodeResult(corrections=[], log_likelihood=0.0, matched_to_boundary=[], avg_cost=0.0)
-        except Exception:
-            from .stim_adapter import graph_from_dem_text
-            self._last_dem_text = dem_text
-            graph = graph_from_dem_text(dem_text)
-            syn = [0]*len(graph.nodes)
-            return self._decode_with_choice(graph, syn, axis="X"), self._decode_with_choice(graph, syn, axis="Z")
+    def decode_from_dem_text(self, dem_text: str, syndrome=None):
+        """Decode observed detection events against a Stim detector error model.
 
+        A detector error model contains probabilities and detector connectivity,
+        not the observed detection events for a shot. Callers must therefore
+        provide the syndrome explicitly. The returned NumPy vector contains the
+        predicted observable/fault flips from PyMatching sparse blossom.
+        """
+        if syndrome is None:
+            raise ValueError(
+                "A detector error model does not contain an observed syndrome. "
+                "Pass detection-event bits with syndrome=..."
+            )
+        from .decoder_mwpm_pm import PyMatchingMWPMDecoder
 
-    def decode_from_dem_file(self, path: str):
+        self._last_dem_text = dem_text
+        return PyMatchingMWPMDecoder().decode_dem(dem_text, syndrome)
+
+    def decode_from_dem_file(self, path: str, syndrome=None):
         with open(path, "r", encoding="utf-8") as f:
-            txt = f.read()
-        return self.decode_from_dem_text(txt)
+            text = f.read()
+        return self.decode_from_dem_text(text, syndrome=syndrome)
