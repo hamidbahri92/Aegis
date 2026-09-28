@@ -35,7 +35,7 @@ def sweep(
     runtime = DecoderRuntime(cfg, RotatedSurfaceLayout(cfg.distance))
     n_x = len(runtime.builder.node_order("X"))
     n_z = len(runtime.builder.node_order("Z"))
-    from a3d.metrics import apply_correction_and_check_logical
+    from a3d.metrics import correction_chain_is_structurally_valid
 
     results: List[Tuple[float, float]] = []
     latency_samples: List[float] = []
@@ -69,9 +69,7 @@ def sweep(
             )
             latency_samples.append(time.perf_counter() - started)
 
-            valid = apply_correction_and_check_logical(
-                runtime.layout,
-                rounds,
+            valid = correction_chain_is_structurally_valid(
                 graph_x,
                 graph_z,
                 syndrome_x,
@@ -205,6 +203,68 @@ def realtime(
     return out_csv
 
 
+def circuit_acceptance(
+    distance: int = 3,
+    rounds: int = 3,
+    shots: int = 512,
+    physical_error_rate: float = 0.01,
+    seed: int = 1234,
+) -> dict[str, float | int]:
+    """Compare Aegis DEM predictions with raw PyMatching on sampled Stim circuits.
+
+    This is a circuit-level acceptance check for the DEM bridge. It validates
+    detector/observable plumbing and reports logical failures against Stim's
+    sampled observables. It does not validate Aegis's custom graph builder.
+    """
+    try:
+        import stim
+    except ImportError as exc:
+        raise RuntimeError(
+            "Circuit acceptance requires Stim: pip install 'aegis-qec[full]'"
+        ) from exc
+
+    import numpy as np
+    import pymatching
+
+    from a3d.decoder_mwpm_pm import PyMatchingMWPMDecoder
+
+    circuit = stim.Circuit.generated(
+        "surface_code:rotated_memory_x",
+        distance=distance,
+        rounds=rounds,
+        after_clifford_depolarization=physical_error_rate,
+        before_measure_flip_probability=physical_error_rate,
+        after_reset_flip_probability=physical_error_rate,
+    )
+    dem = circuit.detector_error_model(decompose_errors=True)
+    detector_samples, actual_observables = circuit.compile_detector_sampler(
+        seed=seed
+    ).sample(
+        shots=shots,
+        separate_observables=True,
+    )
+
+    raw_matching = pymatching.Matching.from_detector_error_model(dem)
+    raw_predictions = raw_matching.decode_batch(detector_samples)
+    aegis_predictions = PyMatchingMWPMDecoder().decode_dem_batch(
+        str(dem),
+        detector_samples,
+    )
+
+    adapter_mismatches = np.any(raw_predictions != aegis_predictions, axis=1)
+    raw_failures = np.any(raw_predictions != actual_observables, axis=1)
+    aegis_failures = np.any(aegis_predictions != actual_observables, axis=1)
+
+    return {
+        "shots": int(shots),
+        "adapter_mismatch_count": int(np.sum(adapter_mismatches)),
+        "raw_logical_failures": int(np.sum(raw_failures)),
+        "aegis_logical_failures": int(np.sum(aegis_failures)),
+        "raw_logical_error_rate": float(np.mean(raw_failures)),
+        "aegis_logical_error_rate": float(np.mean(aegis_failures)),
+    }
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="aegis-bench",
@@ -212,7 +272,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    sweep_parser = sub.add_parser("sweep", help="Run a logical-rate sweep.")
+    sweep_parser = sub.add_parser("sweep", help="Run a structural correction-chain stress sweep.")
     sweep_parser.add_argument("--decoder", default="mwpm")
     sweep_parser.add_argument("--p", nargs="+", type=float, default=[0.02, 0.06])
     sweep_parser.add_argument("--distance", type=int, default=3)
@@ -241,6 +301,16 @@ def _parser() -> argparse.ArgumentParser:
     realtime_parser.add_argument("--rounds", type=int, default=3)
     realtime_parser.add_argument("--steps", type=int, default=200)
     realtime_parser.add_argument("--out", default="bench_out/realtime_latency.csv")
+
+    acceptance_parser = sub.add_parser(
+        "circuit-acceptance",
+        help="Compare Aegis DEM decoding with raw PyMatching on a Stim surface-code circuit.",
+    )
+    acceptance_parser.add_argument("--distance", type=int, default=3)
+    acceptance_parser.add_argument("--rounds", type=int, default=3)
+    acceptance_parser.add_argument("--shots", type=int, default=512)
+    acceptance_parser.add_argument("--p", type=float, default=0.01)
+    acceptance_parser.add_argument("--seed", type=int, default=1234)
     return parser
 
 
@@ -292,6 +362,26 @@ def main(argv: List[str] | None = None) -> int:
             print(f"{row['metric']}: {float(row['seconds']) * 1000.0:.3f} ms")
         print(f"Results: {out_path}")
         print("This is an Aegis end-to-end measurement, not the upstream PyMatching-vs-NetworkX benchmark.")
+    elif args.cmd == "circuit-acceptance":
+        result = circuit_acceptance(
+            distance=args.distance,
+            rounds=args.rounds,
+            shots=args.shots,
+            physical_error_rate=args.p,
+            seed=args.seed,
+        )
+        print("Aegis QEC circuit-level DEM acceptance")
+        print(f"Shots: {result['shots']}")
+        print(f"Adapter mismatches vs raw PyMatching: {result['adapter_mismatch_count']}")
+        print(
+            "Raw PyMatching logical error rate: "
+            f"{float(result['raw_logical_error_rate']):.6g}"
+        )
+        print(
+            "Aegis DEM logical error rate: "
+            f"{float(result['aegis_logical_error_rate']):.6g}"
+        )
+        return 0 if result["adapter_mismatch_count"] == 0 else 1
     return 0
 
 
