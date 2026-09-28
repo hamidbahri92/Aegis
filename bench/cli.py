@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
 import os
 import random
 import time
 from typing import List, Sequence, Tuple
-
-import math
 
 
 def _percentile(values: Sequence[float], fraction: float) -> float:
