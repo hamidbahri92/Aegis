@@ -114,7 +114,7 @@ def main():
         st.error(f"Could not construct this experiment: {type(exc).__name__}: {exc}")
         return 1
 
-    decode_tab, latency_tab, sweep_tab = st.tabs(["Decode", "Latency", "Logical-rate sweep"])
+    decode_tab, latency_tab, sweep_tab = st.tabs(["Decode", "Latency", "Validation sweep"])
 
     with decode_tab:
         st.write(
@@ -179,14 +179,14 @@ def main():
                 st.error(f"Latency experiment failed: {type(exc).__name__}: {exc}")
 
     with sweep_tab:
-        st.write("Run a small deterministic sweep and inspect the resulting logical-rate table.")
+        st.write("Run a small deterministic sweep and inspect correction-validation failures.")
         probabilities = st.multiselect(
             "Physical error probabilities",
             [0.01, 0.02, 0.04, 0.06, 0.08],
             default=[0.02, 0.06],
         )
         trials = st.slider("Trials per probability", 10, 500, 50, 10, key="sweep_trials")
-        if st.button("Run logical-rate sweep"):
+        if st.button("Run validation sweep"):
             if not probabilities:
                 st.warning("Choose at least one physical error probability.")
             else:
@@ -202,7 +202,7 @@ def main():
                     )
                     st.dataframe(
                         [
-                            {"physical_error_probability": p, "logical_rate": rate}
+                            {"synthetic_event_probability": p, "validation_failure_rate": rate}
                             for p, rate in data
                         ],
                         use_container_width=True,
