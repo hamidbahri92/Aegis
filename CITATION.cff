@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use Aegis QEC in research, please cite this software and the decoder papers used by your experiment."
+title: "Aegis QEC"
+type: software
+authors:
+  - family-names: "Bahri"
+    given-names: "Hamid"
+version: 1.1.0
+license: MIT
+repository-code: "https://github.com/hamidbahri92/Aegis"
+url: "https://pypi.org/project/aegis-qec/"
+abstract: "A hardware-aware quantum error-correction research toolkit with sparse-blossom MWPM, realistic decoder inputs, benchmarking, and Stim interoperability."
+keywords:
+  - quantum error correction
+  - surface code
+  - MWPM
+  - PyMatching

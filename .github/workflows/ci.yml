@@ -1,47 +1,70 @@
-name: CI
+name: aegis-qec-ci
+
 on:
   push:
-  pull_request:
+    branches: [main, master, v13]
+  pull_request: {}
 
 jobs:
   test:
-    name: Tests (Py${{ matrix.python }} · ${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    permissions:
-      contents: read
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
-        python: ["3.9", "3.12"]
-
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.12"]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
-          python-version: ${{ matrix.python }}
-          cache: pip
-      - run: |
-          python -m pip install --upgrade pip
-          pip install -e .[full] --prefer-binary
-          pip install coverage pytest-cov
-      - name: Run tests with coverage
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install ".[full,gui]" pytest ruff
+      - name: Repository defect lint
+        run: python -m ruff check --select F,B .
+      - name: Strict lint for Aegis QEC release surfaces
+        run: >-
+          python -m ruff check
+          a3d/decoder_mwpm.py
+          a3d/decoder_mwpm_pm.py
+          a3d/config.py
+          aegis_qec
+          bench/cli.py
+          gui/app.py
+          scripts/run_gui.py
+          tests/test_cli.py
+          tests/test_mwpm_sparse_blossom.py
+          tests/test_public_namespace.py
+          tests/test_decode_from_dem_optional.py
+      - name: Run tests
+        run: python -m pytest -q
+      - name: Verify production MWPM backend
+        run: python -c "from a3d.decoder_mwpm import MWPMDecoder; assert MWPMDecoder.backend == 'pymatching-sparse-blossom'"
+      - name: Verify user-facing commands
         run: |
-          pytest -q --cov=a3d --cov-report=xml --cov-report=term-missing
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+          aegis --help
+          aegis --version
+          aegis doctor --json
+          aegis demo --distance 3 --rounds 3 --error-probability 0
+          aegis-bench --help
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
-          name: coverage-${{ matrix.os }}-py${{ matrix.python }}
-          path: |
-            coverage.xml
-      - name: Upload out/ artifacts (plots/csv)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: research-outputs-${{ matrix.os }}-py${{ matrix.python }}
-          path: |
-            out/
-      - name: Run pre-commit
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install build twine
+      - name: Build release artifacts
+        run: python -m build
+      - name: Validate package metadata and README rendering
+        run: python -m twine check dist/*
+      - name: Install built wheel
+        run: python -m pip install --force-reinstall dist/*.whl
+      - name: Smoke-test installed package
         run: |
-          pip install pre-commit
-          pre-commit run --all-files
+          aegis --version
+          aegis doctor --json
+          python -c "import aegis_qec; assert aegis_qec.__version__ == '1.1.0'"

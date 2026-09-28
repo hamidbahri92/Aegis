@@ -1,44 +1,68 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "aegis-qec"
-version = "1.0.6"
-description = "Aegis: Hardware-Aware Quantum Error Correction Platform"
+version = "1.1.0"
+description = "Hardware-aware quantum error-correction research toolkit with sparse-blossom MWPM."
 readme = "README.md"
-license = { file = "LICENSE" }
-requires-python = ">=3.9"
-authors = [{ name = "Hamid bahri" }]
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Hamid Bahri" }]
+keywords = ["quantum-error-correction", "qec", "surface-code", "mwpm", "pymatching"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Physics",
+]
 
 dependencies = [
-  "numpy>=1.21",
-  "networkx>=3.0,<4.0",
+  "numpy>=1.21.0",
+  "pymatching>=2.4,<3",
+  "matplotlib>=3.5.0",
 ]
 
 [project.optional-dependencies]
 full = [
-  "matplotlib>=3.5",
-  "pyarrow>=10.0",
-  "pytest>=7.0",
+  "pyarrow>=10.0.0",
+  "stim>=1.16,<2",
 ]
-mwpm = [
-  "networkx>=3.0,<4.0"
+dev = [
+  "build>=1.2",
+  "pytest>=7.0.0",
+  "ruff>=0.6",
+  "stim>=1.16,<2",
+]
+gui = [
+  "streamlit>=1.50",
 ]
 
 [project.urls]
+Homepage = "https://github.com/hamidbahri92/Aegis"
 Repository = "https://github.com/hamidbahri92/Aegis"
+Issues = "https://github.com/hamidbahri92/Aegis/issues"
+PyPI = "https://pypi.org/project/aegis-qec/"
 
 [project.scripts]
+aegis = "aegis_qec.cli:main"
 aegis-run = "main:main"
 aegis-metrics = "main_metrics:main"
 aegis-threshold = "main_threshold:main"
 aegis-export-header = "main_export_header:main"
+aegis-ci = "ci_runner:main"
+aegis-bench = "bench.cli:main"
+aegis-gui = "scripts.run_gui:main"
 
-# ØªØ¶Ù…ÛŒÙ† Ø§ÛŒÙ†Ú©Ù‡ a3d Ø¨Ù‡Ø¹Ù†ÙˆØ§Ù† Ù¾Ú©ÛŒØ¬ Ùˆ Ø§Ø³Ú©Ø±ÛŒÙ¾ØªÙ‡Ø§ÛŒ Ø³Ø·Ø­-Ø±ÛŒØ´Ù‡ Ø¯Ø§Ø®Ù„ wheel Ø¨ÛŒØ§ÛŒÙ†Ø¯
 [tool.setuptools]
-include-package-data = true
-py-modules = ["main", "main_metrics", "main_threshold", "main_export_header"]
+py-modules = ["main", "main_metrics", "main_threshold", "main_export_header", "ci_runner"]
 
 [tool.setuptools.packages.find]
-include = ["a3d*"]
-
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+where = ["."]
+include = ["a3d*", "aegis_qec*", "bench*", "gui*", "scripts*"]

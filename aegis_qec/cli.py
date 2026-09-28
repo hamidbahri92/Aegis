@@ -1,0 +1,206 @@
+from __future__ import annotations
+
+import argparse
+import csv
+import importlib.metadata as metadata
+import json
+import platform
+import random
+import sys
+import time
+from pathlib import Path
+from typing import Any
+
+
+def _distribution_version(name: str) -> str | None:
+    try:
+        return metadata.version(name)
+    except metadata.PackageNotFoundError:
+        return None
+
+
+def _doctor_report() -> dict[str, Any]:
+    report: dict[str, Any] = {
+        "name": "Aegis QEC",
+        "distribution": "aegis-qec",
+        "version": _distribution_version("aegis-qec") or "source-checkout",
+        "python": platform.python_version(),
+        "python_supported": sys.version_info >= (3, 10),
+        "platform": platform.platform(),
+        "backend": None,
+        "pymatching": _distribution_version("pymatching"),
+        "stim": _distribution_version("stim"),
+        "streamlit": _distribution_version("streamlit"),
+        "self_test": "not-run",
+    }
+
+    try:
+        from a3d.decoder_mwpm import MWPMDecoder
+        from a3d.graph import DecodingGraph, Edge
+
+        report["backend"] = MWPMDecoder.backend
+        graph = DecodingGraph(
+            nodes=[0, 1, 2],
+            edges=[
+                Edge(0, 1, 1.0, "space"),
+                Edge(1, 2, 1.0, "space"),
+            ],
+            node_meta={
+                0: ("X", None, 0, "stab"),
+                1: ("X", None, 0, "stab"),
+                2: ("X", None, 0, "stab"),
+            },
+        )
+        result = MWPMDecoder().decode(graph, [1, 0, 1])
+        if result.corrections == graph.edges:
+            report["self_test"] = "pass"
+        else:
+            report["self_test"] = "fail"
+            report["error"] = "Sparse-blossom known-answer test returned an unexpected correction."
+    except Exception as exc:
+        report["self_test"] = "fail"
+        report["error"] = f"{type(exc).__name__}: {exc}"
+
+    return report
+
+
+def _doctor(args: argparse.Namespace) -> int:
+    report = _doctor_report()
+    healthy = (
+        report["python_supported"]
+        and report["backend"] == "pymatching-sparse-blossom"
+        and report["pymatching"] is not None
+        and report["self_test"] == "pass"
+    )
+
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+    else:
+        print(f"Aegis QEC {report['version']}")
+        print(f"Python: {report['python']} ({'supported' if report['python_supported'] else 'unsupported'})")
+        print(f"Platform: {report['platform']}")
+        print(f"MWPM backend: {report['backend'] or 'unavailable'}")
+        print(f"PyMatching: {report['pymatching'] or 'not installed'}")
+        print(f"Stim: {report['stim'] or 'not installed (optional)'}")
+        print(f"Streamlit: {report['streamlit'] or 'not installed (optional GUI)'}")
+        print(f"Decoder self-test: {report['self_test']}")
+        if report.get("error"):
+            print(f"Problem: {report['error']}")
+        if not healthy:
+            print("Run 'python -m pip install -U aegis-qec' to repair the core installation.")
+
+    return 0 if healthy else 1
+
+
+def _demo(args: argparse.Namespace) -> int:
+    from a3d import AegisConfig, DecoderRuntime, RotatedSurfaceLayout
+    from a3d.decoder_mwpm import MWPMDecoder
+
+    cfg = AegisConfig(
+        distance=args.distance,
+        rounds=args.rounds,
+        decoder_type=args.decoder,
+        run_certificate=False,
+    )
+    runtime = DecoderRuntime(cfg, RotatedSurfaceLayout(cfg.distance))
+    n_x = len(runtime.builder.node_order("X"))
+    n_z = len(runtime.builder.node_order("Z"))
+    rng = random.Random(args.seed)
+    syndrome_x = [int(rng.random() < args.error_probability) for _ in range(n_x)]
+    syndrome_z = [int(rng.random() < args.error_probability) for _ in range(n_z)]
+
+    started = time.perf_counter()
+    result_x, result_z = runtime.decode_from_syndromes_uniform(syndrome_x, syndrome_z)
+    elapsed_ms = (time.perf_counter() - started) * 1000.0
+
+    print("Aegis QEC demo")
+    print(f"Backend: {MWPMDecoder.backend}")
+    print(f"Decoder: {args.decoder}; distance: {args.distance}; rounds: {args.rounds}")
+    print(f"Detection events: X={sum(syndrome_x)}, Z={sum(syndrome_z)}")
+    print(f"Correction edges: X={len(result_x.corrections)}, Z={len(result_z.corrections)}")
+    print(f"End-to-end decode time: {elapsed_ms:.3f} ms")
+    return 0
+
+
+def _benchmark(args: argparse.Namespace) -> int:
+    from bench.cli import realtime
+
+    out_path = realtime(
+        decoder=args.decoder,
+        distance=args.distance,
+        rounds=args.rounds,
+        steps=args.steps,
+        out_csv=args.out,
+    )
+
+    rows: dict[str, float] = {}
+    with open(out_path, "r", encoding="utf-8", newline="") as handle:
+        for row in csv.DictReader(handle):
+            rows[row["metric"]] = float(row["seconds"])
+
+    print("Aegis QEC latency benchmark")
+    print(f"Decoder: {args.decoder}; distance: {args.distance}; rounds: {args.rounds}; samples: {args.steps}")
+    for name in ("p50", "p95", "p99"):
+        print(f"{name}: {rows.get(name, 0.0) * 1000.0:.3f} ms")
+    print(f"Results: {Path(out_path).resolve()}")
+    print("These are Aegis end-to-end timings, not the upstream PyMatching-vs-NetworkX benchmark.")
+    return 0
+
+
+def _gui(_: argparse.Namespace) -> int:
+    from scripts.run_gui import main as run_gui
+
+    return int(run_gui())
+
+
+def _parser() -> argparse.ArgumentParser:
+    version = _distribution_version("aegis-qec") or "source-checkout"
+    parser = argparse.ArgumentParser(
+        prog="aegis",
+        description="Aegis QEC: hardware-aware quantum error-correction experiments.",
+    )
+    parser.add_argument("--version", action="version", version=f"Aegis QEC {version}")
+    sub = parser.add_subparsers(dest="command")
+
+    doctor = sub.add_parser("doctor", help="Check the installation and sparse-blossom backend.")
+    doctor.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+    doctor.set_defaults(handler=_doctor)
+
+    demo = sub.add_parser("demo", help="Run a small deterministic decoding experiment.")
+    demo.add_argument("--decoder", default="mwpm", choices=["mwpm", "mwpm2", "mwpm_corr", "uf"])
+    demo.add_argument("--distance", type=int, default=5)
+    demo.add_argument("--rounds", type=int, default=6)
+    demo.add_argument("--error-probability", type=float, default=0.05)
+    demo.add_argument("--seed", type=int, default=123)
+    demo.set_defaults(handler=_demo)
+
+    benchmark = sub.add_parser(
+        "benchmark",
+        aliases=["bench"],
+        help="Measure Aegis end-to-end decoder latency.",
+    )
+    benchmark.add_argument("--decoder", default="mwpm", choices=["mwpm", "mwpm2", "mwpm_corr", "uf"])
+    benchmark.add_argument("--distance", type=int, default=5)
+    benchmark.add_argument("--rounds", type=int, default=6)
+    benchmark.add_argument("--steps", type=int, default=200)
+    benchmark.add_argument("--out", default="bench_out/realtime_latency.csv")
+    benchmark.set_defaults(handler=_benchmark)
+
+    gui = sub.add_parser("gui", help="Launch the optional interactive Streamlit application.")
+    gui.set_defaults(handler=_gui)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = _parser()
+    args = parser.parse_args(argv)
+    handler = getattr(args, "handler", None)
+    if handler is None:
+        parser.print_help()
+        print("\nTry 'aegis doctor' first, then 'aegis demo' or 'aegis gui'.")
+        return 0
+    return int(handler(args))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
