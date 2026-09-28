@@ -58,14 +58,19 @@ class _DSU:
             self.r[ra] += 1
 
 
-def _exact_homology_failure(
+def _correction_spans_opposite_boundaries(
     graph: DecodingGraph, chosen_edges: List[Edge]
 ) -> Tuple[bool, bool]:
-    """
-    Exact spatial homology via side-aware boundaries:
-      - Build per-time components using only SPACE and BOUNDARY edges from corrections.
-      - A horizontal logical exists in time slice t iff a component contains both Left & Right boundaries.
-      - A vertical logical exists in time slice t iff a component contains both Top & Bottom boundaries.
+    """Check whether the correction chain itself spans opposite boundaries.
+
+    This is a structural property of the proposed correction, not a logical-error
+    test. A true logical outcome depends on the homology of the residual chain
+    formed by the physical error process combined with the correction.
+
+    The check is performed per time slice using only spatial and boundary edges:
+      - Build per-time components using only SPACE and BOUNDARY edges.
+      - A horizontal span touches both left and right boundaries in one time slice.
+      - A vertical span touches both top and bottom boundaries in one time slice.
     Time-like edges are ignored (measurement errors only).
     """
     meta = graph.node_meta
@@ -93,8 +98,8 @@ def _exact_homology_failure(
         nodes_seen_per_t[t_u].append(e.v)
         dsu.union(e.u, e.v)
 
-    horiz_fail = False
-    vert_fail = False
+    horiz_span = False
+    vert_span = False
 
     for t, dsu in dsu_per_t.items():
         hmask: Dict[int, int] = {}
@@ -111,14 +116,54 @@ def _exact_homology_failure(
                 vmask[root] = vmask.get(root, 0) | (1 << bit)
 
         if any(mask == 0b11 for mask in hmask.values()):
-            horiz_fail = True
+            horiz_span = True
         if any(mask == 0b11 for mask in vmask.values()):
-            vert_fail = True
+            vert_span = True
 
-        if horiz_fail or vert_fail:
+        if horiz_span or vert_span:
             break
 
-    return horiz_fail, vert_fail
+    return horiz_span, vert_span
+
+
+def _exact_homology_failure(
+    graph: DecodingGraph, chosen_edges: List[Edge]
+) -> Tuple[bool, bool]:
+    """Compatibility alias for the historical private helper.
+
+    Despite the old name, this function only inspects the correction chain. It
+    does not know the sampled physical error chain and therefore cannot establish
+    the logical homology class of the residual error.
+    """
+    return _correction_spans_opposite_boundaries(graph, chosen_edges)
+
+
+def correction_chain_is_structurally_valid(
+    graph_X: DecodingGraph,
+    graph_Z: DecodingGraph,
+    syndromes_X: List[int],
+    syndromes_Z: List[int],
+    chosen_edges_X: List[Edge],
+    chosen_edges_Z: List[Edge],
+) -> bool:
+    """Validate syndrome annihilation and correction-chain boundary topology.
+
+    This is intentionally a structural software check. It is not a logical
+    success test because the physical error chain is not an input.
+    """
+    post_X = _apply_corrections_to_syndrome(graph_X, syndromes_X, chosen_edges_X)
+    post_Z = _apply_corrections_to_syndrome(graph_Z, syndromes_Z, chosen_edges_Z)
+    annihilated = (sum(post_X) == 0) and (sum(post_Z) == 0)
+    if not annihilated:
+        return False
+
+    hz_span_X, vt_span_X = _correction_spans_opposite_boundaries(
+        graph_X, chosen_edges_X
+    )
+    hz_span_Z, vt_span_Z = _correction_spans_opposite_boundaries(
+        graph_Z, chosen_edges_Z
+    )
+    return not (hz_span_X or vt_span_X or hz_span_Z or vt_span_Z)
 
 
 def apply_correction_and_check_logical(
@@ -131,16 +176,20 @@ def apply_correction_and_check_logical(
     chosen_edges_X: List[Edge],
     chosen_edges_Z: List[Edge],
 ) -> bool:
-    post_X = _apply_corrections_to_syndrome(graph_X, syndromes_X, chosen_edges_X)
-    post_Z = _apply_corrections_to_syndrome(graph_Z, syndromes_Z, chosen_edges_Z)
-    annihilated = (sum(post_X) == 0) and (sum(post_Z) == 0)
-    if not annihilated:
-        return False
+    """Compatibility wrapper for the pre-1.2 API.
 
-    hz_fail_X, vt_fail_X = _exact_homology_failure(graph_X, chosen_edges_X)
-    hz_fail_Z, vt_fail_Z = _exact_homology_failure(graph_Z, chosen_edges_Z)
-    any_fail = hz_fail_X or vt_fail_X or hz_fail_Z or vt_fail_Z
-    return not any_fail
+    The historical function name overstates what is measured. The implementation
+    checks correction-chain structure only and does not establish logical success.
+    """
+    _ = layout, rounds
+    return correction_chain_is_structurally_valid(
+        graph_X,
+        graph_Z,
+        syndromes_X,
+        syndromes_Z,
+        chosen_edges_X,
+        chosen_edges_Z,
+    )
 
 
 def _logodds(p: float) -> float:
@@ -190,15 +239,22 @@ def run_trial_with_graphs(
     resX = osd.decode(gX, syndX)
     resZ = osd.decode(gZ, syndZ)
 
-    success = apply_correction_and_check_logical(
-        layout, builder.T, gX, gZ, syndX, syndZ, resX.corrections, resZ.corrections
+    structural_valid = correction_chain_is_structurally_valid(
+        gX,
+        gZ,
+        syndX,
+        syndZ,
+        resX.corrections,
+        resZ.corrections,
     )
     return {
         "distance": layout.d,
         "rounds": builder.T,
         "p": p,
         "seed": seed,
-        "success": int(success),
+        "structural_valid": int(structural_valid),
+        # Historical compatibility field. It is not a logical-success label.
+        "success": int(structural_valid),
         "avg_costX": resX.avg_cost,
         "avg_costZ": resZ.avg_cost,
     }

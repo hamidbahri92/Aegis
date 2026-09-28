@@ -31,7 +31,7 @@ class PyMatchingMWPMDecoder(MWPMDecoder):
         return pymatching.Matching.from_detector_error_model(dem)
 
     def decode_dem(self, dem_text: str, syndrome: Sequence[int]) -> np.ndarray:
-        """Decode explicit DEM detection events and return fault/observable flips."""
+        """Decode one explicit DEM detector shot and return predicted observables."""
         matching = self.matching_from_dem(dem_text)
         shot = np.asarray([int(v) & 1 for v in syndrome], dtype=np.uint8)
         if len(shot) != matching.num_detectors:
@@ -39,6 +39,24 @@ class PyMatchingMWPMDecoder(MWPMDecoder):
                 f"Expected {matching.num_detectors} DEM detector bits, got {len(shot)}"
             )
         return matching.decode(shot)
+
+    def decode_dem_batch(
+        self,
+        dem_text: str,
+        syndromes: Sequence[Sequence[int]],
+    ) -> np.ndarray:
+        """Decode a batch of explicit DEM detector shots with one compiled matcher."""
+        matching = self.matching_from_dem(dem_text)
+        shots = np.asarray(syndromes, dtype=np.uint8)
+        if shots.ndim != 2:
+            raise ValueError("DEM batch must be a 2D array-like of detector shots")
+        shots &= 1
+        if shots.shape[1] != matching.num_detectors:
+            raise ValueError(
+                f"Expected {matching.num_detectors} DEM detector bits per shot, "
+                f"got {shots.shape[1]}"
+            )
+        return matching.decode_batch(shots)
 
     def decode_from_dem(
         self, dem_text: str, syndrome: Sequence[int] | None = None

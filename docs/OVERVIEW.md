@@ -12,7 +12,7 @@ The stable public Python namespace is `aegis_qec`.
 
 The historical implementation namespace `a3d` remains importable for compatibility, but new examples and integrations should prefer `aegis_qec`.
 
-Aegis QEC 1.1 requires Python 3.10 or newer. The release CI matrix validates Linux and Windows on Python 3.10 and 3.12.
+Aegis QEC 1.1 requires Python 3.10 or newer. The release CI matrix validates Linux and Windows on Python 3.10, 3.11, and 3.12.
 
 ## Default decoding path
 
@@ -42,7 +42,7 @@ The older entry points remain available for compatibility and specialized workfl
 
 The graphical workbench is organized around experiments rather than internal implementation names. The application displays the active Aegis and PyMatching versions, the actual MWPM backend, and optional dependency status. Decoder choices explicitly identify the recommended production path and experimental alternatives.
 
-The current workbench offers deterministic decode experiments, latency measurements, and correction-validation sweeps. The validation sweep is not a circuit-level logical-error-rate experiment and is not presented as one.
+The current workbench offers deterministic decode experiments, latency measurements, and structural correction-chain sweeps. The structural sweep checks syndrome annihilation and correction-chain boundary topology; it does not know the physical error chain and is not a logical-error-rate experiment.
 
 ## Stim interoperability
 
@@ -52,13 +52,15 @@ This separation prevents an error model from being mistaken for observed data.
 
 ## Evidence policy
 
-Aegis distinguishes three kinds of performance evidence.
+Aegis separates upstream performance evidence, Aegis latency measurements, structural software stress tests, and circuit-level acceptance evidence.
 
 First, upstream published results belong to the upstream implementation. The greater-than-100,000-times comparison against NetworkX is a PyMatching surface-code benchmark reported by the PyMatching authors.
 
 Second, `aegis benchmark` measures Aegis end-to-end latency for the workload and environment shown by the command.
 
-Third, Aegis correction-validation sweeps are synthetic validation experiments. They should not be described as circuit-level logical-error-rate measurements.
+Third, Aegis structural sweeps are synthetic software stress tests and are not logical-error-rate or threshold measurements.
+
+Fourth, the Stim circuit-acceptance path samples detector events and logical observables from a real generated circuit and verifies that the Aegis DEM bridge reproduces raw PyMatching predictions shot for shot.
 
 See [BENCHMARKING.md](BENCHMARKING.md) for the detailed policy.
 

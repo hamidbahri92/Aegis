@@ -25,10 +25,10 @@ def main():
     except Exception as e:
         print(f"Parquet export skipped: {e}")
 
-    # Simple plot: success rate vs p for each distance
+    # Simple plot: structural validity rate vs p for each distance
     groups = {}
     for r in rows:
-        groups.setdefault((r["distance"], r["p"]), []).append(r["success"])
+        groups.setdefault((r["distance"], r["p"]), []).append(r["structural_valid"])
     fig, ax = plt.subplots(figsize=(6, 4))
     for d in distances:
         xs = []
@@ -40,8 +40,8 @@ def main():
         ax.plot(xs, ys, marker="o", label=f"d={d}")
     ax.set_xscale("log")
     ax.set_xlabel("physical error rate p")
-    ax.set_ylabel("success rate")
-    ax.set_title("Aegis metrics (success rate)")
+    ax.set_ylabel("structural validity rate")
+    ax.set_title("Aegis structural correction validation")
     ax.grid(True, ls="--", alpha=0.4)
     ax.legend()
     fig.tight_layout()

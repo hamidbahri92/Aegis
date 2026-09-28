@@ -11,7 +11,7 @@ The PyPI distribution is `aegis-qec`. The stable public Python namespace is `aeg
 
 ## Install
 
-Aegis QEC 1.1 requires Python 3.10 or newer. Continuous integration validates the supported release surfaces on Linux and Windows with Python 3.10 and 3.12.
+Aegis QEC 1.1 requires Python 3.10 or newer. Continuous integration validates the supported release surfaces on Linux and Windows with Python 3.10, 3.11, and 3.12.
 
 ```bash
 python -m pip install -U aegis-qec
@@ -63,7 +63,7 @@ Launch the interactive workbench:
 aegis gui
 ```
 
-The older commands remain available for compatibility and advanced workflows: `aegis-run`, `aegis-metrics`, `aegis-threshold`, `aegis-export-header`, `aegis-bench`, `aegis-gui`, and `aegis-ci`.
+The older commands remain available for compatibility and advanced workflows: `aegis-run`, `aegis-metrics`, `aegis-threshold`, `aegis-export-header`, `aegis-bench`, `aegis-gui`, and `aegis-ci`. The historical `aegis-threshold` command is a structural stress sweep, not a physical QEC threshold estimator.
 
 ## Python API
 
@@ -99,15 +99,9 @@ pymatching-sparse-blossom
 
 Aegis does not silently replace sparse blossom with the historical NetworkX MWPM implementation.
 
-## About the >100,000× result
+## Performance evidence
 
-The greater-than-100,000-times figure is **not an Aegis-wide performance claim**. It is the result reported for PyMatching's published surface-code benchmark against NetworkX.
-
-Aegis uses that PyMatching implementation, but Aegis end-to-end execution can also include graph construction, result reconstruction, optional reweighting, logging, and other work. When quoting performance, name the workload, code distance, number of rounds, decoder, dependency versions, hardware, and whether the measurement is kernel-only or end-to-end.
-
-See [benchmarking documentation](https://github.com/hamidbahri92/Aegis/blob/main/docs/BENCHMARKING.md) for the evidence policy and benchmark definitions.
-
-Reference: Oscar Higgott and Craig Gidney, *Sparse Blossom: correcting a million errors per core second with minimum-weight matching*, Quantum 9, 1600 (2025), DOI 10.22331/q-2025-01-20-1600.
+Aegis keeps upstream algorithm benchmarks, Aegis end-to-end latency, structural stress tests, and circuit-level logical-error measurements separate. See the [benchmarking documentation](https://github.com/hamidbahri92/Aegis/blob/main/docs/BENCHMARKING.md) for definitions, provenance, and the relevant PyMatching references.
 
 ## Interactive workbench
 
@@ -117,7 +111,15 @@ The Streamlit application is designed around experiments rather than internal cl
 - an end-to-end latency experiment with p50, p95, and p99 measurements;
 - a correction-validation sweep for synthetic detection-event inputs.
 
-The validation sweep is deliberately **not** presented as a circuit-level logical-error-rate measurement. See the benchmarking documentation for the distinction.
+The structural sweep is deliberately **not** presented as a circuit-level logical-error-rate measurement. It checks syndrome annihilation and the topology of the proposed correction chain without access to the sampled physical error chain.
+
+For a real circuit-level acceptance check of the DEM bridge, install the full extra and run:
+
+```bash
+aegis-bench circuit-acceptance --distance 3 --rounds 3 --shots 1000 --p 0.01
+```
+
+This generates a noisy Stim surface-code circuit, samples detector events and logical observables, and requires Aegis DEM predictions to match raw PyMatching exactly on the same shots.
 
 ## Stim and detector error models
 

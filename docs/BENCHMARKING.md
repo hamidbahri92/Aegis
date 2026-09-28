@@ -1,6 +1,6 @@
 # Benchmarking Aegis QEC
 
-Aegis QEC uses several kinds of performance evidence. They answer different questions and must not be quoted as if they were interchangeable.
+Aegis QEC uses several kinds of evidence. They answer different questions and must not be quoted as if they were interchangeable.
 
 ## Upstream PyMatching benchmark
 
@@ -22,17 +22,21 @@ aegis benchmark --decoder mwpm --distance 5 --rounds 6 --steps 1000
 
 The command reports p50, p95, and p99 latency and writes the raw summary to CSV.
 
-When publishing or comparing these measurements, report at least the Aegis version, PyMatching version, Python version, operating system, CPU, decoder, code distance, number of rounds, sample count, and whether any optional reweighting or polishing was enabled.
+When publishing or comparing these measurements, report at least the Aegis version, PyMatching version, Python version, operating system, CPU, decoder, code distance, number of rounds, sample count, and whether optional reweighting or polishing was enabled.
 
 These timings should be described as **Aegis end-to-end latency**, not as a reproduction of PyMatching's NetworkX comparison.
 
-## Correction-validation sweep
+## Structural correction-chain stress sweep
 
-`aegis-bench sweep` generates deterministic synthetic detection-event patterns and checks whether the produced correction satisfies Aegis's correction-validation rules.
+`aegis-bench sweep` generates deterministic synthetic detector-bit patterns and runs the selected Aegis decoder.
 
-Its CSV column is named `validation_failure_rate`.
+The structural check has exactly two parts. First, it applies the proposed correction edges to the supplied syndrome and requires all detector defects to be annihilated. Second, it checks whether the **correction chain itself** contains a spatial component touching opposite side-aware boundaries in one time slice.
 
-This experiment is useful for software regression testing and comparing decoder behavior under a controlled synthetic input generator. It is **not** a circuit-level logical-error-rate measurement because the synthetic event generator does not model a complete quantum circuit, decoded observables, and residual physical error chain.
+That second check is not the homology of the physical residual error. The function does not receive the sampled physical error chain, so it cannot form error-plus-correction and cannot determine logical success. The synthetic detector bits are also not sampled from a complete quantum circuit.
+
+For compatibility, CSV output retains `validation_failure_rate`. New output also includes the explicit name `structural_validation_failure_rate`.
+
+This sweep is useful as a software stress test for graph construction, decoder behavior, syndrome annihilation, and correction mapping. It is **not** a circuit-level logical-error-rate measurement and it is **not** a threshold estimate.
 
 Example:
 
@@ -40,24 +44,47 @@ Example:
 aegis-bench sweep --decoder mwpm --p 0.01 0.02 0.04 --distance 5 --rounds 6 --trials 200
 ```
 
-## Circuit-level logical-error studies
+The historical `aegis-threshold` command uses related structural machinery. Its name is retained for compatibility, but its output must not be cited as a QEC threshold.
 
-A publishable circuit-level logical-error-rate study should define a physical circuit or detector error model, sample observed detector events and logical observables, decode those observations, and compare predicted observables against ground truth.
+## Circuit-level DEM acceptance
 
-Aegis already includes Stim/DEM interoperability, but the current convenience sweep command is deliberately not labeled as this stronger experiment.
+`aegis-bench circuit-acceptance` generates a noisy rotated surface-code memory circuit with Stim, samples detector events and the corresponding logical observables, and decodes the exact same detector shots through two paths:
+
+1. a raw `pymatching.Matching` constructed directly from the Stim detector error model;
+2. Aegis's `PyMatchingMWPMDecoder` DEM bridge.
+
+Example:
+
+```bash
+aegis-bench circuit-acceptance --distance 3 --rounds 3 --shots 1000 --p 0.01
+```
+
+The acceptance check reports the number of shot-by-shot prediction mismatches between Aegis and raw PyMatching and reports each path's logical-error rate against Stim's sampled logical observables.
+
+A zero adapter-mismatch count establishes that Aegis's DEM input/output plumbing preserves PyMatching's predictions for that sampled circuit and workload. It does **not** validate Aegis's custom decoding-graph builder because the DEM path delegates graph construction to PyMatching.
+
+## Custom graph-adapter acceptance
+
+The unit suite separately cross-checks the Aegis graph adapter against PyMatching's independent `decode_to_edges_array` output. Aegis's fault-ID-derived correction edges are normalized back into detector-edge pairs and compared with PyMatching's decoded edge solution, including virtual-boundary edges.
+
+This test is designed to catch a class of bugs where sparse blossom finds the right matching but Aegis maps returned fault IDs back to the wrong Aegis `Edge` objects.
+
+## What is still missing
+
+The most important scientific benchmark still missing is a hardware-aware advantage experiment. It should use a circuit or error model with known non-uniform, erasure, leakage, or calibrated noise; compare a plain baseline against Aegis's hardware-aware weighting under the same sampled shots; and report logical observables with uncertainty.
+
+Until such an experiment exists, calibrated weighting, leakage handling, learned reweighting, and related research paths should be treated as capabilities under evaluation rather than demonstrated improvements over plain Stim plus PyMatching.
 
 ## Reproducibility rules
 
-Performance reports should keep the following boundaries explicit.
-
 Do not use the upstream greater-than-100,000-times result as an Aegis end-to-end number.
 
-Do not call the correction-validation sweep a circuit-level logical-error-rate benchmark.
+Do not call the structural stress sweep a circuit-level logical-error-rate benchmark or a threshold estimate.
 
 Do not compare two latency numbers without identifying the workload and timed region.
 
-Do record dependency versions and hardware.
+Do record dependency versions, random seeds, circuit parameters, and hardware.
 
-Do preserve the random seed or input corpus when a benchmark uses generated data.
+Do preserve the input corpus or generation procedure when a benchmark uses generated data.
 
 These rules are part of the Aegis QEC evidence policy, not merely documentation style.
