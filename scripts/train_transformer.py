@@ -17,11 +17,6 @@ from a3d.reweight_transformer import _TinyEdgeTransformer  # type: ignore
 def _make_batch(cfg) -> List[float]:
     lay = RotatedSurfaceLayout(cfg.distance)
     rt = DecoderRuntime(cfg, lay)
-    nX = len(rt.builder.node_order("X"))
-    import random
-    random.seed(123)
-    sX = [1 if random.random()<0.05 else 0 for _ in range(nX)]
-    sZ = [0]*len(rt.builder.node_order("Z"))
     w_space_X, w_time_X, p_erase_X = rt._weight_dicts_from_cfg("X")
     g = rt.builder.build("X", w_space_X, w_time_X, p_erase_X)
     # Super simple target: 1.0 for time edges, else 0.0 (placeholder signal)
