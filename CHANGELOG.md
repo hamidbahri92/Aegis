@@ -18,6 +18,10 @@ Python 3.11 is now included in the hosted CI matrix alongside 3.10 and 3.12.
 
 The stale pre-1.1 Dependabot pull requests were closed as superseded.
 
+A controlled non-uniform calibration benchmark now compares uniform and correctly calibrated MWPM weights on identical sampled physical error chains with exact residual-chain homology in the benchmark graph. The result is explicitly scoped as graph-level evidence, not a claim that device calibration ingestion is already end to end.
+
+The historical `trial_error_rate` helper is now documented and deprecated as a synthetic decoder smoke proxy rather than a logical-error-rate estimator.
+
 ## 1.1.0 — 2026-09-28
 
 ### Behavior changes and migration note
