@@ -69,8 +69,8 @@ def _correction_spans_opposite_boundaries(
 
     The check is performed per time slice using only spatial and boundary edges:
       - Build per-time components using only SPACE and BOUNDARY edges from corrections.
-      - A horizontal logical exists in time slice t iff a component contains both Left & Right boundaries.
-      - A vertical logical exists in time slice t iff a component contains both Top & Bottom boundaries.
+      - A horizontal spanning component exists in time slice t iff it contains both left and right boundaries.
+      - A vertical spanning component exists in time slice t iff it contains both top and bottom boundaries.
     Time-like edges are ignored (measurement errors only).
     """
     meta = graph.node_meta
@@ -98,8 +98,8 @@ def _correction_spans_opposite_boundaries(
         nodes_seen_per_t[t_u].append(e.v)
         dsu.union(e.u, e.v)
 
-    horiz_fail = False
-    vert_fail = False
+    horiz_span = False
+    vert_span = False
 
     for t, dsu in dsu_per_t.items():
         hmask: Dict[int, int] = {}
@@ -116,14 +116,14 @@ def _correction_spans_opposite_boundaries(
                 vmask[root] = vmask.get(root, 0) | (1 << bit)
 
         if any(mask == 0b11 for mask in hmask.values()):
-            horiz_fail = True
+            horiz_span = True
         if any(mask == 0b11 for mask in vmask.values()):
-            vert_fail = True
+            vert_span = True
 
-        if horiz_fail or vert_fail:
+        if horiz_span or vert_span:
             break
 
-    return horiz_fail, vert_fail
+    return horiz_span, vert_span
 
 
 def _exact_homology_failure(
