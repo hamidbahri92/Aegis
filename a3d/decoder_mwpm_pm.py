@@ -1,53 +1,51 @@
-
-# FILE: a3d/decoder_mwpm_pm.py
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Sequence
 
-from .decoder_greedy import DecodeResult
+import numpy as np
+import pymatching
+
+from .decoder_mwpm import MWPMDecoder
 
 
-class PyMatchingMWPMDecoder:
-    """Run MWPM via PyMatching on a Stim DEM string.
+class PyMatchingMWPMDecoder(MWPMDecoder):
+    """Compatibility wrapper for PyMatching-backed graph and DEM decoding.
 
-    This decoder is only used when a DEM is provided (interop path).
+    The ordinary MWPMDecoder already uses PyMatching sparse blossom. This
+    class remains for callers that imported the historical adapter directly.
     """
-    def __init__(self):
-        try:
-            import pymatching as pm  # type: ignore
-            import stim  # type: ignore
-            self.pm = pm
-            self.stim = stim
-            self.ok = True
-        except Exception:
-            self.pm = None
-            self.stim = None
-            self.ok = False
-
-    def decode_from_dem(self, dem_text: str) -> Tuple[DecodeResult, DecodeResult]:
-        if not self.ok:
-            # fallback empty result
-            return DecodeResult([], 0.0, [], 0.0), DecodeResult([], 0.0, [], 0.0)
-        dem = self.stim.DetectorErrorModel(dem_text)
-        m = self.pm.Matching.from_detector_error_model(dem)
-        # Without a real-time syndrome stream, return empty corrections placeholder.
-        # Integrators can extend this path to feed measured syndromes to m.decode().
-        return DecodeResult([], 0.0, [], 0.0), DecodeResult([], 0.0, [], 0.0)
-
 
     def decode_graph(self, graph, syndromes):
-        """Export graph to DEM, build PyMatching, and decode the given syndrome."""
-        if not self.ok:
-            return DecodeResult([], 0.0, [], 0.0)
-        from .dem_export import graph_to_dem_text
-        dem_txt = graph_to_dem_text(graph)
-        dem = self.stim.DetectorErrorModel(dem_txt)
-        m = self.pm.Matching.from_detector_error_model(dem)
-        # Expect syndromes length >= number of detectors
-        syn = [int(x) for x in syndromes[: dem.num_detectors ]]
+        return self.decode(graph, syndromes)
+
+    @staticmethod
+    def matching_from_dem(dem_text: str) -> pymatching.Matching:
         try:
-            _ = m.decode(syn)  # PyMatching returns observables flips; we ignore mapping here
-        except Exception:
-            pass
-        # We don't have a direct mapping back to correction edges; return cost proxy
-        return DecodeResult([], 0.0, [], 0.0)
+            import stim
+        except ImportError as exc:  # pragma: no cover - optional extra
+            raise RuntimeError(
+                "Stim DEM support requires the optional dependency: "
+                "pip install 'aegis-qec[full]'"
+            ) from exc
+        dem = stim.DetectorErrorModel(dem_text)
+        return pymatching.Matching.from_detector_error_model(dem)
+
+    def decode_dem(self, dem_text: str, syndrome: Sequence[int]) -> np.ndarray:
+        """Decode explicit DEM detection events and return fault/observable flips."""
+        matching = self.matching_from_dem(dem_text)
+        shot = np.asarray([int(v) & 1 for v in syndrome], dtype=np.uint8)
+        if len(shot) != matching.num_detectors:
+            raise ValueError(
+                f"Expected {matching.num_detectors} DEM detector bits, got {len(shot)}"
+            )
+        return matching.decode(shot)
+
+    def decode_from_dem(
+        self, dem_text: str, syndrome: Sequence[int] | None = None
+    ):
+        if syndrome is None:
+            raise ValueError(
+                "A detector error model does not contain an observed syndrome. "
+                "Pass the detection-event bits as syndrome=..."
+            )
+        return self.decode_dem(dem_text, syndrome)
