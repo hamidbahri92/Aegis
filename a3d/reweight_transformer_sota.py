@@ -10,13 +10,15 @@ try:
 except Exception:
     TORCH_OK=False
     torch=None
-    nn=object  # type: ignore
+    nn = None  # type: ignore[assignment]
+
+_ModuleBase = nn.Module if TORCH_OK else object
 
 from .graph import DecodingGraph
 from .stats import effective_cost_from_edge
 
 
-class SwiGLU(nn.Module):  # type: ignore[misc]
+class SwiGLU(_ModuleBase):
     def __init__(self, d: int, mult: int = 4):
         super().__init__()
         self.w1 = nn.Linear(d, mult*d)
@@ -26,7 +28,7 @@ class SwiGLU(nn.Module):  # type: ignore[misc]
     def forward(self, x):
         return self.w3(self.act(self.w1(x)) * self.w2(x))
 
-class Block(nn.Module):  # type: ignore[misc]
+class Block(_ModuleBase):
     def __init__(self, d: int, heads: int):
         super().__init__()
         self.norm1 = nn.LayerNorm(d)
@@ -43,7 +45,7 @@ class Block(nn.Module):  # type: ignore[misc]
         x = self.ff(x) + h
         return x
 
-class SotaEdgeTransformer(nn.Module):  # type: ignore[misc]
+class SotaEdgeTransformer(_ModuleBase):
     def __init__(self, d_model: int = 64, heads: int = 8, layers: int = 4, in_dim: int = 10):
         super().__init__()
         self.enc = nn.Linear(in_dim, d_model)
