@@ -76,10 +76,18 @@ aegis-run
 aegis-metrics
 aegis-threshold
 aegis-export-header
+aegis-bench --help
+aegis-gui
 aegis-ci
 ```
 
-For repository benchmarks, run `python -m bench.cli ...` from a source checkout. The Streamlit dashboard is launched from a checkout with `python -m scripts.run_gui` after installing the GUI dependencies.
+For a quick latency run:
+
+```bash
+aegis-bench realtime --decoder mwpm --distance 5 --rounds 6 --steps 200
+```
+
+The dashboard is optional and installs with `pip install "aegis-qec[gui]"`.
 
 ## Correctness and performance policy
 
