@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import warnings
 from typing import Dict, List, Optional, Tuple
 
 try:
@@ -27,8 +28,21 @@ def _parse_error(line: str) -> Tuple[float, List[str]]:
     rest = m.group(2).split()
     return p, rest
 
-def graph_from_dem_text(dem_text: str) -> DecodingGraph:
-    """Convert a Stim Detector Error Model (DEM) text into a DecodingGraph.
+def graph_from_dem_text_approximate(dem_text: str) -> DecodingGraph:
+    """Approximately project a narrow DEM-text subset into an Aegis graph.
+
+    This legacy helper is not a faithful Stim DEM parser. In particular, the
+    simplified Aegis DecodingGraph cannot represent arbitrary DEM hyperedges,
+    repeat blocks, observable structure, or Stim detector-shift semantics without
+    loss. The internal grouping counter used below is only a legacy structural
+    grouping index; it must not be interpreted as physical time.
+
+    For production DEM decoding, use PyMatchingMWPMDecoder, which delegates the
+    detector error model directly to Stim and PyMatching.
+
+    Historical behavior follows below.
+
+    Convert a Stim Detector Error Model (DEM) text into a DecodingGraph.
 
     Supported:
       - error(p) tokens: D# (detectors), L# (observables)
@@ -128,6 +142,30 @@ def graph_from_dem_text(dem_text: str) -> DecodingGraph:
 
     return DecodingGraph(nodes=nodes, edges=edges, node_meta=node_meta)
 
+def graph_from_dem_text(dem_text: str) -> DecodingGraph:
+    """Deprecated compatibility wrapper for the approximate legacy projection."""
+    warnings.warn(
+        "graph_from_dem_text is an approximate legacy projection, not a faithful "
+        "Stim DEM parser. Use PyMatchingMWPMDecoder for production DEM decoding, "
+        "or graph_from_dem_text_approximate only when the lossy projection is "
+        "explicitly intended.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return graph_from_dem_text_approximate(dem_text)
+
+
+def graph_from_dem_file_approximate(path: str) -> DecodingGraph:
+    with open(path, "r", encoding="utf-8") as handle:
+        return graph_from_dem_text_approximate(handle.read())
+
+
 def graph_from_dem_file(path: str) -> DecodingGraph:
-    with open(path, "r", encoding="utf-8") as f:
-        return graph_from_dem_text(f.read())
+    """Deprecated compatibility wrapper for the approximate legacy projection."""
+    warnings.warn(
+        "graph_from_dem_file is an approximate legacy projection, not a faithful "
+        "Stim DEM parser. Use PyMatchingMWPMDecoder for production DEM decoding.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return graph_from_dem_file_approximate(path)
