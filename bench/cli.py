@@ -35,8 +35,26 @@ def sweep(
     runtime = DecoderRuntime(cfg, RotatedSurfaceLayout(cfg.distance))
     n_x = len(runtime.builder.node_order("X"))
     n_z = len(runtime.builder.node_order("Z"))
+    from a3d.metrics import apply_correction_and_check_logical
+
     results: List[Tuple[float, float]] = []
     latency_samples: List[float] = []
+
+    order_x = runtime.builder.node_order("X")
+    order_z = runtime.builder.node_order("Z")
+    last_round = rounds - 1
+    graph_x = runtime.builder.build(
+        "X",
+        {(coord, t): 1.0 for coord, t in order_x},
+        {(coord, t): 1.0 for coord, t in order_x if t < last_round},
+        {(coord, t): 0.0 for coord, t in order_x if t < last_round},
+    )
+    graph_z = runtime.builder.build(
+        "Z",
+        {(coord, t): 1.0 for coord, t in order_z},
+        {(coord, t): 1.0 for coord, t in order_z if t < last_round},
+        {(coord, t): 0.0 for coord, t in order_z if t < last_round},
+    )
 
     for physical_p in ps:
         failures = 0
@@ -51,12 +69,19 @@ def sweep(
             )
             latency_samples.append(time.perf_counter() - started)
 
-            if result_x.avg_cost <= 0 and sum(syndrome_x) > 0:
-                failures += 1
-            if result_z.avg_cost <= 0 and sum(syndrome_z) > 0:
-                failures += 1
+            valid = apply_correction_and_check_logical(
+                runtime.layout,
+                rounds,
+                graph_x,
+                graph_z,
+                syndrome_x,
+                syndrome_z,
+                result_x.corrections,
+                result_z.corrections,
+            )
+            failures += int(not valid)
 
-        results.append((physical_p, failures / max(1, 2 * trials)))
+        results.append((physical_p, failures / max(1, trials)))
 
     if latency_out and latency_samples:
         os.makedirs(os.path.dirname(latency_out) or ".", exist_ok=True)
@@ -76,7 +101,7 @@ def sweep(
         os.makedirs(os.path.dirname(out_csv) or ".", exist_ok=True)
         with open(out_csv, "w", newline="", encoding="utf-8") as handle:
             writer = csv.writer(handle)
-            writer.writerow(["p", "logical_rate"])
+            writer.writerow(["p", "validation_failure_rate"])
             writer.writerows(results)
 
     return results
@@ -109,7 +134,7 @@ def autobench(
     os.makedirs(os.path.dirname(out_csv) or ".", exist_ok=True)
     with open(out_csv, "w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
-        writer.writerow(["decoder", "p", "logical_rate"])
+        writer.writerow(["decoder", "p", "validation_failure_rate"])
         writer.writerows(rows)
     return out_csv
 
@@ -131,14 +156,15 @@ def plot(in_csv: str, out_png: str | None = None) -> str:
         rows = [row for row in rows if row["decoder"] == first_decoder]
 
     for row in rows:
-        if "p" in row and "logical_rate" in row:
+        rate_key = "validation_failure_rate" if "validation_failure_rate" in row else "logical_rate"
+        if "p" in row and rate_key in row:
             xs.append(float(row["p"]))
-            ys.append(float(row["logical_rate"]))
+            ys.append(float(row[rate_key]))
 
     plt.figure()
     plt.plot(xs, ys, marker="o")
     plt.xlabel("p")
-    plt.ylabel("logical error rate")
+    plt.ylabel("correction validation failure rate")
 
     if not out_png:
         out_png = os.path.splitext(in_csv)[0] + ".png"
@@ -234,7 +260,7 @@ def main(argv: List[str] | None = None) -> int:
         )
         print(f"Aegis QEC sweep complete with {len(results)} probability points.")
         for physical_p, logical_rate in results:
-            print(f"p={physical_p:.6g} logical_rate={logical_rate:.6g}")
+            print(f"p={physical_p:.6g} validation_failure_rate={logical_rate:.6g}")
         print(f"Results: {args.out}")
         print(f"Latency summary: {args.latency_out}")
     elif args.cmd == "autobench":
