@@ -54,10 +54,12 @@ aegis-metrics = "main_metrics:main"
 aegis-threshold = "main_threshold:main"
 aegis-export-header = "main_export_header:main"
 aegis-ci = "ci_runner:main"
+aegis-bench = "bench.cli:main"
+aegis-gui = "scripts.run_gui:main"
 
 [tool.setuptools]
 py-modules = ["main", "main_metrics", "main_threshold", "main_export_header", "ci_runner"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["a3d*", "aegis_qec*"]
+include = ["a3d*", "aegis_qec*", "bench*", "gui*", "scripts*"]
