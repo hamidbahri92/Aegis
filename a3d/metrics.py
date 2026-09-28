@@ -68,9 +68,9 @@ def _correction_spans_opposite_boundaries(
     formed by the physical error process combined with the correction.
 
     The check is performed per time slice using only spatial and boundary edges:
-      - Build per-time components using only SPACE and BOUNDARY edges from corrections.
-      - A horizontal spanning component exists in time slice t iff it contains both left and right boundaries.
-      - A vertical spanning component exists in time slice t iff it contains both top and bottom boundaries.
+      - Build per-time components using only SPACE and BOUNDARY edges.
+      - A horizontal span touches both left and right boundaries in one time slice.
+      - A vertical span touches both top and bottom boundaries in one time slice.
     Time-like edges are ignored (measurement errors only).
     """
     meta = graph.node_meta
