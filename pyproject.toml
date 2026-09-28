@@ -39,7 +39,8 @@ dev = [
   "stim>=1.16,<2",
 ]
 gui = [
-  "streamlit>=1.35",
+  "streamlit>=1.35,<1.50; python_version < '3.10'",
+  "streamlit>=1.50; python_version >= '3.10'",
 ]
 
 [project.urls]
