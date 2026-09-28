@@ -214,3 +214,6 @@ out/
 *.py[cod]
 *.pyd
 *.pyo
+
+# Local experimental model checkpoints
+*.pt
