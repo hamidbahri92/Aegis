@@ -50,7 +50,9 @@ This mechanism is disabled by default in version 1.1. Experiments that enable it
 
 A detector error model is an error model, not an observed shot. Aegis therefore requires explicit observed detection-event bits when decoding a Stim DEM.
 
-`PyMatchingMWPMDecoder.decode_from_dem` raises an error if the syndrome argument is omitted. This prevents the historical placeholder behavior in which a DEM could be treated as if it were observed detector data.
+`PyMatchingMWPMDecoder.decode_from_dem` raises an error if the syndrome argument is omitted. Production DEM decoding delegates the full detector error model to Stim and PyMatching instead of reparsing it into Aegis's simplified graph schema.
+
+The older `a3d.stim_adapter.graph_from_dem_text` helper is deprecated. Its replacement name, `graph_from_dem_text_approximate`, makes its scope explicit: it is a lossy structural projection for legacy experiments, not a faithful Stim DEM parser. Arbitrary DEM hyperedges, repeat blocks, observable structure, and detector-shift semantics cannot be preserved by that simplified projection.
 
 ## Performance claims
 
