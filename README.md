@@ -11,7 +11,7 @@ The PyPI distribution is `aegis-qec`. The stable public Python namespace is `aeg
 
 ## Install
 
-Aegis QEC 1.1 requires Python 3.10 or newer. Continuous integration validates the supported release surfaces on Linux and Windows with Python 3.10 and 3.12.
+Aegis QEC 1.1 requires Python 3.10 or newer. Continuous integration validates the supported release surfaces on Linux and Windows with Python 3.10, 3.11, and 3.12.
 
 ```bash
 python -m pip install -U aegis-qec
