@@ -33,6 +33,7 @@ jobs:
           gui/app.py
           scripts/run_gui.py
           tests/test_cli.py
+          tests/test_calibration_advantage.py
           tests/test_circuit_acceptance.py
           tests/test_mwpm_sparse_blossom.py
           tests/test_public_namespace.py
@@ -49,6 +50,7 @@ jobs:
           aegis demo --distance 3 --rounds 3 --error-probability 0
           aegis-bench --help
           aegis-bench circuit-acceptance --distance 3 --rounds 3 --shots 32 --p 0.02 --seed 1234
+          aegis-bench calibration-advantage --shots 2000 --seed 20260928 --out-json bench_out/calibration_advantage.json --plot bench_out/calibration_advantage.png
 
   package:
     runs-on: ubuntu-latest

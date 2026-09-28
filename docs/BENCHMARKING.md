@@ -69,11 +69,29 @@ The unit suite separately cross-checks the Aegis graph adapter against PyMatchin
 
 This test is designed to catch a class of bugs where sparse blossom finds the right matching but Aegis maps returned fault IDs back to the wrong Aegis `Edge` objects.
 
+## Controlled calibration-advantage experiment
+
+`aegis-bench calibration-advantage` is a deliberately small graph-level experiment designed to answer one narrow question: does supplying correct non-uniform edge probabilities change the logical outcome when the noise is genuinely non-uniform?
+
+The model contains two detector nodes between opposite boundaries. A single middle-edge error and a pair of boundary-edge errors produce the same detector syndrome, but the two physical error chains differ by a boundary-to-boundary logical path. This makes the residual chain, physical error XOR correction, an exact ground-truth logical test for this model.
+
+The default experiment uses boundary-edge error probabilities of 0.18 and a middle-edge probability of 0.01. The uniform baseline receives the global average probability on every edge. The calibrated decoder receives the actual edge probabilities. Both decoders process exactly the same sampled physical error chains.
+
+Example:
+
+```bash
+aegis-bench calibration-advantage --shots 10000 --seed 20260928 --out-json bench_out/calibration.json --plot bench_out/calibration.png
+```
+
+The command reports graph-level logical failure rates with Wilson ninety-five-percent confidence intervals, paired discordant failure counts, an exact two-sided paired-binomial p-value, relative reduction, and the uniform-to-calibrated failure ratio. The implementation also reports analytically expected failure rates for this three-edge model so the Monte Carlo result can be checked against a closed-form reference. Optional JSON and PNG outputs make the evidence reproducible and easy to plot.
+
+This experiment proves that Aegis's non-uniform graph-weight plumbing can improve decoding when the supplied calibration is informative. It does **not** prove that Aegis currently converts IBM or other device calibration records into correct surface-code edge probabilities. The current hardware interface can acquire calibration-like arrays, while the production runtime still requires graph weights to be supplied through its weight dictionaries. Building and validating that calibration-to-decoding-graph mapping remains separate work.
+
 ## What is still missing
 
-The most important scientific benchmark still missing is a hardware-aware advantage experiment. It should use a circuit or error model with known non-uniform, erasure, leakage, or calibrated noise; compare a plain baseline against Aegis's hardware-aware weighting under the same sampled shots; and report logical observables with uncertainty.
+The controlled graph experiment now demonstrates that correct non-uniform weights can beat a uniform baseline in a model with exact residual-chain ground truth. What is still missing is the stronger hardware claim: a validated mapping from real device calibration or a realistic circuit-level non-uniform noise model into Aegis graph weights, followed by logical-observable comparisons against an appropriate baseline.
 
-Until such an experiment exists, calibrated weighting, leakage handling, learned reweighting, and related research paths should be treated as capabilities under evaluation rather than demonstrated improvements over plain Stim plus PyMatching.
+Until that end-to-end calibration mapping is validated, IBM calibration ingestion, leakage handling, learned reweighting, and related research paths should be treated as capabilities under evaluation rather than demonstrated device-level improvements over plain Stim plus PyMatching.
 
 ## Reproducibility rules
 
