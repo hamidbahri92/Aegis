@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from bench.cli import calibration_advantage
+from bench.cli import calibration_advantage, write_calibration_artifacts
 
 
-def test_calibrated_weights_reduce_failures_under_nonuniform_noise():
+def test_calibrated_weights_reduce_failures_under_nonuniform_noise(tmp_path):
     result = calibration_advantage(
         shots=12000,
         seed=20260928,
@@ -22,3 +22,14 @@ def test_calibrated_weights_reduce_failures_under_nonuniform_noise():
     )
     assert abs(uniform_rate - float(result["expected_uniform_rate"])) < 0.01
     assert abs(calibrated_rate - float(result["expected_calibrated_rate"])) < 0.005
+    assert float(result["paired_exact_p_value"]) < 1e-4
+
+    json_path = tmp_path / "calibration.json"
+    plot_path = tmp_path / "calibration.png"
+    write_calibration_artifacts(
+        result,
+        json_path=str(json_path),
+        plot_path=str(plot_path),
+    )
+    assert json_path.exists() and json_path.stat().st_size > 0
+    assert plot_path.exists() and plot_path.stat().st_size > 0
