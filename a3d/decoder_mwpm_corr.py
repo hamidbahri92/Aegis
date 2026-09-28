@@ -57,7 +57,7 @@ class CorrelationMWPMDecoder:
         else:
             deltas = [self.alpha * _motif_score(graph, i, adj) for i in range(len(graph.edges))]
         # Apply costs in-place
-        for e, base, d in zip(graph.edges, costs, deltas):
+        for e, base, d in zip(graph.edges, costs, deltas, strict=True):
             new_c = max(1e-6, base + d)
             object.__setattr__(e, "weight", float(new_c))
         # Run MWPM
