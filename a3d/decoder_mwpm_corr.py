@@ -31,7 +31,7 @@ def _motif_score(graph: DecodingGraph, edge_index: int, adj) -> float:
             if w == u or w == v:
                 continue
             # look for a neighbor edge type different than current one
-            for j, ej in enumerate(graph.edges):
+            for ej in graph.edges:
                 if (ej.u==u and ej.v==w) or (ej.u==v and ej.v==w):
                     if ej.etype != typ and ej.etype in ("time","space"):
                         score -= 0.05  # encourage mixed motifs
