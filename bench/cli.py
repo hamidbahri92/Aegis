@@ -99,8 +99,16 @@ def sweep(
         os.makedirs(os.path.dirname(out_csv) or ".", exist_ok=True)
         with open(out_csv, "w", newline="", encoding="utf-8") as handle:
             writer = csv.writer(handle)
-            writer.writerow(["p", "validation_failure_rate"])
-            writer.writerows(results)
+            writer.writerow(
+                [
+                    "p",
+                    "structural_validation_failure_rate",
+                    "validation_failure_rate",
+                ]
+            )
+            writer.writerows(
+                (physical_p, rate, rate) for physical_p, rate in results
+            )
 
     return results
 
@@ -132,8 +140,18 @@ def autobench(
     os.makedirs(os.path.dirname(out_csv) or ".", exist_ok=True)
     with open(out_csv, "w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
-        writer.writerow(["decoder", "p", "validation_failure_rate"])
-        writer.writerows(rows)
+        writer.writerow(
+            [
+                "decoder",
+                "p",
+                "structural_validation_failure_rate",
+                "validation_failure_rate",
+            ]
+        )
+        writer.writerows(
+            (decoder, physical_p, rate, rate)
+            for decoder, physical_p, rate in rows
+        )
     return out_csv
 
 
@@ -154,7 +172,12 @@ def plot(in_csv: str, out_png: str | None = None) -> str:
         rows = [row for row in rows if row["decoder"] == first_decoder]
 
     for row in rows:
-        rate_key = "validation_failure_rate" if "validation_failure_rate" in row else "logical_rate"
+        if "structural_validation_failure_rate" in row:
+            rate_key = "structural_validation_failure_rate"
+        elif "validation_failure_rate" in row:
+            rate_key = "validation_failure_rate"
+        else:
+            rate_key = "logical_rate"
         if "p" in row and rate_key in row:
             xs.append(float(row["p"]))
             ys.append(float(row[rate_key]))
@@ -330,7 +353,7 @@ def main(argv: List[str] | None = None) -> int:
         )
         print(f"Aegis QEC sweep complete with {len(results)} probability points.")
         for physical_p, logical_rate in results:
-            print(f"p={physical_p:.6g} validation_failure_rate={logical_rate:.6g}")
+            print(f"p={physical_p:.6g} structural_validation_failure_rate={logical_rate:.6g}")
         print(f"Results: {args.out}")
         print(f"Latency summary: {args.latency_out}")
     elif args.cmd == "autobench":
