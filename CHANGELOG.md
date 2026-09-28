@@ -2,7 +2,29 @@
 
 All notable user-facing changes to Aegis QEC are recorded here.
 
+## Unreleased
+
+### Scientific validation and repository hygiene
+
+The historical structural correction check is now named for what it measures. It verifies syndrome annihilation and correction-chain boundary topology but does not claim to determine logical success without the sampled physical error chain.
+
+A Stim circuit-level acceptance path now samples detector events and logical observables and compares Aegis DEM predictions with raw PyMatching shot for shot.
+
+The sparse-blossom graph adapter is cross-checked against PyMatching's decoded edge output so fault-ID-to-Aegis-edge mapping errors are directly testable.
+
+The placeholder `edge_reweighter.pt` checkpoint was removed. The Transformer training script is explicitly documented as experimental scaffolding and generated checkpoints are ignored by Git.
+
+Python 3.11 is now included in the hosted CI matrix alongside 3.10 and 3.12.
+
+The stale pre-1.1 Dependabot pull requests were closed as superseded.
+
 ## 1.1.0 — 2026-09-28
+
+### Behavior changes and migration note
+
+Version 1.1 changes the behavior of default-constructed configurations. `AegisConfig()` previously selected the OSD path; it now selects PyMatching sparse-blossom MWPM. Optional OSD polishing is also disabled by default.
+
+Existing code that depends on the previous default should set `decoder_type="osd"` explicitly. Code that depended on the historical NetworkX MWPM implementation must migrate because NetworkX is no longer an Aegis production fallback.
 
 ### Package identity
 
