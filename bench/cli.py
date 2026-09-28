@@ -7,6 +7,8 @@ import random
 import time
 from typing import List, Sequence, Tuple
 
+import math
+
 
 def _percentile(values: Sequence[float], fraction: float) -> float:
     ordered = sorted(values)
@@ -362,6 +364,40 @@ def calibration_advantage(
         (1.0 - p_left) * (1.0 - p_right) + p_left * p_right
     )
 
+    discordant = uniform_only + calibrated_only
+    if discordant:
+        smaller = min(uniform_only, calibrated_only)
+        paired_p_value = min(
+            1.0,
+            2.0
+            * sum(
+                math.comb(discordant, index)
+                for index in range(smaller + 1)
+            )
+            / (2**discordant),
+        )
+    else:
+        paired_p_value = 1.0
+
+    def wilson_interval(failures: int) -> tuple[float, float]:
+        z = 1.959963984540054
+        n = float(shots)
+        rate = failures / n
+        denominator = 1.0 + z * z / n
+        centre = (rate + z * z / (2.0 * n)) / denominator
+        radius = (
+            z
+            * math.sqrt(
+                rate * (1.0 - rate) / n
+                + z * z / (4.0 * n * n)
+            )
+            / denominator
+        )
+        return max(0.0, centre - radius), min(1.0, centre + radius)
+
+    uniform_ci = wilson_interval(uniform_count)
+    calibrated_ci = wilson_interval(calibrated_count)
+
     return {
         "shots": int(shots),
         "seed": int(seed),
@@ -388,7 +424,62 @@ def calibration_advantage(
             if calibrated_rate > 0.0
             else float("inf")
         ),
+        "paired_exact_p_value": float(paired_p_value),
+        "uniform_ci95_low": float(uniform_ci[0]),
+        "uniform_ci95_high": float(uniform_ci[1]),
+        "calibrated_ci95_low": float(calibrated_ci[0]),
+        "calibrated_ci95_high": float(calibrated_ci[1]),
     }
+
+
+def write_calibration_artifacts(
+    result: dict[str, float | int],
+    json_path: str | None = None,
+    plot_path: str | None = None,
+) -> None:
+    if json_path:
+        import json
+
+        os.makedirs(os.path.dirname(json_path) or ".", exist_ok=True)
+        with open(json_path, "w", encoding="utf-8") as handle:
+            json.dump(result, handle, indent=2, sort_keys=True)
+            handle.write("\n")
+
+    if plot_path:
+        import matplotlib.pyplot as plt
+
+        labels = ["Uniform", "Calibrated"]
+        rates = [
+            float(result["uniform_graph_logical_failure_rate"]),
+            float(result["calibrated_graph_logical_failure_rate"]),
+        ]
+        lower = [
+            rates[0] - float(result["uniform_ci95_low"]),
+            rates[1] - float(result["calibrated_ci95_low"]),
+        ]
+        upper = [
+            float(result["uniform_ci95_high"]) - rates[0],
+            float(result["calibrated_ci95_high"]) - rates[1],
+        ]
+
+        os.makedirs(os.path.dirname(plot_path) or ".", exist_ok=True)
+        fig, ax = plt.subplots(figsize=(6.0, 4.0))
+        positions = range(len(labels))
+        ax.bar(positions, rates)
+        ax.errorbar(
+            positions,
+            rates,
+            yerr=[lower, upper],
+            fmt="none",
+            capsize=5,
+        )
+        ax.set_xticks(list(positions), labels)
+        ax.set_ylabel("Graph logical failure rate")
+        ax.set_title("Controlled non-uniform calibration benchmark")
+        ax.set_ylim(bottom=0.0)
+        fig.tight_layout()
+        fig.savefig(plot_path, dpi=160)
+        plt.close(fig)
 
 
 def circuit_acceptance(
@@ -502,6 +593,8 @@ def _parser() -> argparse.ArgumentParser:
     calibration_parser.add_argument("--p-left", type=float, default=0.18)
     calibration_parser.add_argument("--p-middle", type=float, default=0.01)
     calibration_parser.add_argument("--p-right", type=float, default=0.18)
+    calibration_parser.add_argument("--out-json")
+    calibration_parser.add_argument("--plot")
 
     acceptance_parser = sub.add_parser(
         "circuit-acceptance",
@@ -594,6 +687,19 @@ def main(argv: List[str] | None = None) -> int:
             f"{result['uniform_only_failures']} vs "
             f"{result['calibrated_only_failures']}"
         )
+        print(
+            "Exact paired-binomial p-value: "
+            f"{float(result['paired_exact_p_value']):.6g}"
+        )
+        write_calibration_artifacts(
+            result,
+            json_path=args.out_json,
+            plot_path=args.plot,
+        )
+        if args.out_json:
+            print(f"JSON results: {args.out_json}")
+        if args.plot:
+            print(f"Plot: {args.plot}")
         print(
             "This is a controlled graph-level calibration experiment, "
             "not a hardware-device benchmark."
