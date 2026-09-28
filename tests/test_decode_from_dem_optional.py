@@ -1,11 +1,21 @@
+import pytest
 
-from a3d import AegisConfig, DecoderRuntime, RotatedSurfaceLayout
 
+def test_decode_from_dem_requires_detection_events():
+    pytest.importorskip("stim")
+    from a3d.decoder_mwpm_pm import PyMatchingMWPMDecoder
 
-def test_decode_from_dem_text_runs():
-    cfg = AegisConfig(distance=3, rounds=3, decoder_type="mwpm")
-    lay = RotatedSurfaceLayout(cfg.distance)
-    rt = DecoderRuntime(cfg, lay)
+    decoder = PyMatchingMWPMDecoder()
     dem = "error(0.01) D0 D1\n"
-    resX, resZ = rt.decode_from_dem_text(dem)
-    assert hasattr(resX, "avg_cost") and hasattr(resZ, "avg_cost")
+    with pytest.raises(ValueError, match="observed syndrome"):
+        decoder.decode_from_dem(dem)
+
+
+def test_decode_from_dem_accepts_explicit_syndrome():
+    pytest.importorskip("stim")
+    from a3d.decoder_mwpm_pm import PyMatchingMWPMDecoder
+
+    decoder = PyMatchingMWPMDecoder()
+    dem = "error(0.01) D0 D1\n"
+    prediction = decoder.decode_from_dem(dem, [1, 1])
+    assert prediction is not None
