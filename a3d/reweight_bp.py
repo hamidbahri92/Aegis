@@ -62,7 +62,7 @@ class BeliefPropagationReweighter:
             msg = new
         # apply messages as negative deltas on costs (cheaper if supported)
         out = []
-        for i, e in enumerate(g.edges):
+        for i in range(len(g.edges)):
             c = max(1e-6, base[i] - msg[i])
             out.append(c)
         return out
