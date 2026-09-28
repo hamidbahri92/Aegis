@@ -11,7 +11,11 @@ from a3d.sweep import sweep_physical_p
 
 
 def main():
-    print("NOTE: aegis-threshold is a historical command name. This command does not estimate a QEC threshold; it plots structural correction-validation results.")
+    print(
+        "NOTE: aegis-threshold is a historical command name. "
+        "This command does not estimate a QEC threshold; it plots "
+        "structural correction-validation results."
+    )
     os.makedirs("out", exist_ok=True)
     distances = [3, 5, 7]
     rounds = 6
@@ -37,7 +41,7 @@ def main():
     ax.set_xscale("log")
     ax.set_xlabel("physical error rate p")
     ax.set_ylabel("structural validity rate")
-    ax.set_title("Threshold-style sweep (success curves)")
+    ax.set_title("Structural correction sweep (not a threshold estimate)")
     ax.grid(True, ls="--", alpha=0.4)
     ax.legend()
     fig.tight_layout()
