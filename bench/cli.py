@@ -222,7 +222,7 @@ def main(argv: List[str] | None = None) -> int:
     args = _parser().parse_args(argv)
 
     if args.cmd == "sweep":
-        sweep(
+        results = sweep(
             args.decoder,
             args.p,
             distance=args.distance,
@@ -232,23 +232,40 @@ def main(argv: List[str] | None = None) -> int:
             corr_params=args.corr_params,
             latency_out=args.latency_out,
         )
+        print(f"Aegis QEC sweep complete with {len(results)} probability points.")
+        for physical_p, logical_rate in results:
+            print(f"p={physical_p:.6g} logical_rate={logical_rate:.6g}")
+        print(f"Results: {args.out}")
+        print(f"Latency summary: {args.latency_out}")
     elif args.cmd == "autobench":
-        autobench(
+        out_path = autobench(
             distance=args.distance,
             rounds=args.rounds,
             trials=args.trials,
             out_csv=args.out,
         )
+        print(f"Aegis QEC decoder comparison complete. Results: {out_path}")
     elif args.cmd == "plot":
-        plot(args.csv, args.out)
+        out_path = plot(args.csv, args.out)
+        if not out_path:
+            print("Plotting requires matplotlib.")
+            return 2
+        print(f"Plot written to: {out_path}")
     elif args.cmd == "realtime":
-        realtime(
+        out_path = realtime(
             decoder=args.decoder,
             distance=args.distance,
             rounds=args.rounds,
             steps=args.steps,
             out_csv=args.out,
         )
+        with open(out_path, "r", encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        print("Aegis QEC end-to-end latency")
+        for row in rows:
+            print(f"{row['metric']}: {float(row['seconds']) * 1000.0:.3f} ms")
+        print(f"Results: {out_path}")
+        print("This is an Aegis end-to-end measurement, not the upstream PyMatching-vs-NetworkX benchmark.")
     return 0
 
 
