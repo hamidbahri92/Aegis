@@ -4,43 +4,60 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aegis-qec"
-version = "1.0.23"
-description = "Research-grade, hardware-aware QEC stack for surface codes."
+version = "1.1.0"
+description = "Hardware-aware quantum error-correction research toolkit with sparse-blossom MWPM."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { file = "LICENSE" }
 authors = [{ name = "Hamid Bahri" }]
-
+keywords = ["quantum-error-correction", "qec", "surface-code", "mwpm", "pymatching"]
 classifiers = [
-  "Programming Language :: Python :: 3",
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
   "License :: OSI Approved :: MIT License",
-  "Operating System :: OS Independent"
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Physics",
 ]
 
 dependencies = [
   "numpy>=1.21.0",
-  "networkx>=3.0",
-  "matplotlib>=3.5.0"
+  "pymatching>=2.4,<3",
+  "matplotlib>=3.5.0",
 ]
 
 [project.optional-dependencies]
 full = [
   "pyarrow>=10.0.0",
-  "pytest>=7.0.0"
+  "pytest>=7.0.0",
+  "stim>=1.16,<2",
+]
+dev = [
+  "build>=1.2",
+  "pytest>=7.0.0",
+  "ruff>=0.6",
+  "stim>=1.16,<2",
+]
+gui = [
+  "streamlit>=1.35",
 ]
 
 [project.urls]
 Homepage = "https://github.com/hamidbahri92/Aegis"
+Repository = "https://github.com/hamidbahri92/Aegis"
+Issues = "https://github.com/hamidbahri92/Aegis/issues"
+PyPI = "https://pypi.org/project/aegis-qec/"
 
 [project.scripts]
 aegis-run = "main:main"
 aegis-metrics = "main_metrics:main"
 aegis-threshold = "main_threshold:main"
 aegis-export-header = "main_export_header:main"
+aegis-ci = "ci_runner:main"
 
 [tool.setuptools]
-py-modules = ["main", "main_metrics", "main_threshold", "main_export_header"]
+py-modules = ["main", "main_metrics", "main_threshold", "main_export_header", "ci_runner"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["a3d*"]
+include = ["a3d*", "aegis_qec*"]
