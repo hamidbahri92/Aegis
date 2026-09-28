@@ -1,90 +1,128 @@
 # FILE: gui/app.py
+from __future__ import annotations
+
+import random
+import time
+
 try:
     import streamlit as st
+
     STREAMLIT_OK = True
 except Exception:
     STREAMLIT_OK = False
 
+
+def _percentile(samples, fraction):
+    ordered = sorted(samples)
+    if not ordered:
+        return 0.0
+    index = min(len(ordered) - 1, max(0, int(fraction * len(ordered)) - 1))
+    return ordered[index]
+
+
 def main():
     if not STREAMLIT_OK:
-        print("Streamlit not installed. `pip install streamlit` and try `aegis-gui`.")
+        print("Streamlit is not installed. Run: pip install 'aegis-qec[gui]'")
         return
-    st.set_page_config(page_title="Aegis QEC Dashboard", layout="wide")
-    st.title("Aegis — Quantum Error Correction Dashboard")
+
     from a3d import AegisConfig, DecoderRuntime, RotatedSurfaceLayout
+    from a3d.decoder_mwpm import MWPMDecoder
+
+    st.set_page_config(page_title="Aegis QEC", layout="wide")
+    st.title("Aegis QEC")
+    st.caption(
+        "Hardware-aware quantum error-correction experiments with "
+        f"{MWPMDecoder.backend} MWPM."
+    )
+
     col1, col2, col3 = st.columns(3)
     with col1:
-        dec = st.selectbox("Decoder", ["mwpm","mwpm2","mwpm_corr","uf"])
-        rw  = st.selectbox("Reweighter", ["none","bp","transformer","transformer_sota"])
+        decoder = st.selectbox("Decoder", ["mwpm", "mwpm2", "mwpm_corr", "uf"])
+        reweighter = st.selectbox(
+            "Reweighter", ["none", "bp", "transformer", "transformer_sota"]
+        )
     with col2:
-        dist = st.slider("Distance", 3, 11, 5, 2)
-        rnds = st.slider("Rounds", 2, 12, 6, 1)
+        distance = st.slider("Code distance", 3, 11, 5, 2)
+        rounds = st.slider("Syndrome rounds", 2, 12, 6, 1)
     with col3:
-        p = st.slider("Synthetic p", 0.0, 0.2, 0.05, 0.005)
-        run = st.button("Run demo decode")
-    cfg = AegisConfig(distance=dist, rounds=rnds, decoder_type=dec)
-    cfg.reweighter_type = rw
-    layout = RotatedSurfaceLayout(cfg.distance)
-    rt = DecoderRuntime(cfg, layout)
-    import random
-    if run:
-        nX = len(rt.builder.node_order("X")); nZ = len(rt.builder.node_order("Z"))
-        random.seed(123)
-        sX = [1 if random.random()<p else 0 for _ in range(nX)]
-        sZ = [1 if random.random()<p else 0 for _ in range(nZ)]
-        resX, resZ = rt.decode_from_syndromes_uniform(sX, sZ)
-        st.success(f"X avg_cost={resX.avg_cost:.4f} (conf={getattr(resX,'confidence',0):.2f}), "
-                   f"Z avg_cost={resZ.avg_cost:.4f} (conf={getattr(resZ,'confidence',0):.2f})")
-    st.markdown("---")
-    st.subheader("Quick sweep")
-    ps = st.multiselect("p values", [0.01,0.02,0.04,0.06,0.08], default=[0.02,0.06])
+        error_probability = st.slider(
+            "Synthetic error probability", 0.0, 0.2, 0.05, 0.005
+        )
+        run_decode = st.button("Run demo decode", type="primary")
+
+    cfg = AegisConfig(
+        distance=distance,
+        rounds=rounds,
+        decoder_type=decoder,
+        reweighter_type=reweighter,
+    )
+    runtime = DecoderRuntime(cfg, RotatedSurfaceLayout(cfg.distance))
+
+    if run_decode:
+        n_x = len(runtime.builder.node_order("X"))
+        n_z = len(runtime.builder.node_order("Z"))
+        rng = random.Random(123)
+        syndrome_x = [
+            int(rng.random() < error_probability) for _ in range(n_x)
+        ]
+        syndrome_z = [
+            int(rng.random() < error_probability) for _ in range(n_z)
+        ]
+
+        started = time.perf_counter()
+        result_x, result_z = runtime.decode_from_syndromes_uniform(
+            syndrome_x, syndrome_z
+        )
+        elapsed_ms = (time.perf_counter() - started) * 1000.0
+
+        st.success(
+            f"Decoded in {elapsed_ms:.3f} ms — "
+            f"X cost {result_x.avg_cost:.4f}, "
+            f"Z cost {result_z.avg_cost:.4f}"
+        )
+
+    st.divider()
+    st.subheader("Latency experiment")
+    trials = st.slider("Trials", 10, 500, 50, 10)
+    if st.button("Measure latency"):
+        n_x = len(runtime.builder.node_order("X"))
+        n_z = len(runtime.builder.node_order("Z"))
+        rng = random.Random(1)
+        samples = []
+
+        for _ in range(trials):
+            syndrome_x = [rng.randint(0, 1) for _ in range(n_x)]
+            syndrome_z = [rng.randint(0, 1) for _ in range(n_z)]
+            started = time.perf_counter()
+            runtime.decode_from_syndromes_uniform(syndrome_x, syndrome_z)
+            samples.append(time.perf_counter() - started)
+
+        st.metric("p50", f"{_percentile(samples, 0.50) * 1e3:.3f} ms")
+        st.metric("p95", f"{_percentile(samples, 0.95) * 1e3:.3f} ms")
+        st.metric("p99", f"{_percentile(samples, 0.99) * 1e3:.3f} ms")
+
+    st.divider()
+    st.subheader("Quick logical-rate sweep")
+    probabilities = st.multiselect(
+        "Physical error probabilities",
+        [0.01, 0.02, 0.04, 0.06, 0.08],
+        default=[0.02, 0.06],
+    )
     if st.button("Run sweep"):
-        from bench.generate_plots import run_sweep
-        data = run_sweep(dec, ps, distance=dist, rounds=rnds, trials=50)
-        st.write({"decoder": dec, "data": data})
-        try:
-            import matplotlib.pyplot as plt
-            xs = [x for x,_ in data]; ys = [y for _,y in data]
-            fig = plt.figure()
-            plt.plot(xs, ys, marker="o")
-            plt.xlabel("p"); plt.ylabel("logical error rate"); plt.title(dec)
-            st.pyplot(fig)
-        except Exception:
-            st.info("matplotlib not available; showing data only.")
+        from bench.cli import sweep
+
+        data = sweep(
+            decoder,
+            probabilities,
+            distance=distance,
+            rounds=rounds,
+            trials=50,
+        )
+        st.dataframe(
+            [{"physical_p": physical_p, "logical_rate": rate} for physical_p, rate in data],
+            use_container_width=True,
+        )
+
 
 if __name__ == "__main__":
     main()
-
-
-    st.markdown("---")
-    st.subheader("Realtime sample (latency SLO)")
-    trials = st.slider("Trials", 10, 500, 50, 10)
-    if st.button("Run realtime sample"):
-        import time
-        nX = len(rt.builder.node_order("X"))
-        nZ = len(rt.builder.node_order("Z"))
-        lat = []
-        import random
-        random.seed(1)
-        for _ in range(trials):
-            sX = [random.randint(0,1) for _ in range(nX)]
-            sZ = [random.randint(0,1) for _ in range(nZ)]
-            t0 = time.perf_counter()
-            _ = rt.decode_from_syndromes_uniform(sX, sZ)
-            t1 = time.perf_counter()
-            lat.append(t1 - t0)
-        lat.sort()
-        if lat:
-            p50 = lat[int(0.50*len(lat))-1]
-            p95 = lat[int(0.95*len(lat))-1]
-            p99 = lat[int(0.99*len(lat))-1] if len(lat)>1 else lat[-1]
-            st.info(f"p50={p50*1e3:.2f} ms | p95={p95*1e3:.2f} ms | p99={p99*1e3:.2f} ms (n={len(lat)})")
-
-
-    st.subheader("Latest realtime latency CSV")
-    import os
-    if os.path.exists("bench_out/realtime_latency.csv"):
-        import pandas as pd
-        st.dataframe(pd.read_csv("bench_out/realtime_latency.csv"))
-    else:
-        st.caption("Run the realtime sample or CLI to populate latency CSV.")
