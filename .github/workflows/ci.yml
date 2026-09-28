@@ -39,4 +39,4 @@ jobs:
       - name: Verify installed CLI entry points
         run: |
           aegis-bench --help
-          aegis-gui --help || true
+          python -c "import gui.app, scripts.run_gui"
