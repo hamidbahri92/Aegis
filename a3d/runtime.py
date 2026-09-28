@@ -128,11 +128,11 @@ class DecoderRuntime:
                 rw = GraphEdgeTransformerReweighter(weights_path=getattr(self.cfg, "reweighter_weights", ""))
                 # Reweight X
                 new_costs_X = rw.reweight(graph_X)
-                for e, c in zip(graph_X.edges, new_costs_X):
+                for e, c in zip(graph_X.edges, new_costs_X, strict=True):
                     object.__setattr__(e, "weight", float(c))
                 # Reweight Z
                 new_costs_Z = rw.reweight(graph_Z)
-                for e, c in zip(graph_Z.edges, new_costs_Z):
+                for e, c in zip(graph_Z.edges, new_costs_Z, strict=True):
                     object.__setattr__(e, "weight", float(c))
             except Exception:
                 logger.exception("Transformer reweighter failed; continuing with base costs")
@@ -142,10 +142,10 @@ class DecoderRuntime:
                 from .reweight_transformer_sota import GraphEdgeTransformerSOTA
                 rw = GraphEdgeTransformerSOTA(weights_path=getattr(self.cfg, "reweighter_weights", ""))
                 new_costs_X = rw.reweight(graph_X)
-                for e, c in zip(graph_X.edges, new_costs_X):
+                for e, c in zip(graph_X.edges, new_costs_X, strict=True):
                     object.__setattr__(e, "weight", float(c))
                 new_costs_Z = rw.reweight(graph_Z)
-                for e, c in zip(graph_Z.edges, new_costs_Z):
+                for e, c in zip(graph_Z.edges, new_costs_Z, strict=True):
                     object.__setattr__(e, "weight", float(c))
             except Exception:
                 logger.exception("SOTA transformer reweighter failed; continuing with base costs")
@@ -154,10 +154,10 @@ class DecoderRuntime:
                 from .reweight_bp import BeliefPropagationReweighter
                 bp = BeliefPropagationReweighter()
                 new_costs_X = bp.reweight(graph_X)
-                for e, c in zip(graph_X.edges, new_costs_X):
+                for e, c in zip(graph_X.edges, new_costs_X, strict=True):
                     object.__setattr__(e, "weight", float(c))
                 new_costs_Z = bp.reweight(graph_Z)
-                for e, c in zip(graph_Z.edges, new_costs_Z):
+                for e, c in zip(graph_Z.edges, new_costs_Z, strict=True):
                     object.__setattr__(e, "weight", float(c))
             except Exception:
                 logger.exception("BP reweighter failed; continuing with base costs")
@@ -296,7 +296,7 @@ class DecoderRuntime:
         """Decode a batch of X/Z syndrome pairs using the same runtime/builder.
         Returns list of (resX, resZ)."""
         out = []
-        for sX, sZ in zip(batch_X, batch_Z):
+        for sX, sZ in zip(batch_X, batch_Z, strict=True):
             out.append(self.decode_from_syndromes_uniform(sX, sZ, **kwargs))
         return out
 
