@@ -5,42 +5,72 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 ![CI](https://github.com/hamidbahri92/Aegis/actions/workflows/ci.yml/badge.svg)
 
-**Aegis QEC is a Python research toolkit for hardware-aware quantum error-correction experiments, with exact sparse-blossom minimum-weight perfect matching, surface-code graph construction, soft information, erasure/leakage models, correlation reweighting, and Stim/DEM interoperability.**
+**Aegis QEC is a hardware-aware quantum error-correction research toolkit built around PyMatching sparse-blossom minimum-weight perfect matching.** It adds surface-code graph construction, calibrated weights, erasure and leakage information, correlation-aware experiments, Stim detector-error-model interoperability, benchmarking tools, and an optional interactive workbench.
 
-The package on PyPI is `aegis-qec`. The public Python namespace is `aegis_qec`. The historical `a3d` namespace remains available for compatibility.
-
-## Why Aegis QEC
-
-Aegis QEC is for researchers, students, and quantum-control engineers who want to experiment with realistic decoder inputs without rebuilding the plumbing around graph construction, error weighting, leakage, correlations, metrics, and benchmarking.
-
-It is not trying to replace PyMatching or Stim. Aegis uses them where they are strongest and adds the hardware-aware experimentation layer around them.
-
-## Fast MWPM by default
-
-`decoder_type="mwpm"` now uses **PyMatching v2+ sparse blossom directly**. The old NetworkX MWPM implementation is no longer the production backend.
-
-The sparse-blossom algorithm by Oscar Higgott and Craig Gidney avoids the all-pairs shortest-path construction used by many older MWPM implementations. PyMatching reports more than a **100,000x speedup over NetworkX** on its published surface-code benchmark. That number is the PyMatching benchmark result, not a promise that every Aegis workload is exactly 100,000x faster; Aegis includes graph construction and optional post-processing that also contribute to end-to-end latency.
-
-Paper: Higgott and Gidney, *Sparse Blossom: correcting a million errors per core second with minimum-weight matching*, Quantum 9, 1600 (2025), https://doi.org/10.22331/q-2025-01-20-1600
+The PyPI distribution is `aegis-qec`. The stable public Python namespace is `aegis_qec`. The historical `a3d` namespace remains available for compatibility.
 
 ## Install
 
-```bash
-pip install -U aegis-qec
-```
-
-For the full research stack including Stim interoperability:
+Aegis QEC 1.1 requires Python 3.10 or newer. Continuous integration validates the supported release surfaces on Linux and Windows with Python 3.10 and 3.12.
 
 ```bash
-pip install -U "aegis-qec[full]"
+python -m pip install -U aegis-qec
 ```
 
-## Five-minute start
+For Stim interoperability and the broader research stack:
+
+```bash
+python -m pip install -U "aegis-qec[full]"
+```
+
+For the interactive application:
+
+```bash
+python -m pip install -U "aegis-qec[gui]"
+```
+
+## First minute
+
+Aegis has one primary command:
+
+```bash
+aegis
+```
+
+Start by checking the installation:
+
+```bash
+aegis doctor
+```
+
+The doctor reports the installed Aegis version, Python version, PyMatching version, active MWPM backend, optional Stim and Streamlit availability, and the result of a small known-answer sparse-blossom decode.
+
+Run a deterministic example:
+
+```bash
+aegis demo
+```
+
+Measure end-to-end decoder latency:
+
+```bash
+aegis benchmark --decoder mwpm --distance 5 --rounds 6 --steps 200
+```
+
+Launch the interactive workbench:
+
+```bash
+aegis gui
+```
+
+The older commands remain available for compatibility and advanced workflows: `aegis-run`, `aegis-metrics`, `aegis-threshold`, `aegis-export-header`, `aegis-bench`, `aegis-gui`, and `aegis-ci`.
+
+## Python API
 
 ```python
 from aegis_qec import AegisConfig, DecoderRuntime, RotatedSurfaceLayout
 
-cfg = AegisConfig(distance=5, rounds=6, decoder_type="mwpm")
+cfg = AegisConfig(distance=5, rounds=6)
 layout = RotatedSurfaceLayout(cfg.distance)
 runtime = DecoderRuntime(cfg, layout)
 
@@ -55,45 +85,53 @@ result_x, result_z = runtime.decode_from_syndromes_uniform(
 print(result_x.avg_cost, result_z.avg_cost)
 ```
 
-The compatibility import still works:
+`AegisConfig()` defaults to the `mwpm` decoder. In Aegis QEC 1.1, that production MWPM path is PyMatching 2.4+ sparse blossom. Experimental OSD polishing, correlation-aware variants, union-find decoding, belief-propagation reweighting, and Transformer reweighting are opt-in.
+
+## Sparse blossom
+
+Aegis translates its decoding graph into a PyMatching graph, maps explicit Aegis boundary edges to PyMatching virtual boundaries, and assigns each Aegis edge a PyMatching fault identifier. The returned correction vector can therefore be mapped back to concrete Aegis correction edges.
+
+The production backend identifies itself as:
+
+```text
+pymatching-sparse-blossom
+```
+
+Aegis does not silently replace sparse blossom with the historical NetworkX MWPM implementation.
+
+## About the >100,000× result
+
+The greater-than-100,000-times figure is **not an Aegis-wide performance claim**. It is the result reported for PyMatching's published surface-code benchmark against NetworkX.
+
+Aegis uses that PyMatching implementation, but Aegis end-to-end execution can also include graph construction, result reconstruction, optional reweighting, logging, and other work. When quoting performance, name the workload, code distance, number of rounds, decoder, dependency versions, hardware, and whether the measurement is kernel-only or end-to-end.
+
+See [docs/BENCHMARKING.md](docs/BENCHMARKING.md) for the evidence policy and benchmark definitions.
+
+Reference: Oscar Higgott and Craig Gidney, *Sparse Blossom: correcting a million errors per core second with minimum-weight matching*, Quantum 9, 1600 (2025), DOI 10.22331/q-2025-01-20-1600.
+
+## Interactive workbench
+
+The Streamlit application is designed around experiments rather than internal class names. It shows the active environment and backend, labels the recommended sparse-blossom path separately from experimental decoders, and provides three guided activities:
+
+- a deterministic synthetic decode with timing and correction summaries;
+- an end-to-end latency experiment with p50, p95, and p99 measurements;
+- a correction-validation sweep for synthetic detection-event inputs.
+
+The validation sweep is deliberately **not** presented as a circuit-level logical-error-rate measurement. See the benchmarking documentation for the distinction.
+
+## Stim and detector error models
+
+A Stim detector error model describes error mechanisms, detector connectivity, and observables. It does not contain the observed detection events for a particular shot. Aegis therefore requires explicit observed detector bits when decoding a DEM.
 
 ```python
-import a3d
+from a3d.decoder_mwpm_pm import PyMatchingMWPMDecoder
+
+decoder = PyMatchingMWPMDecoder()
+prediction = decoder.decode_from_dem(
+    "error(0.01) D0 D1\n",
+    syndrome=[1, 1],
+)
 ```
-
-## Decoder stack
-
-Aegis currently includes sparse-blossom MWPM, pipelined MWPM, correlation-aware MWPM, union-find with erasures, greedy matching with OSD fallback, BP reweighting, optional Transformer reweighting, soft-information inputs, leakage-aware weighting, confidence scoring, profiling, and detector-error-model utilities.
-
-The ordinary `mwpm`, `mwpm2`, and correlation-aware MWPM paths share the same sparse-blossom backend. `MWPMDecoder.decode_batch(...)` reuses one compiled PyMatching graph for many syndrome shots.
-
-## Command-line tools
-
-The existing command-line entry points remain available:
-
-```bash
-aegis-run
-aegis-metrics
-aegis-threshold
-aegis-export-header
-aegis-bench --help
-aegis-gui
-aegis-ci
-```
-
-For a quick latency run:
-
-```bash
-aegis-bench realtime --decoder mwpm --distance 5 --rounds 6 --steps 200
-```
-
-The dashboard is optional and installs with `pip install "aegis-qec[gui]"`.
-
-## Correctness and performance policy
-
-Performance claims must be benchmarked against a named workload and backend. Aegis does not silently substitute NetworkX for sparse blossom. The MWPM backend identifies itself as `pymatching-sparse-blossom`, and tests cover detector-to-detector paths, virtual boundaries, batch decoding, and the public package namespace.
-
-A detector error model describes an error model, not an observed syndrome. DEM interoperability should therefore always be tested with explicit detection-event data rather than treating a DEM file by itself as a decode request.
 
 ## Development
 
@@ -101,27 +139,26 @@ A detector error model describes an error model, not an observed syndrome. DEM i
 git clone https://github.com/hamidbahri92/Aegis.git
 cd Aegis
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
-pytest -q
-ruff check .
+source .venv/bin/activate
+python -m pip install -e ".[dev,gui]"
+aegis-ci
 ```
 
-## Project identity
+On Windows PowerShell, activate the environment with `.\.venv\Scripts\Activate.ps1`.
 
-Use **Aegis QEC** in prose, documentation, screenshots, and announcements. Use `aegis-qec` for the PyPI distribution and `aegis_qec` for Python imports. `a3d` is a compatibility namespace rather than the public product name.
+Hosted CI and `aegis-ci` both enforce a repository-wide real-defect Ruff gate, stricter linting on the Aegis QEC release surfaces, the test suite, and package build validation. Hosted CI additionally builds the distribution, checks its long description with Twine, installs the built wheel, and exercises the user-facing commands.
 
-For discoverability, the GitHub repository itself should ultimately be renamed from `Aegis` to `aegis-qec` or `Aegis-QEC`.
+## Release identity
 
-## Who this is for
+Use **Aegis QEC** as the product name in prose. Use `aegis-qec` for the PyPI distribution and `aegis_qec` for the public Python import. `a3d` is a compatibility namespace.
 
-The primary audience is QEC researchers and graduate students who need reproducible decoding experiments with realistic weights and fast exact MWPM. A second audience is quantum-hardware and control engineers exploring decoder latency, leakage, soft information, and hardware-aware interfaces. A third audience is educators who want a readable Python stack that can expose the pieces around a production-grade matching backend.
+Version 1.1.0 is the release that establishes this identity, makes sparse-blossom MWPM the true default path, and introduces the unified `aegis` command.
 
-The strongest public story is therefore not “another quantum SDK.” It is: **fast, exact QEC decoding plus an experimental workbench for the messy hardware information that real decoders have to consume.**
+See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 ## Citation
 
-If Aegis QEC contributes to published work, please cite the project and the underlying decoder implementations that your experiment uses. In particular, sparse-blossom performance comes from PyMatching and should be credited to Higgott and Gidney.
+If Aegis QEC contributes to published work, cite Aegis and the underlying decoder implementation used by the experiment. Sparse-blossom algorithm and performance claims should credit Higgott and Gidney. Machine-readable citation metadata is provided in [CITATION.cff](CITATION.cff).
 
 ## License
 
