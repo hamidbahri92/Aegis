@@ -49,7 +49,7 @@ def main() -> int:
 
     print("\n=== Aegis QEC local CI summary ===")
     labels = ["defect lint", "strict lint", "tests", "package build"]
-    for label, code in zip(labels, checks):
+    for label, code in zip(labels, checks, strict=True):
         print(f"{label}: {'PASS' if code == 0 else f'FAIL ({code})'}")
 
     return max(checks) if checks else 0
