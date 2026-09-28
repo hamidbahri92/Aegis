@@ -226,6 +226,171 @@ def realtime(
     return out_csv
 
 
+def calibration_advantage(
+    shots: int = 10000,
+    seed: int = 20260928,
+    p_left: float = 0.18,
+    p_middle: float = 0.01,
+    p_right: float = 0.18,
+) -> dict[str, float | int]:
+    """Measure the value of correct non-uniform weights in a controlled graph model.
+
+    The graph has two detector nodes between opposite boundaries. Two different
+    physical error chains can produce the same two-detector syndrome: a single
+    middle edge, or the pair of boundary edges. Those chains differ by a
+    boundary-to-boundary logical path.
+
+    The uniform decoder receives one global average error rate for all edges.
+    The calibrated decoder receives the true edge probabilities. Both decode
+    exactly the same sampled physical error chains. Logical failure is measured
+    from the homology of physical-error XOR correction, not from syndrome
+    annihilation alone.
+
+    This is a graph-level calibration experiment. It does not claim that current
+    hardware-interface calibration arrays are automatically mapped into these
+    weights.
+    """
+    from a3d.decoder_mwpm import MWPMDecoder
+    from a3d.graph import DecodingGraph, Edge
+    from a3d.metrics import _correction_spans_opposite_boundaries
+    from a3d.stats import logodds_from_p
+
+    probabilities = (float(p_left), float(p_middle), float(p_right))
+    if any(not 0.0 < p < 0.5 for p in probabilities):
+        raise ValueError("edge probabilities must satisfy 0 < p < 0.5")
+    if shots < 1:
+        raise ValueError("shots must be positive")
+
+    left_boundary = 2
+    right_boundary = 3
+    node_meta = {
+        0: ("X", None, 0, "stab"),
+        1: ("X", None, 0, "stab"),
+        left_boundary: ("X", None, 0, "boundary-H-W"),
+        right_boundary: ("X", None, 0, "boundary-H-E"),
+    }
+
+    def make_graph(weights):
+        return DecodingGraph(
+            nodes=[0, 1, left_boundary, right_boundary],
+            edges=[
+                Edge(0, left_boundary, weights[0], "boundary"),
+                Edge(0, 1, weights[1], "space"),
+                Edge(1, right_boundary, weights[2], "boundary"),
+            ],
+            node_meta=node_meta,
+        )
+
+    calibrated_graph = make_graph(tuple(logodds_from_p(p) for p in probabilities))
+    global_p = sum(probabilities) / len(probabilities)
+    uniform_weight = logodds_from_p(global_p)
+    uniform_graph = make_graph((uniform_weight, uniform_weight, uniform_weight))
+
+    rng = random.Random(seed)
+    physical_errors: list[tuple[bool, bool, bool]] = []
+    syndromes: list[list[int]] = []
+    for _ in range(shots):
+        error = tuple(rng.random() < p for p in probabilities)
+        physical_errors.append(error)
+        left_error, middle_error, right_error = error
+        syndromes.append(
+            [
+                int(left_error) ^ int(middle_error),
+                int(middle_error) ^ int(right_error),
+            ]
+        )
+
+    decoder = MWPMDecoder()
+    uniform_results = decoder.decode_batch(uniform_graph, syndromes)
+    calibrated_results = decoder.decode_batch(calibrated_graph, syndromes)
+
+    uniform_index = {id(edge): index for index, edge in enumerate(uniform_graph.edges)}
+    calibrated_index = {
+        id(edge): index for index, edge in enumerate(calibrated_graph.edges)
+    }
+
+    def logical_failure(error, result, index_by_id):
+        correction_indices = {index_by_id[id(edge)] for edge in result.corrections}
+        residual_indices = {
+            index
+            for index, active in enumerate(error)
+            if bool(active) ^ (index in correction_indices)
+        }
+        residual_edges = [
+            calibrated_graph.edges[index] for index in sorted(residual_indices)
+        ]
+        horizontal_span, vertical_span = _correction_spans_opposite_boundaries(
+            calibrated_graph,
+            residual_edges,
+        )
+        return horizontal_span or vertical_span
+
+    uniform_failures = []
+    calibrated_failures = []
+    for error, uniform_result, calibrated_result in zip(
+        physical_errors,
+        uniform_results,
+        calibrated_results,
+        strict=True,
+    ):
+        uniform_failures.append(
+            logical_failure(error, uniform_result, uniform_index)
+        )
+        calibrated_failures.append(
+            logical_failure(error, calibrated_result, calibrated_index)
+        )
+
+    uniform_count = sum(uniform_failures)
+    calibrated_count = sum(calibrated_failures)
+    uniform_rate = uniform_count / shots
+    calibrated_rate = calibrated_count / shots
+    uniform_only = sum(
+        u and not k
+        for u, k in zip(uniform_failures, calibrated_failures, strict=True)
+    )
+    calibrated_only = sum(
+        k and not u
+        for u, k in zip(uniform_failures, calibrated_failures, strict=True)
+    )
+    both = sum(
+        u and k
+        for u, k in zip(uniform_failures, calibrated_failures, strict=True)
+    )
+
+    expected_uniform = p_left * p_right
+    expected_calibrated = p_middle * (
+        (1.0 - p_left) * (1.0 - p_right) + p_left * p_right
+    )
+
+    return {
+        "shots": int(shots),
+        "seed": int(seed),
+        "p_left": float(p_left),
+        "p_middle": float(p_middle),
+        "p_right": float(p_right),
+        "uniform_global_p": float(global_p),
+        "uniform_failures": int(uniform_count),
+        "calibrated_failures": int(calibrated_count),
+        "uniform_only_failures": int(uniform_only),
+        "calibrated_only_failures": int(calibrated_only),
+        "both_failures": int(both),
+        "uniform_graph_logical_failure_rate": float(uniform_rate),
+        "calibrated_graph_logical_failure_rate": float(calibrated_rate),
+        "expected_uniform_rate": float(expected_uniform),
+        "expected_calibrated_rate": float(expected_calibrated),
+        "relative_reduction": (
+            float(1.0 - calibrated_rate / uniform_rate)
+            if uniform_rate > 0.0
+            else 0.0
+        ),
+        "improvement_factor": (
+            float(uniform_rate / calibrated_rate)
+            if calibrated_rate > 0.0
+            else float("inf")
+        ),
+    }
+
+
 def circuit_acceptance(
     distance: int = 3,
     rounds: int = 3,
@@ -325,6 +490,19 @@ def _parser() -> argparse.ArgumentParser:
     realtime_parser.add_argument("--steps", type=int, default=200)
     realtime_parser.add_argument("--out", default="bench_out/realtime_latency.csv")
 
+    calibration_parser = sub.add_parser(
+        "calibration-advantage",
+        help=(
+            "Compare uniform and correctly calibrated MWPM weights on the same "
+            "non-uniform graph-level error samples."
+        ),
+    )
+    calibration_parser.add_argument("--shots", type=int, default=10000)
+    calibration_parser.add_argument("--seed", type=int, default=20260928)
+    calibration_parser.add_argument("--p-left", type=float, default=0.18)
+    calibration_parser.add_argument("--p-middle", type=float, default=0.01)
+    calibration_parser.add_argument("--p-right", type=float, default=0.18)
+
     acceptance_parser = sub.add_parser(
         "circuit-acceptance",
         help="Compare Aegis DEM decoding with raw PyMatching on a Stim surface-code circuit.",
@@ -385,6 +563,41 @@ def main(argv: List[str] | None = None) -> int:
             print(f"{row['metric']}: {float(row['seconds']) * 1000.0:.3f} ms")
         print(f"Results: {out_path}")
         print("This is an Aegis end-to-end measurement, not the upstream PyMatching-vs-NetworkX benchmark.")
+    elif args.cmd == "calibration-advantage":
+        result = calibration_advantage(
+            shots=args.shots,
+            seed=args.seed,
+            p_left=args.p_left,
+            p_middle=args.p_middle,
+            p_right=args.p_right,
+        )
+        print("Aegis QEC controlled calibration-advantage experiment")
+        print(f"Shots: {result['shots']}")
+        print(
+            "Uniform graph logical failure rate: "
+            f"{float(result['uniform_graph_logical_failure_rate']):.6g}"
+        )
+        print(
+            "Calibrated graph logical failure rate: "
+            f"{float(result['calibrated_graph_logical_failure_rate']):.6g}"
+        )
+        print(
+            "Relative failure reduction: "
+            f"{100.0 * float(result['relative_reduction']):.2f}%"
+        )
+        print(
+            "Uniform/calibrated failure ratio: "
+            f"{float(result['improvement_factor']):.3f}x"
+        )
+        print(
+            "Paired discordant failures, uniform-only vs calibrated-only: "
+            f"{result['uniform_only_failures']} vs "
+            f"{result['calibrated_only_failures']}"
+        )
+        print(
+            "This is a controlled graph-level calibration experiment, "
+            "not a hardware-device benchmark."
+        )
     elif args.cmd == "circuit-acceptance":
         result = circuit_acceptance(
             distance=args.distance,
