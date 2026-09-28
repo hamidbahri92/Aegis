@@ -1,6 +1,6 @@
 # FILE: tests/test_homology_exact.py
 from a3d.graph import DecodingGraphBuilder, RotatedSurfaceLayout
-from a3d.metrics import _exact_homology_failure
+from a3d.metrics import _correction_spans_opposite_boundaries
 
 
 def _find_node_ids_by_role(graph, prefix):
@@ -28,7 +28,7 @@ def _first_boundary_edge_from(graph, u, boundary_prefix):
     return None
 
 
-def test_exact_homology_detects_horizontal_span():
+def test_correction_chain_detects_horizontal_boundary_span():
     d = 3
     T = 1
     lay = RotatedSurfaceLayout(d)
@@ -44,7 +44,7 @@ def test_exact_homology_detects_horizontal_span():
 
     # Pick three X stabilizers forming a diagonal chain across columns: (0,0)->(1,1)->(2,2)
     # Then connect endpoints to Left and Right boundaries respectively.
-    # This yields a component touching both H-W and H-E in the same time slice.
+    # This yields a correction component touching both H-W and H-E in the same time slice.
     stab_nodes = [
         nid
         for nid, (sec, coord, t, role) in gX.node_meta.items()
@@ -61,12 +61,12 @@ def test_exact_homology_detects_horizontal_span():
     eR = _first_boundary_edge_from(gX, stab_nodes[2], "boundary-H-E")
     assert eL is not None and eR is not None
 
-    horiz_fail, vert_fail = _exact_homology_failure(gX, [e01, e12, eL, eR])
-    assert horiz_fail is True
-    assert vert_fail is False
+    horiz_span, vert_span = _correction_spans_opposite_boundaries(gX, [e01, e12, eL, eR])
+    assert horiz_span is True
+    assert vert_span is False
 
 
-def test_exact_homology_no_false_positive_single_side():
+def test_correction_chain_single_boundary_is_not_a_span():
     d = 3
     T = 1
     lay = RotatedSurfaceLayout(d)
@@ -89,5 +89,5 @@ def test_exact_homology_no_false_positive_single_side():
     eL = _first_boundary_edge_from(gX, single, "boundary-H-W")
     assert eL is not None
 
-    horiz_fail, vert_fail = _exact_homology_failure(gX, [eL])
-    assert not horiz_fail and not vert_fail
+    horiz_span, vert_span = _correction_spans_opposite_boundaries(gX, [eL])
+    assert not horiz_span and not vert_span
