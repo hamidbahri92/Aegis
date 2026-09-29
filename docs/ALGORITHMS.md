@@ -1,61 +1,79 @@
-# Aegis QEC algorithms
+# Algorithms in Aegis QEC
 
-## Production minimum-weight perfect matching
+Aegis QEC contains one default decoding path with the strongest validation coverage and several experimental alternatives. This page explains what each path actually does so benchmark results can be interpreted correctly.
 
-Aegis QEC 1.1 uses PyMatching 2.4 or newer as the production minimum-weight perfect-matching engine. PyMatching 2 implements the sparse-blossom algorithm described by Oscar Higgott and Craig Gidney in *Sparse Blossom: correcting a million errors per core second with minimum-weight matching*, Quantum 9, 1600 (2025).
+## Sparse-blossom MWPM
 
-`AegisConfig()` defaults to `decoder_type="mwpm"`. Experimental OSD polishing is disabled by default, so the ordinary default path does not silently replace a sparse-blossom result with a different decoder.
+`AegisConfig()` defaults to `decoder_type="mwpm"`. The implementation lives in `a3d.decoder_mwpm.MWPMDecoder` and uses PyMatching 2.4 or newer.
 
-## Graph translation
+Aegis does not implement a second hidden matching engine for this path. It builds an Aegis `DecodingGraph`, translates that graph into `pymatching.Matching`, calls PyMatching, and reconstructs Aegis correction edges from the returned fault vector.
 
-Aegis decoding graphs contain stabilizer nodes, spatial and temporal edges, and explicit side-aware boundary nodes.
+The backend string is `pymatching-sparse-blossom`.
 
-For sparse-blossom decoding, Aegis compacts non-boundary graph nodes into PyMatching detector indices. Ordinary Aegis edges are added with `Matching.add_edge`. Edges that connect a detector to an Aegis boundary node are represented with `Matching.add_boundary_edge`.
+### Graph translation
 
-Every translated Aegis edge receives a unique PyMatching fault identifier. PyMatching can therefore return a correction vector that Aegis maps directly back to its original `Edge` objects. This preserves concrete correction paths instead of returning only paired defect identifiers.
+Boundary nodes in an Aegis graph are explicit nodes whose role begins with `boundary`. During compilation, ordinary detector-to-detector edges become PyMatching edges. Detector-to-boundary edges become PyMatching virtual-boundary edges.
 
-The compiled matcher is cached by graph topology and effective edge weights. `MWPMDecoder.decode_batch` reuses one compiled PyMatching graph for multiple syndrome shots.
+Each translated Aegis edge receives its graph index as a PyMatching fault identifier. After decoding, nonzero fault identifiers are mapped directly back to the original Aegis `Edge` objects.
 
-## Boundary handling
+This design matters because Aegis needs concrete correction paths for validation and downstream experiments, not merely a list of paired defects.
 
-Aegis graph construction uses side-aware boundary nodes for west, east, north, and south boundaries at each time slice. The sparse-blossom adapter converts detector-to-boundary edges into PyMatching virtual-boundary edges.
+### Cached and batch decoding
 
-Tests cover detector-to-detector correction paths and virtual-boundary corrections, including the mapping from a PyMatching fault vector back to the corresponding Aegis boundary edge.
+The matcher cache key includes detector nodes, edge endpoints, effective weights, and boundary status. Repeated decodes on an unchanged graph reuse the compiled matcher.
 
-## Edge costs
+`MWPMDecoder.decode_batch` compiles once, stacks detector shots into a NumPy array, and uses PyMatching's batch decoder.
 
-Aegis represents matching costs using negative log odds. Erasure information can modify effective edge probabilities before they are converted back into matching costs.
+## Costs and erasures
 
-When comparing measurements across decoder variants, report how weights were constructed. A timing number without the graph and weight policy is not a complete decoder benchmark.
+Aegis graph edges carry a weight and optional erasure probability. Effective costs are computed before matching.
 
-## Decoder families
+The calibrated runtime path derives spatial and temporal weights from configured data and measurement probabilities using negative log odds. The uniform path assigns constant spatial and temporal weights and is useful for controlled comparisons.
 
-`mwpm` is the validated production sparse-blossom path.
+Erasure-aware behavior is available in the graph cost model and in the union-find research path. When publishing results, state how weights and erasure probabilities were produced.
 
-`mwpm2` performs a sparse-blossom pass, applies a local correlation-inspired reweighting, and performs a second sparse-blossom pass. It is experimental.
+## Direct Stim DEM decoding
 
-`mwpm_corr` applies motif-based or configured correlation adjustments before sparse-blossom matching. It is experimental.
+`a3d.decoder_mwpm_pm.PyMatchingMWPMDecoder` is the direct detector-error-model bridge.
 
-`uf` selects the union-find-with-erasures research path. It is experimental.
+`matching_from_dem` parses the DEM with Stim and creates a `pymatching.Matching` from it. `decode_dem` and `decode_dem_batch` then consume explicit detector-event bits.
 
-Greedy, OSD, belief-propagation reweighting, and Transformer reweighting remain research paths and are not presented as equivalent in validation status to the production `mwpm` backend.
+A detector error model is not an observed shot. Accordingly, `decode_from_dem` raises a `ValueError` when no syndrome is supplied.
 
-## Optional OSD polishing
+The circuit-acceptance test checks this bridge against raw PyMatching on the same Stim-generated detector samples and logical observables.
 
-Aegis retains an optional OSD polishing mechanism for experiments. It can compare an OSD-derived correction against an existing result and replace the result if its internal likelihood metric is lower.
+## The legacy DEM graph projection
 
-This mechanism is disabled by default in version 1.1. Experiments that enable it should report that fact because the final correction is no longer guaranteed to be the direct sparse-blossom output.
+`a3d.stim_adapter` contains a historical helper that projects a narrow subset of DEM text into an Aegis graph. That projection is not a complete Stim parser.
 
-## Detector error models
+In particular, an ordinary `DecodingGraph` cannot faithfully recover arbitrary DEM hyperedges, repeat blocks, observable structure, or the full semantics of detector shifts from the helper's simplified representation. Use the direct `PyMatchingMWPMDecoder` DEM path when fidelity to a Stim detector error model matters.
 
-A detector error model is an error model, not an observed shot. Aegis therefore requires explicit observed detection-event bits when decoding a Stim DEM.
+## Experimental decoder paths
 
-`PyMatchingMWPMDecoder.decode_from_dem` raises an error if the syndrome argument is omitted. This prevents the historical placeholder behavior in which a DEM could be treated as if it were observed detector data.
+The following paths are intentionally available for research but should not be described as having the same validation status as default sparse-blossom MWPM.
 
-## Performance claims
+**Pipelined MWPM.** `mwpm2`, `pipelined_mwpm`, and `pmwpm` perform a first sparse-blossom decode, lower selected local edge costs near the first correction, run sparse blossom again, and keep the result favored by the implementation's likelihood and average-cost comparison.
 
-The greater-than-100,000-times comparison against NetworkX is an upstream PyMatching benchmark for a specific surface-code workload. It is not an unconditional Aegis speedup.
+**Correlation-aware MWPM.** `mwpm_corr`, `mwpmc`, and `mwpm3` adjust edge costs using configured correlation parameters or local structural motifs before invoking sparse blossom.
 
-Aegis end-to-end latency can include graph construction, reweighting, correction reconstruction, logging, certificates when explicitly enabled, and Python orchestration. Benchmark reports must identify what is inside the timed region.
+**Union find with erasures.** `uf`, `unionfind`, and `uf_e` use an erasure-aware pre-peeling stage followed by a union-find-style growth process ordered by effective edge cost.
 
-See [BENCHMARKING.md](BENCHMARKING.md) for the benchmark taxonomy and reporting rules.
+**Greedy and OSD.** The greedy decoder and OSD decoder remain available as research and compatibility paths. OSD can also be enabled as a post-decode polishing stage.
+
+**Belief-propagation reweighting.** The BP module builds an adjacency graph over decoding edges and iteratively adjusts effective costs from local support.
+
+**Transformer reweighting.** Optional Torch-backed reweighters generate per-edge cost adjustments from graph-derived features. These paths depend on model weights and experiment configuration and are not part of the default installation contract.
+
+## What the tests establish
+
+The default MWPM tests establish that Aegis uses the sparse-blossom backend, reconstructs ordinary and virtual-boundary correction edges, reuses a matcher for batch decoding, and agrees with PyMatching's independent decoded-edge oracle for representative syndromes.
+
+The DEM tests establish that observed detector bits are required and that the Aegis direct DEM bridge can reproduce raw PyMatching predictions on sampled Stim circuits.
+
+Those tests validate the adapter and integration contracts they exercise. They do not convert every experimental decoder or hardware-facing module into a validated physical-QEC result.
+
+## Sparse-blossom reference
+
+Oscar Higgott and Craig Gidney, *Sparse Blossom: correcting a million errors per core second with minimum-weight matching*, Quantum 9, 1600 (2025), DOI 10.22331/q-2025-01-20-1600.
+
+The paper's performance results belong to the sparse-blossom implementation and benchmark described by the authors. See [Benchmarking](BENCHMARKING.md) for how Aegis separates upstream results from its own measurements.
