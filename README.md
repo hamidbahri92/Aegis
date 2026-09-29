@@ -152,7 +152,7 @@ python -m pip install -e ".[dev,gui]"
 aegis-ci
 ```
 
-On Windows PowerShell, activate with `\.venv\Scripts\Activate.ps1`.
+On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1`.
 
 Hosted CI tests Ubuntu and Windows across Python 3.10, 3.11, and 3.12. It runs repository defect lint, stricter lint on release-critical surfaces, pytest, backend and CLI checks, package builds, Twine metadata validation, wheel installation, circuit acceptance, and the controlled calibration benchmark.
 
@@ -166,4 +166,4 @@ If it saves you time, a GitHub star is a simple way to make the project easier f
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](https://github.com/hamidbahri92/Aegis/blob/main/LICENSE).
