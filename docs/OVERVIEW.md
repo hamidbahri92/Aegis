@@ -1,71 +1,75 @@
 # Aegis QEC overview
 
-Aegis QEC is a Python research toolkit for hardware-aware quantum error-correction experiments. Its production minimum-weight perfect-matching path delegates matching to PyMatching's sparse-blossom implementation and focuses Aegis itself on the surrounding experimentation layer: graph construction, calibrated edge costs, erasure and leakage information, soft inputs, correlation-aware research paths, detector-error-model interoperability, benchmarking, and reproducible interfaces.
+Aegis QEC is an experimentation layer around quantum-error-correction decoding. Its strongest path combines Aegis surface-code graph construction and experiment orchestration with PyMatching's sparse-blossom minimum-weight perfect matching. The project also contains research decoders, reweighting methods, benchmarking tools, a Stim detector-error-model bridge, and an optional graphical workbench.
 
-## Product and package identity
+This document describes the code that exists today. It separates the stable public interface and validated paths from experimental modules so users can choose the right level of trust for a given experiment.
+
+## Package identity
 
 The product name is **Aegis QEC**.
 
-The package published to PyPI is `aegis-qec`.
+The PyPI distribution is `aegis-qec`.
 
-The stable public Python namespace is `aegis_qec`.
+The public Python namespace is `aegis_qec`.
 
-The historical implementation namespace `a3d` remains importable for compatibility, but new examples and integrations should prefer `aegis_qec`.
+The historical implementation namespace `a3d` remains importable for compatibility and still contains most low-level modules.
 
-Aegis QEC 1.1 requires Python 3.10 or newer. The release CI matrix validates Linux and Windows on Python 3.10, 3.11, and 3.12.
+Aegis QEC 1.1 requires Python 3.10 or newer. Hosted CI tests Ubuntu and Windows with Python 3.10, 3.11, and 3.12.
 
-## Default decoding path
+## Mental model
 
-`AegisConfig()` defaults to `decoder_type="mwpm"`. That path constructs an Aegis decoding graph and invokes PyMatching sparse blossom. Each Aegis edge receives a PyMatching fault identifier, and Aegis boundary edges are represented using PyMatching virtual boundaries. The correction vector is mapped back to the original Aegis edge objects.
+At the top level, `aegis_qec` exposes `AegisConfig`, `DecoderRuntime`, and `RotatedSurfaceLayout`. The runtime creates decoding graphs for the X and Z sectors, applies optional cost transformations, dispatches to the selected decoder, and returns concrete correction edges.
 
-The backend string is `pymatching-sparse-blossom`.
+The default decoder is `mwpm`. `a3d.decoder_mwpm.MWPMDecoder` translates the Aegis graph into a `pymatching.Matching`, converts Aegis boundary edges into PyMatching virtual-boundary edges, assigns one fault identifier per Aegis edge, and reconstructs Aegis correction edges from PyMatching's fault vector. The compiled matcher is cached and reused when the graph topology and effective weights are unchanged.
 
-There is no silent NetworkX production fallback.
+The direct Stim path is separate. `a3d.decoder_mwpm_pm.PyMatchingMWPMDecoder` constructs a PyMatching decoder from a Stim detector error model and requires explicit detector events for each shot. This is the preferred route when the detector error model itself is the source of graph semantics.
 
-Experimental features such as OSD polishing, two-pass correlation-aware MWPM, learned correlation adjustments, union-find decoding, belief-propagation reweighting, and Transformer reweighting must be selected explicitly.
+## Graphs and costs
 
-## Interfaces
+Aegis graph nodes carry sector, coordinate, time index, and role metadata. Edges represent spatial, temporal, or boundary relationships and carry weights plus optional erasure probabilities.
 
-The primary command-line entry point is `aegis`.
+The runtime can create uniform costs for controlled tests or costs derived from configuration fields such as data-error probability, measurement-error probability, leakage probability, and time-weight scaling. The default MWPM backend consumes the resulting effective costs.
 
-`aegis doctor` checks the environment and performs a small known-answer sparse-blossom decode.
+Aegis also exposes optional reweighting paths. Belief-propagation reweighting, Transformer reweighting, correlation adjustments, and multi-pass MWPM are experimental and should be reported explicitly when used.
 
-`aegis demo` runs a deterministic first experiment and explains the result.
+## Decoder families
 
-`aegis benchmark` measures Aegis end-to-end latency and clearly labels it as an Aegis measurement rather than an upstream PyMatching comparison.
+The best-tested path is `mwpm`, backed by PyMatching sparse blossom.
 
-`aegis gui` launches the optional Streamlit workbench.
+`mwpm2`, `pipelined_mwpm`, and `pmwpm` select a two-pass MWPM experiment that adjusts local costs after an initial decode.
 
-The older entry points remain available for compatibility and specialized workflows.
+`mwpm_corr`, `mwpmc`, and `mwpm3` select a correlation-adjusted MWPM experiment.
 
-## Interactive application
+`uf`, `unionfind`, and `uf_e` select the union-find-with-erasures research path.
 
-The graphical workbench is organized around experiments rather than internal implementation names. The application displays the active Aegis and PyMatching versions, the actual MWPM backend, and optional dependency status. Decoder choices explicitly identify the recommended production path and experimental alternatives.
+Greedy and OSD paths remain available. OSD polishing can also be enabled as an optional certificate stage. Because polishing can replace a sparse-blossom result, experiments using it should state that it was enabled.
 
-The current workbench offers deterministic decode experiments, latency measurements, and structural correction-chain sweeps. The structural sweep checks syndrome annihilation and correction-chain boundary topology; it does not know the physical error chain and is not a logical-error-rate experiment.
+## Detector error models
 
-## Stim interoperability
+A detector error model and a detector shot are different objects. The model defines possible error mechanisms and detector/observable relationships. A shot supplies the observed detector bits.
 
-Stim detector error models describe probabilistic error mechanisms and detector connectivity. They do not contain the observed detector outcomes for a specific shot. Aegis therefore requires explicit detection-event bits when a detector error model is decoded.
+Aegis enforces this distinction in `PyMatchingMWPMDecoder.decode_from_dem`: omitting the syndrome raises an error. `decode_dem_batch` supports multiple detector shots with one compiled matcher.
 
-This separation prevents an error model from being mistaken for observed data.
+The older `a3d.stim_adapter` text parser projects a narrow subset of DEM text into an Aegis `DecodingGraph`. It cannot faithfully represent arbitrary Stim hyperedges, repeat structure, observables, or detector-shift semantics. Treat it as a compatibility helper, not as a general Stim parser.
 
-## Evidence policy
+## Validation surfaces
 
-Aegis separates upstream performance evidence, Aegis latency measurements, structural software stress tests, and circuit-level acceptance evidence.
+The test suite checks several independent properties of the default path. It verifies the backend identity string, detector-to-detector and detector-to-boundary corrections, batch reuse, mapping of PyMatching fault identifiers back to Aegis edges, and edge-level parity against PyMatching's independent `decode_to_edges_array` output.
 
-First, upstream published results belong to the upstream implementation. The greater-than-100,000-times comparison against NetworkX is a PyMatching surface-code benchmark reported by the PyMatching authors.
+For detector error models, the circuit-acceptance benchmark generates a noisy rotated surface-code memory circuit with Stim, samples detector events and logical observables, and decodes the same shots through raw PyMatching and the Aegis DEM bridge. The acceptance test requires the two prediction streams to match.
 
-Second, `aegis benchmark` measures Aegis end-to-end latency for the workload and environment shown by the command.
+The controlled calibration experiment uses a small graph with exact residual-chain logical ground truth to test whether informative non-uniform weights can outperform a uniform baseline on the same sampled physical errors.
 
-Third, Aegis structural sweeps are synthetic software stress tests and are not logical-error-rate or threshold measurements.
+Structural sweeps serve a different purpose. They test software behavior using synthetic detector patterns and correction-chain checks. They are not physical threshold or logical-error-rate experiments.
 
-Fourth, the Stim circuit-acceptance path samples detector events and logical observables from a real generated circuit and verifies that the Aegis DEM bridge reproduces raw PyMatching predictions shot for shot.
+## User interfaces
 
-See [BENCHMARKING.md](BENCHMARKING.md) for the detailed policy.
+The `aegis` command is the main user entry point. `doctor` checks the environment and sparse-blossom backend, `demo` runs a deterministic decode, `benchmark` measures end-to-end latency, and `gui` launches the optional Streamlit workbench.
 
-## Quality and release gates
+`aegis-bench` exposes specialized benchmark commands including `realtime`, `calibration-advantage`, `circuit-acceptance`, `sweep`, and `autobench`.
 
-Pull-request CI runs on Linux and Windows with supported Python versions. It checks repository-wide likely defects, applies stricter linting to release-critical code, runs the test suite, verifies the sparse-blossom backend, exercises the public commands, builds the wheel and source distribution, checks the rendered package metadata with Twine, installs the built wheel, and executes an installed-package smoke test.
+Older commands remain installed for compatibility with existing scripts.
 
-PyPI publication performs another build, Twine metadata check, wheel installation, `aegis doctor` self-test, and version assertion before upload.
+## Where to go next
+
+Read [Algorithms](ALGORITHMS.md) for decoder and graph details. Read [Benchmarking](BENCHMARKING.md) before interpreting performance or logical-failure numbers. The repository root [README](../README.md) is the quickest installation and first-use guide.
