@@ -5,8 +5,8 @@ type: software
 authors:
   - family-names: "Bahri"
     given-names: "Hamid"
-version: 1.1.0
-date-released: 2026-09-28
+version: 1.1.1
+date-released: 2026-09-29
 license: MIT
 repository-code: "https://github.com/hamidbahri92/Aegis"
 url: "https://pypi.org/project/aegis-qec/"
