@@ -90,11 +90,13 @@ def graph_from_dem_text_approximate(dem_text: str) -> DecodingGraph:
         for d in range(maxd + 1):
             nid_of_det[(d, ts)] = nid
             node_meta[nid] = ("X", None, ts, "stab")
-            nodes.append(nid); nid += 1
+            nodes.append(nid)
+            nid += 1
         # Create one generic boundary for this legacy group.
         nid_of_obs[(-1, ts)] = nid
         node_meta[nid] = ("X", None, ts, "boundary-H-W")
-        nodes.append(nid); nid += 1
+        nodes.append(nid)
+        nid += 1
 
     # Second pass: create edges
     edges: List[Edge] = []
@@ -119,7 +121,8 @@ def graph_from_dem_text_approximate(dem_text: str) -> DecodingGraph:
                     for z in range(max_d_per_t.get(t, -1) + 1, d + 1):
                         nid_of_det[(z, t)] = nid
                         node_meta[nid] = ("X", None, t, "stab")
-                        nodes.append(nid); nid += 1
+                        nodes.append(nid)
+                        nid += 1
                     max_d_per_t[t] = d
             # connect detectors pairwise in a simple chain (D0-D1, D1-D2, ...)
             for i in range(max(0, len(dets) - 1)):
@@ -132,7 +135,8 @@ def graph_from_dem_text_approximate(dem_text: str) -> DecodingGraph:
                 if (lid, t) not in nid_of_obs:
                     nid_of_obs[(lid, t)] = nid
                     node_meta[nid] = ("X", None, t, f"boundary-L-{lid}")
-                    nodes.append(nid); nid += 1
+                    nodes.append(nid)
+                    nid += 1
                 bnd = nid_of_obs[(lid, t)]
                 for d in dets[:1] or [0]:
                     if (d, t) in nid_of_det:
