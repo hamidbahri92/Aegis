@@ -1,89 +1,79 @@
 # Changelog
 
-All notable user-facing changes to Aegis QEC are recorded here.
+This file records user-visible changes to Aegis QEC.
 
 ## Unreleased
 
-### Scientific validation and repository hygiene
+### Detector-error-model safety
 
-The historical structural correction check is now named for what it measures. It verifies syndrome annihilation and correction-chain boundary topology but does not claim to determine logical success without the sampled physical error chain.
+The historical DEM-text-to-Aegis-graph projection is being made explicit as a lossy compatibility path. Faithful detector-error-model decoding uses Stim and PyMatching directly and requires the observed detector bits for each shot.
 
-A Stim circuit-level acceptance path now samples detector events and logical observables and compares Aegis DEM predictions with raw PyMatching shot for shot.
+### Validation
 
-The sparse-blossom graph adapter is cross-checked against PyMatching's decoded edge output so fault-ID-to-Aegis-edge mapping errors are directly testable.
+Circuit acceptance compares the Aegis DEM bridge with raw PyMatching on identical Stim-generated detector samples and logical observables.
 
-The placeholder `edge_reweighter.pt` checkpoint was removed. The Transformer training script is explicitly documented as experimental scaffolding and generated checkpoints are ignored by Git.
+The custom graph adapter is checked against PyMatching's decoded-edge output so correction-edge reconstruction can be tested independently.
 
-Python 3.11 is now included in the hosted CI matrix alongside 3.10 and 3.12.
+The controlled calibration experiment compares uniform and non-uniform graph weights on identical sampled physical error chains with exact residual-chain logical ground truth for its small benchmark graph.
 
-The stale pre-1.1 Dependabot pull requests were closed as superseded.
+Structural correction checks are described as structural validation rather than physical logical-error-rate or threshold measurements.
 
-A controlled non-uniform calibration benchmark now compares uniform and correctly calibrated MWPM weights on identical sampled physical error chains with exact residual-chain homology in the benchmark graph. The result is explicitly scoped as graph-level evidence, not a claim that device calibration ingestion is already end to end.
+### Quality
 
-The historical `trial_error_rate` helper is now documented and deprecated as a synthetic decoder smoke proxy rather than a logical-error-rate estimator.
+Hosted CI covers Ubuntu and Windows on Python 3.10, 3.11, and 3.12. Release-critical code receives stricter linting in addition to repository defect checks, tests, command smoke tests, package validation, and installed-wheel checks.
 
 ## 1.1.0 — 2026-09-28
 
-### Behavior changes and migration note
+### Aegis QEC identity
 
-Version 1.1 changes the behavior of default-constructed configurations. `AegisConfig()` previously selected the OSD path; it now selects PyMatching sparse-blossom MWPM. Optional OSD polishing is also disabled by default.
+The public product name is **Aegis QEC**.
 
-Existing code that depends on the previous default should set `decoder_type="osd"` explicitly. Code that depended on the historical NetworkX MWPM implementation must migrate because NetworkX is no longer an Aegis production fallback.
+The PyPI distribution is `aegis-qec`.
 
-### Package identity
+The public Python namespace is `aegis_qec`. The historical `a3d` namespace remains available for compatibility.
 
-Aegis is standardized as **Aegis QEC** in public documentation.
+Python 3.10 is the minimum supported version.
 
-The PyPI distribution remains `aegis-qec`.
+### Default decoding path
 
-The stable public Python namespace is `aegis_qec`, while `a3d` remains available for compatibility.
+`AegisConfig()` now defaults to `decoder_type="mwpm"`.
 
-Python 3.10 is the minimum supported version for this release.
+The default MWPM implementation uses PyMatching 2.4 or newer and identifies its backend as `pymatching-sparse-blossom`. There is no NetworkX fallback in this path.
 
-### Decoder
+Aegis graph edges are assigned PyMatching fault identifiers so decoded corrections can be reconstructed as concrete Aegis `Edge` objects. Explicit Aegis boundary edges are translated into PyMatching virtual-boundary edges.
 
-The default `AegisConfig` decoder is now `mwpm`.
+Compiled matchers are cached for repeated graph topologies and weights, and batch decoding is available.
 
-Production MWPM uses PyMatching 2.4+ sparse blossom with no silent NetworkX fallback.
+Optional OSD polishing is disabled by default. Existing applications that depended on the previous OSD default should select `decoder_type="osd"` explicitly.
 
-Aegis graph edges are mapped to PyMatching fault identifiers so returned correction vectors map back to concrete Aegis correction edges.
+### Detector error models
 
-Explicit Aegis boundary edges are translated to PyMatching virtual-boundary edges.
+The direct DEM interface requires observed detector-event bits. Calling `decode_from_dem` without a syndrome raises an error instead of treating an error model as observed data.
 
-Compiled matchers are cached, and batched sparse-blossom decoding is available.
+Batch DEM decoding is available for multiple detector shots using one compiled matcher.
 
-Optional OSD polishing is disabled by default so the ordinary production path remains sparse blossom end to end.
+### Command-line experience
 
-Detector error models now require explicit observed detection-event bits instead of returning a placeholder correction.
+The `aegis` command is the primary entry point.
 
-### User experience
+`aegis doctor` checks the installation, dependency versions, active sparse-blossom backend, and a known-answer decode.
 
-A new `aegis` command is the primary entry point.
+`aegis demo` runs a deterministic first experiment.
 
-`aegis doctor` reports the environment and performs a known-answer sparse-blossom self-test.
+`aegis benchmark` reports Aegis end-to-end latency.
 
-`aegis demo` provides a deterministic first decoding experiment.
+`aegis gui` launches the optional interactive workbench.
 
-`aegis benchmark` reports end-to-end latency with a clear scope statement.
-
-`aegis gui` launches a reorganized interactive workbench that labels recommended and experimental paths separately.
-
-The benchmark CLI now prints useful terminal summaries instead of silently writing files.
+Specialized and historical entry points remain installed for compatibility.
 
 ### Benchmark semantics
 
-The published greater-than-100,000-times comparison is explicitly attributed to PyMatching's named surface-code benchmark against NetworkX.
+Aegis end-to-end timings are reported separately from upstream PyMatching performance results.
 
-Aegis end-to-end latency measurements are labeled separately.
+Synthetic structural sweeps are not presented as circuit-level logical-error-rate measurements or physical threshold estimates.
 
-The synthetic sweep output is renamed `validation_failure_rate` and is no longer presented as a circuit-level logical-error rate.
+The sparse-blossom performance results cited by Aegis are attributed to the upstream Higgott and Gidney work rather than claimed as universal Aegis speedups.
 
-### Quality and release engineering
+### Packaging and release
 
-CI validates Linux and Windows on Python 3.10 and 3.12.
-
-CI runs repository defect linting, strict release-surface linting, the test suite, backend assertions, command-line smoke tests, package builds, Twine metadata checks, wheel installation, and installed-package self-tests.
-
-The PyPI publication workflow performs package validation and an installed-wheel doctor check before upload.
-
-The obsolete v13 release workflow and duplicate local CI launcher were removed.
+Version 1.1.0 establishes the `aegis-qec` distribution and `aegis_qec` public namespace, validates package metadata and README rendering during CI, installs the built wheel for smoke tests, and supports tag-driven PyPI release automation.
