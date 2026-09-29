@@ -22,6 +22,8 @@ A controlled non-uniform calibration benchmark now compares uniform and correctl
 
 The historical `trial_error_rate` helper is now documented and deprecated as a synthetic decoder smoke proxy rather than a logical-error-rate estimator.
 
+The legacy `stim_adapter.graph_from_dem_text` parser is deprecated and renamed `graph_from_dem_text_approximate`. Production DEM decoding continues through Stim and PyMatching directly; the approximate parser is retained only for compatibility with explicitly lossy structural experiments.
+
 ## 1.1.0 — 2026-09-28
 
 ### Behavior changes and migration note

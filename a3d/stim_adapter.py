@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import warnings
 from typing import Dict, List, Optional, Tuple
 
 try:
@@ -27,20 +28,32 @@ def _parse_error(line: str) -> Tuple[float, List[str]]:
     rest = m.group(2).split()
     return p, rest
 
-def graph_from_dem_text(dem_text: str) -> DecodingGraph:
-    """Convert a Stim Detector Error Model (DEM) text into a DecodingGraph.
 
-    Supported:
-      - error(p) tokens: D# (detectors), L# (observables)
-      - shift_detectors k: increments time slice t by k (>=1).
+def graph_from_dem_text_approximate(dem_text: str) -> DecodingGraph:
+    """Approximately project a narrow DEM-text subset into an Aegis graph.
 
-    We create nodes for each detector id seen at each time t; edges get weights from
-    negative log-odds of p. Edges between detectors at the same t are 'space'; edges
-    connecting to a boundary-L node are 'boundary'. If a parser sees detectors that
-    reference a time slice with no prior declaration for that id, we allocate missing
-    nodes up to that id for the current t.
+    This legacy helper is not a faithful Stim DEM parser. In particular, the
+    simplified Aegis DecodingGraph cannot represent arbitrary DEM hyperedges,
+    repeat blocks, observable structure, or Stim detector-shift semantics without
+    loss. The internal grouping counter used below is only a legacy structural
+    grouping index; it must not be interpreted as physical time.
+
+    For production DEM decoding, use PyMatchingMWPMDecoder, which delegates the
+    detector error model directly to Stim and PyMatching.
+
+    Historical behavior follows below.
+
+    Convert a Stim Detector Error Model (DEM) text into a DecodingGraph.
+
+    Historical subset:
+      - error(p) tokens containing D# and L# targets;
+      - shift_detectors k advances a legacy grouping counter.
+
+    Detector nodes are grouped by that counter and edges receive negative-log-odds
+    weights. The grouping counter is stored in the graph's historical time metadata
+    field for compatibility, but it is not a faithful reconstruction of Stim time.
     """
-    # First pass: discover time slices and max detector id per slice
+    # First pass: discover legacy groups and max detector id per group
     t = 0
     max_d_per_t: Dict[int, int] = {0: -1}
     lines = [ln.strip() for ln in dem_text.splitlines()]
@@ -55,7 +68,7 @@ def graph_from_dem_text(dem_text: str) -> DecodingGraph:
                 max_d_per_t[t] = -1
             continue
         if line.startswith("error(") and "D" in line:
-            # track largest detector id used at this t
+            # Track the largest detector id used in this legacy group.
             _, toks = _parse_error(line)
             for tok in toks:
                 if tok.startswith("D"):
@@ -66,7 +79,7 @@ def graph_from_dem_text(dem_text: str) -> DecodingGraph:
                     except Exception:
                         pass
 
-    # Build nodes and per-time observable boundaries
+    # Build nodes and per-group observable boundaries
     nodes: List[int] = []
     node_meta: Dict[int, Tuple[str, Optional[Tuple[int,int]], int, str]] = {}
     nid_of_det: Dict[Tuple[int, int], int] = {}   # (det_id, t) -> nid
@@ -77,11 +90,13 @@ def graph_from_dem_text(dem_text: str) -> DecodingGraph:
         for d in range(maxd + 1):
             nid_of_det[(d, ts)] = nid
             node_meta[nid] = ("X", None, ts, "stab")
-            nodes.append(nid); nid += 1
-        # create one generic boundary for this slice as well
+            nodes.append(nid)
+            nid += 1
+        # Create one generic boundary for this legacy group.
         nid_of_obs[(-1, ts)] = nid
         node_meta[nid] = ("X", None, ts, "boundary-H-W")
-        nodes.append(nid); nid += 1
+        nodes.append(nid)
+        nid += 1
 
     # Second pass: create edges
     edges: List[Edge] = []
@@ -106,7 +121,8 @@ def graph_from_dem_text(dem_text: str) -> DecodingGraph:
                     for z in range(max_d_per_t.get(t, -1) + 1, d + 1):
                         nid_of_det[(z, t)] = nid
                         node_meta[nid] = ("X", None, t, "stab")
-                        nodes.append(nid); nid += 1
+                        nodes.append(nid)
+                        nid += 1
                     max_d_per_t[t] = d
             # connect detectors pairwise in a simple chain (D0-D1, D1-D2, ...)
             for i in range(max(0, len(dets) - 1)):
@@ -119,7 +135,8 @@ def graph_from_dem_text(dem_text: str) -> DecodingGraph:
                 if (lid, t) not in nid_of_obs:
                     nid_of_obs[(lid, t)] = nid
                     node_meta[nid] = ("X", None, t, f"boundary-L-{lid}")
-                    nodes.append(nid); nid += 1
+                    nodes.append(nid)
+                    nid += 1
                 bnd = nid_of_obs[(lid, t)]
                 for d in dets[:1] or [0]:
                     if (d, t) in nid_of_det:
@@ -128,6 +145,30 @@ def graph_from_dem_text(dem_text: str) -> DecodingGraph:
 
     return DecodingGraph(nodes=nodes, edges=edges, node_meta=node_meta)
 
+def graph_from_dem_text(dem_text: str) -> DecodingGraph:
+    """Deprecated compatibility wrapper for the approximate legacy projection."""
+    warnings.warn(
+        "graph_from_dem_text is an approximate legacy projection, not a faithful "
+        "Stim DEM parser. Use PyMatchingMWPMDecoder for production DEM decoding, "
+        "or graph_from_dem_text_approximate only when the lossy projection is "
+        "explicitly intended.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return graph_from_dem_text_approximate(dem_text)
+
+
+def graph_from_dem_file_approximate(path: str) -> DecodingGraph:
+    with open(path, "r", encoding="utf-8") as handle:
+        return graph_from_dem_text_approximate(handle.read())
+
+
 def graph_from_dem_file(path: str) -> DecodingGraph:
-    with open(path, "r", encoding="utf-8") as f:
-        return graph_from_dem_text(f.read())
+    """Deprecated compatibility wrapper for the approximate legacy projection."""
+    warnings.warn(
+        "graph_from_dem_file is an approximate legacy projection, not a faithful "
+        "Stim DEM parser. Use PyMatchingMWPMDecoder for production DEM decoding.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return graph_from_dem_file_approximate(path)
