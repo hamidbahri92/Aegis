@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "aegis-qec"
 version = "1.1.0"
-description = "Hardware-aware quantum error-correction research toolkit with sparse-blossom MWPM."
+description = "Surface-code decoding and QEC experiments powered by PyMatching sparse blossom."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -46,8 +46,11 @@ gui = [
 
 [project.urls]
 Homepage = "https://github.com/hamidbahri92/Aegis"
+Documentation = "https://github.com/hamidbahri92/Aegis#readme"
 Repository = "https://github.com/hamidbahri92/Aegis"
 Issues = "https://github.com/hamidbahri92/Aegis/issues"
+Changelog = "https://github.com/hamidbahri92/Aegis/blob/main/CHANGELOG.md"
+Citation = "https://github.com/hamidbahri92/Aegis/blob/main/CITATION.cff"
 PyPI = "https://pypi.org/project/aegis-qec/"
 
 [project.scripts]
