@@ -4,6 +4,10 @@ This file records user-visible changes to Aegis QEC.
 
 ## Unreleased
 
+No user-visible changes recorded yet.
+
+## 1.1.1 — 2026-09-29
+
 ### Detector-error-model safety
 
 The historical DEM-text-to-Aegis-graph projection is being made explicit as a lossy compatibility path. Faithful detector-error-model decoding uses Stim and PyMatching directly and requires the observed detector bits for each shot.
