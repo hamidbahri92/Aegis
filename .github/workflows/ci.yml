@@ -27,6 +27,7 @@ jobs:
           python -m ruff check
           a3d/decoder_mwpm.py
           a3d/decoder_mwpm_pm.py
+          a3d/stim_adapter.py
           a3d/config.py
           aegis_qec
           bench/cli.py
@@ -38,6 +39,7 @@ jobs:
           tests/test_mwpm_sparse_blossom.py
           tests/test_public_namespace.py
           tests/test_decode_from_dem_optional.py
+          tests/test_stim_adapter_deprecation.py
       - name: Run tests
         run: python -m pytest -q
       - name: Verify production MWPM backend

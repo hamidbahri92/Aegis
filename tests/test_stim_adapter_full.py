@@ -1,18 +1,18 @@
 
 # FILE: tests/test_stim_adapter_full.py
-from a3d.stim_adapter import graph_from_dem_text
+from a3d.stim_adapter import graph_from_dem_text_approximate
 
 
-def test_dem_shift_and_edges():
+def test_approximate_dem_shift_grouping_and_edges():
     dem = """
-# t0
+# legacy group 0
 error(0.01) D0 D1
 error(0.02) D1 L0
 shift_detectors 1
-# t1
+# next legacy group
 error(0.01) D0 D1
 """
-    g = graph_from_dem_text(dem)
+    g = graph_from_dem_text_approximate(dem)
     # Expect nodes for D0,D1 at t0 and t1 plus boundaries
     ts = [meta[2] for _, meta in g.node_meta.items()]
     assert 0 in ts and 1 in ts
