@@ -3,7 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/aegis-qec.svg)](https://pypi.org/project/aegis-qec/)
 ![Python](https://img.shields.io/pypi/pyversions/aegis-qec.svg)
 [![CI](https://github.com/hamidbahri92/Aegis/actions/workflows/ci.yml/badge.svg)](https://github.com/hamidbahri92/Aegis/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/hamidbahri92/Aegis/blob/main/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/hamidbahri92/Aegis?style=social)](https://github.com/hamidbahri92/Aegis/stargazers)
 
 **Aegis QEC is a Python toolkit for surface-code decoding experiments built around PyMatching's sparse-blossom MWPM engine.** It gives you a practical layer for building decoding graphs, supplying calibrated or erasure-aware costs, decoding Stim detector error models, validating correction plumbing, and running reproducible benchmarks without hiding which parts are validated and which parts are experimental.
@@ -108,7 +108,7 @@ aegis-bench calibration-advantage \
 
 **Structural stress tests.** `aegis-bench sweep` checks correction-chain behavior on synthetic detector-bit patterns. It is useful for software validation, but it is not a circuit-level logical-error-rate or threshold measurement.
 
-See [Benchmarking](docs/BENCHMARKING.md) for the exact interpretation of each result.
+See [Benchmarking](https://github.com/hamidbahri92/Aegis/blob/main/docs/BENCHMARKING.md) for the exact interpretation of each result.
 
 ## About sparse-blossom performance claims
 
@@ -124,7 +124,7 @@ The default `mwpm` path is the best-tested Aegis decoder path. Tests cover spars
 
 Aegis also contains research paths for pipelined or correlation-adjusted MWPM, union-find with erasure handling, belief-propagation reweighting, Transformer-based reweighting, OSD polishing, leakage information, correlation models, and hardware-facing calibration acquisition. These are useful experimental surfaces, but they do not all have the same validation status as the default MWPM and DEM paths.
 
-Read [Algorithms](docs/ALGORITHMS.md) for the implementation model and [Overview](docs/OVERVIEW.md) for the package architecture.
+Read [Algorithms](https://github.com/hamidbahri92/Aegis/blob/main/docs/ALGORITHMS.md) for the implementation model and [Overview](https://github.com/hamidbahri92/Aegis/blob/main/docs/OVERVIEW.md) for the package architecture.
 
 ## Commands
 
@@ -156,11 +156,11 @@ On Windows PowerShell, activate with `\.venv\Scripts\Activate.ps1`.
 
 Hosted CI tests Ubuntu and Windows across Python 3.10, 3.11, and 3.12. It runs repository defect lint, stricter lint on release-critical surfaces, pytest, backend and CLI checks, package builds, Twine metadata validation, wheel installation, circuit acceptance, and the controlled calibration benchmark.
 
-See [Contributing](CONTRIBUTING.md) before opening a pull request.
+See [Contributing](https://github.com/hamidbahri92/Aegis/blob/main/CONTRIBUTING.md) before opening a pull request.
 
 ## Cite, star, or contribute
 
-If Aegis QEC helps your research, please cite the software and the underlying decoder paper used by your experiment. Machine-readable metadata lives in [CITATION.cff](CITATION.cff).
+If Aegis QEC helps your research, please cite the software and the underlying decoder paper used by your experiment. Machine-readable metadata lives in [CITATION.cff](https://github.com/hamidbahri92/Aegis/blob/main/CITATION.cff).
 
 If it saves you time, a GitHub star is a simple way to make the project easier for other quantum-error-correction researchers to discover. If you find a reproducible bug, open an issue. If you can improve a decoder, benchmark, test, or explanation, contributions are welcome.
 
