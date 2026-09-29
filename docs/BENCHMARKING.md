@@ -1,108 +1,101 @@
 # Benchmarking Aegis QEC
 
-Aegis QEC uses several kinds of evidence. They answer different questions and must not be quoted as if they were interchangeable.
+Aegis QEC exposes several benchmarks that answer different questions. Keeping those questions separate is the easiest way to avoid misleading performance or error-correction claims.
 
-## Upstream PyMatching benchmark
+## One rule to remember
 
-PyMatching's sparse-blossom documentation and paper report a greater-than-100,000-times speedup over NetworkX for their named surface-code benchmark. That result belongs to PyMatching and should be attributed to Higgott and Gidney.
+A decoder-kernel benchmark, an Aegis end-to-end latency measurement, a structural software stress test, and a circuit-level logical-error experiment are not interchangeable.
 
-Aegis uses the same PyMatching sparse-blossom engine for its production MWPM path, but Aegis does not claim that every end-to-end Aegis workload is more than 100,000 times faster than an older Aegis workload.
-
-Reference: Oscar Higgott and Craig Gidney, *Sparse Blossom: correcting a million errors per core second with minimum-weight matching*, Quantum 9, 1600 (2025), DOI 10.22331/q-2025-01-20-1600.
+Always name the workload and the measurement boundary.
 
 ## Aegis end-to-end latency
 
-`aegis benchmark` and `aegis-bench realtime` measure Aegis end-to-end decoder latency for deterministic synthetic syndrome inputs.
-
-Example:
+Use either:
 
 ```bash
 aegis benchmark --decoder mwpm --distance 5 --rounds 6 --steps 1000
 ```
 
-The command reports p50, p95, and p99 latency and writes the raw summary to CSV.
+or:
 
-When publishing or comparing these measurements, report at least the Aegis version, PyMatching version, Python version, operating system, CPU, decoder, code distance, number of rounds, sample count, and whether optional reweighting or polishing was enabled.
+```bash
+aegis-bench realtime --decoder mwpm --distance 5 --rounds 6 --steps 1000
+```
 
-These timings should be described as **Aegis end-to-end latency**, not as a reproduction of PyMatching's NetworkX comparison.
+The benchmark generates deterministic synthetic detector-bit inputs, runs the selected Aegis runtime path, and reports p50, p95, and p99 latency.
 
-## Structural correction-chain stress sweep
+This is an Aegis end-to-end measurement. Depending on configuration, the timed path can include graph handling, cost transformation, PyMatching decoding, correction reconstruction, optional reweighting, and Python orchestration.
 
-`aegis-bench sweep` generates deterministic synthetic detector-bit patterns and runs the selected Aegis decoder.
+For a result intended for comparison or publication, record the Aegis version, PyMatching version, Python version, operating system, processor, decoder, code distance, number of rounds, sample count, weight policy, optional reweighter or polishing settings, and whether graphs or matchers were reused.
 
-The structural check has exactly two parts. First, it applies the proposed correction edges to the supplied syndrome and requires all detector defects to be annihilated. Second, it checks whether the **correction chain itself** contains a spatial component touching opposite side-aware boundaries in one time slice.
+## Upstream PyMatching performance
 
-That second check is not the homology of the physical residual error. The function does not receive the sampled physical error chain, so it cannot form error-plus-correction and cannot determine logical success. The synthetic detector bits are also not sampled from a complete quantum circuit.
+Aegis QEC uses PyMatching's sparse-blossom implementation for default MWPM. Higgott and Gidney report sub-microsecond-per-round decoding for a distance-17 surface-code workload at 0.1 percent circuit-level depolarizing noise on one CPU core, and the paper reports extremely large improvements over older matching implementations, including a greater-than-one-hundred-thousand-times comparison with a NetworkX implementation at large code distance.
 
-For compatibility, CSV output retains `validation_failure_rate`. New output also includes the explicit name `structural_validation_failure_rate`.
+Those are upstream PyMatching results under the paper's workload and hardware. They are not universal Aegis end-to-end speedups.
 
-This sweep is useful as a software stress test for graph construction, decoder behavior, syndrome annihilation, and correction mapping. It is **not** a circuit-level logical-error-rate measurement and it is **not** a threshold estimate.
+Reference: Oscar Higgott and Craig Gidney, *Sparse Blossom: correcting a million errors per core second with minimum-weight matching*, Quantum 9, 1600 (2025), DOI 10.22331/q-2025-01-20-1600.
 
-Example:
+## Circuit-level DEM acceptance
+
+Run:
+
+```bash
+aegis-bench circuit-acceptance --distance 3 --rounds 3 --shots 1000 --p 0.01 --seed 1234
+```
+
+Aegis generates a noisy rotated surface-code memory circuit with Stim, samples detector events together with logical observables, and decodes the same detector shots in two ways: directly through raw PyMatching and through `PyMatchingMWPMDecoder.decode_dem_batch`.
+
+The command reports adapter mismatches and the logical-error rate of each prediction stream against the sampled logical observables.
+
+A zero adapter-mismatch count is strong evidence for the DEM bridge on the sampled workload because both paths receive the same detector shots and must return the same observable predictions. It does not validate Aegis's custom graph builder because the DEM path delegates graph construction to PyMatching.
+
+## Controlled calibration-advantage experiment
+
+Run:
+
+```bash
+aegis-bench calibration-advantage \
+  --shots 10000 \
+  --seed 20260928 \
+  --out-json bench_out/calibration.json \
+  --plot bench_out/calibration.png
+```
+
+This experiment uses a deliberately small graph where two distinct physical error chains can produce the same detector syndrome but differ by a boundary-to-boundary logical path. That lets the benchmark evaluate the residual chain, physical error XOR correction, against exact logical ground truth for the model.
+
+The uniform decoder receives one global probability on every edge. The calibrated decoder receives the actual non-uniform edge probabilities. Both decode exactly the same sampled physical error chains.
+
+The output includes failure counts, graph-level logical-failure rates, Wilson ninety-five-percent confidence intervals, paired discordant failure counts, an exact paired-binomial p-value, analytically expected rates, relative reduction, and the uniform-to-calibrated failure ratio.
+
+This demonstrates the behavior of Aegis's non-uniform weight plumbing when the supplied probabilities are informative. It is not evidence that arbitrary real-device calibration records are already converted into physically correct surface-code graph weights.
+
+## Structural correction-chain sweep
+
+Run:
 
 ```bash
 aegis-bench sweep --decoder mwpm --p 0.01 0.02 0.04 --distance 5 --rounds 6 --trials 200
 ```
 
-The historical `aegis-threshold` command uses related structural machinery. Its name is retained for compatibility, but its output must not be cited as a QEC threshold.
+The sweep generates synthetic detector-bit patterns and checks whether proposed correction edges annihilate detector defects and whether the correction chain itself has problematic boundary topology.
 
-## Circuit-level DEM acceptance
+The check does not receive a sampled physical error chain and cannot form the physical residual error. It therefore is not a circuit-level logical-error-rate measurement and is not a threshold estimator.
 
-`aegis-bench circuit-acceptance` generates a noisy rotated surface-code memory circuit with Stim, samples detector events and the corresponding logical observables, and decodes the exact same detector shots through two paths:
-
-1. a raw `pymatching.Matching` constructed directly from the Stim detector error model;
-2. Aegis's `PyMatchingMWPMDecoder` DEM bridge.
-
-Example:
-
-```bash
-aegis-bench circuit-acceptance --distance 3 --rounds 3 --shots 1000 --p 0.01
-```
-
-The acceptance check reports the number of shot-by-shot prediction mismatches between Aegis and raw PyMatching and reports each path's logical-error rate against Stim's sampled logical observables.
-
-A zero adapter-mismatch count establishes that Aegis's DEM input/output plumbing preserves PyMatching's predictions for that sampled circuit and workload. It does **not** validate Aegis's custom decoding-graph builder because the DEM path delegates graph construction to PyMatching.
+The historical `aegis-threshold` command uses related structural machinery. Its name remains for compatibility, but its output should be described as a structural stress result.
 
 ## Custom graph-adapter acceptance
 
-The unit suite separately cross-checks the Aegis graph adapter against PyMatching's independent `decode_to_edges_array` output. Aegis's fault-ID-derived correction edges are normalized back into detector-edge pairs and compared with PyMatching's decoded edge solution, including virtual-boundary edges.
+The unit suite also cross-checks Aegis's custom graph adapter against PyMatching's independent `decode_to_edges_array` result. It normalizes both outputs into detector-edge pairs, including virtual-boundary edges, and compares them.
 
-This test is designed to catch a class of bugs where sparse blossom finds the right matching but Aegis maps returned fault IDs back to the wrong Aegis `Edge` objects.
+This specifically tests the mapping between PyMatching fault identifiers and Aegis `Edge` objects. It catches bugs where the matching result is correct but the reconstructed Aegis correction path is wrong.
 
-## Controlled calibration-advantage experiment
+## Reproducibility checklist
 
-`aegis-bench calibration-advantage` is a deliberately small graph-level experiment designed to answer one narrow question: does supplying correct non-uniform edge probabilities change the logical outcome when the noise is genuinely non-uniform?
+For any benchmark you plan to share, preserve the command line or API call, random seed, dependency versions, Aegis commit or release, input generation procedure, machine information, graph and weight policy, optional decoder settings, and raw output artifacts.
 
-The model contains two detector nodes between opposite boundaries. A single middle-edge error and a pair of boundary-edge errors produce the same detector syndrome, but the two physical error chains differ by a boundary-to-boundary logical path. This makes the residual chain, physical error XOR correction, an exact ground-truth logical test for this model.
+When comparing two decoders, feed them equivalent inputs and define the timed region before interpreting a speed ratio.
 
-The default experiment uses boundary-edge error probabilities of 0.18 and a middle-edge probability of 0.01. The uniform baseline receives the global average probability on every edge. The calibrated decoder receives the actual edge probabilities. Both decoders process exactly the same sampled physical error chains.
+When reporting logical failure, state what supplied the physical errors, detector events, and logical ground truth.
 
-Example:
-
-```bash
-aegis-bench calibration-advantage --shots 10000 --seed 20260928 --out-json bench_out/calibration.json --plot bench_out/calibration.png
-```
-
-The command reports graph-level logical failure rates with Wilson ninety-five-percent confidence intervals, paired discordant failure counts, an exact two-sided paired-binomial p-value, relative reduction, and the uniform-to-calibrated failure ratio. The implementation also reports analytically expected failure rates for this three-edge model so the Monte Carlo result can be checked against a closed-form reference. Optional JSON and PNG outputs make the evidence reproducible and easy to plot.
-
-This experiment proves that Aegis's non-uniform graph-weight plumbing can improve decoding when the supplied calibration is informative. It does **not** prove that Aegis currently converts IBM or other device calibration records into correct surface-code edge probabilities. The current hardware interface can acquire calibration-like arrays, while the production runtime still requires graph weights to be supplied through its weight dictionaries. Building and validating that calibration-to-decoding-graph mapping remains separate work.
-
-## What is still missing
-
-The controlled graph experiment now demonstrates that correct non-uniform weights can beat a uniform baseline in a model with exact residual-chain ground truth. What is still missing is the stronger hardware claim: a validated mapping from real device calibration or a realistic circuit-level non-uniform noise model into Aegis graph weights, followed by logical-observable comparisons against an appropriate baseline.
-
-Until that end-to-end calibration mapping is validated, IBM calibration ingestion, leakage handling, learned reweighting, and related research paths should be treated as capabilities under evaluation rather than demonstrated device-level improvements over plain Stim plus PyMatching.
-
-## Reproducibility rules
-
-Do not use the upstream greater-than-100,000-times result as an Aegis end-to-end number.
-
-Do not call the structural stress sweep a circuit-level logical-error-rate benchmark or a threshold estimate.
-
-Do not compare two latency numbers without identifying the workload and timed region.
-
-Do record dependency versions, random seeds, circuit parameters, and hardware.
-
-Do preserve the input corpus or generation procedure when a benchmark uses generated data.
-
-These rules are part of the Aegis QEC evidence policy, not merely documentation style.
+When quoting sparse-blossom speedups, cite the upstream paper rather than presenting those numbers as measurements made by Aegis.
