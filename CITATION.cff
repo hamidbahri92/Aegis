@@ -6,15 +6,20 @@ authors:
   - family-names: "Bahri"
     given-names: "Hamid"
 version: 1.1.1
-date-released: 2026-09-29
+date-released: 2026-10-04
 license: MIT
 repository-code: "https://github.com/hamidbahri92/Aegis"
 url: "https://pypi.org/project/aegis-qec/"
-abstract: "A Python toolkit for surface-code decoding experiments using PyMatching sparse-blossom MWPM, explicit detector-error-model inputs, correction-edge reconstruction, and reproducible validation and benchmarking workflows."
+abstract: "An open-source Python toolkit for quantum error correction and surface-code decoding using PyMatching sparse-blossom MWPM, explicit Stim detector-error-model inputs, calibrated decoding experiments, correction-edge reconstruction, and reproducible validation and benchmarking workflows."
 keywords:
   - quantum error correction
+  - QEC
   - surface code
+  - rotated surface code
+  - quantum decoding
   - minimum-weight perfect matching
   - sparse blossom
   - PyMatching
   - Stim
+  - detector error model
+  - fault-tolerant quantum computing
