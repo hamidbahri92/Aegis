@@ -4,18 +4,90 @@ on:
   push:
     tags:
       - "v*.*.*"
+    branches:
+      - main
+    paths:
+      - ".github/RELEASE_REQUEST"
 
 permissions:
   contents: read
 
 jobs:
+  resolve:
+    name: Resolve and authorize release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Resolve package version and requested release
+        id: release
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import tomllib
+
+          with open("pyproject.toml", "rb") as f:
+              version = tomllib.load(f)["project"]["version"]
+
+          ref_type = os.environ["GITHUB_REF_TYPE"]
+          ref_name = os.environ["GITHUB_REF_NAME"]
+
+          if ref_type == "tag":
+              if not ref_name.startswith("v"):
+                  raise SystemExit(f"release tag must start with v: {ref_name}")
+              requested = ref_name[1:]
+          else:
+              requested = pathlib.Path(".github/RELEASE_REQUEST").read_text(encoding="utf-8").strip()
+
+          if requested != version:
+              raise SystemExit(f"requested release {requested} != package version {version}")
+
+          tag = f"v{version}"
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"version={version}\n")
+              out.write(f"tag={tag}\n")
+          PY
+      - name: Create immutable release tag from reviewed main commit
+        if: github.ref_type == 'branch'
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          git fetch --tags --force
+          if git rev-parse -q --verify "refs/tags/${RELEASE_TAG}" >/dev/null; then
+            existing="$(git rev-list -n 1 "${RELEASE_TAG}")"
+            if [ "${existing}" != "${GITHUB_SHA}" ]; then
+              echo "Tag ${RELEASE_TAG} already exists at ${existing}, expected ${GITHUB_SHA}" >&2
+              exit 1
+            fi
+            echo "Tag ${RELEASE_TAG} already points at this release commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${RELEASE_TAG}" "${GITHUB_SHA}" -m "Aegis QEC ${RELEASE_VERSION}"
+          git push origin "${RELEASE_TAG}"
+
   build:
     name: Build and validate distributions
+    needs: resolve
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
@@ -32,16 +104,16 @@ jobs:
           python -m pip install --force-reinstall dist/*.whl
           aegis --version
           aegis doctor --json
-      - name: Verify tag matches package version
+      - name: Verify requested release matches package version
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
         run: >-
           python -c
           "import importlib.metadata as m, os;
-          expected = os.environ['RELEASE_TAG'].removeprefix('v');
+          expected = os.environ['RELEASE_VERSION'];
           actual = m.version('aegis-qec');
-          assert actual == expected, f'tag {expected} != package {actual}'"
-      - name: Preserve validated distributions for the publish job
+          assert actual == expected, f'release {expected} != package {actual}'"
+      - name: Preserve validated distributions for publishing
         uses: actions/upload-artifact@v7
         with:
           name: python-package-distributions
@@ -51,7 +123,7 @@ jobs:
 
   publish:
     name: Publish validated distributions to PyPI
-    needs: build
+    needs: [resolve, build]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -64,3 +136,53 @@ jobs:
           path: dist/
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+
+  github-release:
+    name: Create GitHub Release
+    needs: [resolve, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+      - name: Retrieve validated distributions
+        uses: actions/download-artifact@v7
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Build release notes from changelog
+        env:
+          RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import re
+
+          version = os.environ["RELEASE_VERSION"]
+          text = pathlib.Path("CHANGELOG.md").read_text(encoding="utf-8")
+          pattern = rf"^## {re.escape(version)}\s+—.*?\n(.*?)(?=^## |\Z)"
+          match = re.search(pattern, text, flags=re.MULTILINE | re.DOTALL)
+          if not match:
+              raise SystemExit(f"Could not find changelog section for {version}")
+          notes = match.group(1).strip() + "\n"
+          pathlib.Path("release_notes.md").write_text(notes, encoding="utf-8")
+          PY
+      - name: Create or refresh GitHub Release and attach distributions
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
+        shell: bash
+        run: |
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release edit "${RELEASE_TAG}" --title "Aegis QEC ${RELEASE_VERSION}" --notes-file release_notes.md
+            gh release upload "${RELEASE_TAG}" dist/* --clobber
+          else
+            gh release create "${RELEASE_TAG}" dist/* --verify-tag --title "Aegis QEC ${RELEASE_VERSION}" --notes-file release_notes.md --latest
+          fi
