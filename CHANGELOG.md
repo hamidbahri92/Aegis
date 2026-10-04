@@ -6,7 +6,7 @@ This file records user-visible changes to Aegis QEC.
 
 No user-visible changes recorded yet.
 
-## 1.1.1 — 2026-09-29
+## 1.1.1 — 2026-10-04
 
 ### Detector-error-model safety
 
