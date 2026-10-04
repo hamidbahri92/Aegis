@@ -5,13 +5,26 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "aegis-qec"
 version = "1.1.1"
-description = "Surface-code decoding and QEC experiments powered by PyMatching sparse blossom."
+description = "Quantum error correction toolkit for surface-code decoding, PyMatching sparse-blossom MWPM, Stim detector error models, calibration, and reproducible benchmarks."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Hamid Bahri" }]
-keywords = ["quantum-error-correction", "qec", "surface-code", "mwpm", "pymatching"]
+keywords = [
+  "quantum-error-correction",
+  "qec",
+  "surface-code",
+  "rotated-surface-code",
+  "quantum-decoding",
+  "mwpm",
+  "minimum-weight-perfect-matching",
+  "sparse-blossom",
+  "pymatching",
+  "stim",
+  "detector-error-model",
+  "fault-tolerant-quantum-computing",
+]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Science/Research",
