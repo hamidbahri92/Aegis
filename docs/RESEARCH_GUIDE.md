@@ -32,11 +32,11 @@ research_out/study.csv
 research_out/study.png
 ```
 
-The JSON artifact is the primary reproducibility record. It contains the experiment parameters, base seed, per-point seeds, environment versions, noise model, result table, detector counts, timing data, and interpretation warning.
+The JSON artifact is the primary reproducibility record. It contains the experiment parameters, base seed, per-point seeds, environment versions, noise model, result table, detector counts, timing data, SHA-256 hashes of the generated Stim circuit and detector error model, and an interpretation warning.
 
 ## What the default study means
 
-The default study uses Stim's rotated surface-code memory circuit. The same probability p is applied to after-Clifford depolarization, measurement flips before measurement, and reset flips after reset.
+The default study uses Stim's rotated surface-code memory circuit. The same probability p is applied to after-Clifford depolarization, data depolarization before each syndrome-extraction round, measurement flips before measurement, and reset flips after reset.
 
 If no fixed number of rounds is supplied, Aegis uses rounds equal to code distance.
 
