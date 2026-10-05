@@ -12,6 +12,7 @@ from a3d import AegisConfig, DecoderRuntime, RotatedSurfaceLayout
 from .campaign import run_campaign, write_campaign_summary
 from .comparison import compare_decoders_exact_shots, write_comparison_json
 from .decoder_plugins import available_decoders, custom_decoder_registry
+from .io_decode import predict_observables_from_files
 from .research import run_surface_code_study, wilson_interval, write_study_artifacts
 
 try:
@@ -26,6 +27,7 @@ __all__ = [
     "available_decoders",
     "compare_decoders_exact_shots",
     "custom_decoder_registry",
+    "predict_observables_from_files",
     "run_campaign",
     "run_surface_code_study",
     "wilson_interval",
