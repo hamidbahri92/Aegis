@@ -9,6 +9,9 @@ from importlib.metadata import PackageNotFoundError, version
 
 from a3d import AegisConfig, DecoderRuntime, RotatedSurfaceLayout
 
+from .campaign import run_campaign, write_campaign_summary
+from .comparison import compare_decoders_exact_shots, write_comparison_json
+from .decoder_plugins import available_decoders, custom_decoder_registry
 from .research import run_surface_code_study, wilson_interval, write_study_artifacts
 
 try:
@@ -20,8 +23,14 @@ __all__ = [
     "AegisConfig",
     "DecoderRuntime",
     "RotatedSurfaceLayout",
+    "available_decoders",
+    "compare_decoders_exact_shots",
+    "custom_decoder_registry",
+    "run_campaign",
     "run_surface_code_study",
     "wilson_interval",
+    "write_campaign_summary",
+    "write_comparison_json",
     "write_study_artifacts",
     "__version__",
 ]
