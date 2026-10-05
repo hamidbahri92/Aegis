@@ -117,8 +117,8 @@ def main():
         st.error(f"Could not construct this experiment: {type(exc).__name__}: {exc}")
         return 1
 
-    decode_tab, latency_tab, sweep_tab, study_tab = st.tabs(
-        ["Decode", "Latency", "Validation sweep", "Circuit study"]
+    decode_tab, latency_tab, sweep_tab, study_tab, explain_tab = st.tabs(
+        ["Decode", "Latency", "Validation sweep", "Circuit study", "Explain one shot"]
     )
 
     with decode_tab:
@@ -406,6 +406,128 @@ def main():
                         file_name="aegis_surface_code_study.csv",
                         mime="text/csv",
                     )
+
+    with explain_tab:
+        st.write(
+            "Inspect one real circuit-level shot: fired detectors, MWPM pairings, "
+            "observable prediction, and logical outcome."
+        )
+        if _version("stim") == "not installed":
+            st.warning(
+                "Shot explanation requires the full scientific extra: "
+                "python -m pip install -U 'aegis-qec[full]'."
+            )
+        else:
+            explain_col1, explain_col2, explain_col3 = st.columns(3)
+            with explain_col1:
+                explain_distance = st.selectbox(
+                    "Explain distance",
+                    [3, 5, 7, 9, 11],
+                    index=1,
+                )
+                explain_basis = st.selectbox(
+                    "Explain memory basis",
+                    ["x", "z"],
+                )
+            with explain_col2:
+                explain_p = st.number_input(
+                    "Explain physical error probability",
+                    min_value=0.0,
+                    max_value=0.49,
+                    value=0.01,
+                    step=0.001,
+                    format="%.4f",
+                )
+                explain_rounds = st.number_input(
+                    "Explain rounds",
+                    min_value=1,
+                    value=int(explain_distance),
+                    step=1,
+                )
+            with explain_col3:
+                explain_seed = st.number_input(
+                    "Explain seed",
+                    min_value=0,
+                    value=1234,
+                    step=1,
+                )
+
+            if st.button("Explain one shot", type="primary"):
+                try:
+                    import matplotlib.pyplot as plt
+
+                    from aegis_qec.explain import (
+                        explain_surface_code_shot,
+                        shot_explanation_figure,
+                    )
+
+                    explanation = explain_surface_code_shot(
+                        distance=int(explain_distance),
+                        physical_error_rate=float(explain_p),
+                        basis=explain_basis,
+                        rounds=int(explain_rounds),
+                        seed=int(explain_seed),
+                    )
+                    st.session_state["aegis_shot_explanation"] = explanation
+
+                    metric1, metric2, metric3 = st.columns(3)
+                    metric1.metric(
+                        "Fired detectors",
+                        explanation["fired_detector_count"],
+                    )
+                    metric2.metric(
+                        "MWPM pairs",
+                        len(explanation["matched_detection_events"]),
+                    )
+                    metric3.metric(
+                        "Outcome",
+                        (
+                            "Logical failure"
+                            if explanation["logical_failure"]
+                            else "Logical success"
+                        ),
+                    )
+
+                    fig = shot_explanation_figure(explanation)
+                    st.pyplot(fig)
+                    plt.close(fig)
+
+                    st.subheader("Fired detectors")
+                    st.dataframe(
+                        explanation["fired_detectors"],
+                        use_container_width=True,
+                        hide_index=True,
+                    )
+                    st.subheader("Matched detection events")
+                    st.dataframe(
+                        explanation["matched_detection_events"],
+                        use_container_width=True,
+                        hide_index=True,
+                    )
+                    st.write(
+                        "Actual observables:",
+                        explanation["actual_observables"],
+                    )
+                    st.write(
+                        "Predicted observables:",
+                        explanation["predicted_observables"],
+                    )
+                except Exception as exc:
+                    st.error(
+                        f"Shot explanation failed: {type(exc).__name__}: {exc}"
+                    )
+
+            explanation = st.session_state.get("aegis_shot_explanation")
+            if explanation:
+                st.info(explanation["interpretation"])
+                st.download_button(
+                    "Download shot explanation JSON",
+                    data=(
+                        json.dumps(explanation, indent=2, sort_keys=True) + "\n"
+                    ).encode("utf-8"),
+                    file_name="aegis_shot_explanation.json",
+                    mime="application/json",
+                )
 
     st.divider()
     st.caption(
