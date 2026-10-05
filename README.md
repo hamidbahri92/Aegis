@@ -158,6 +158,43 @@ The same workflow is available in the **Circuit study** tab of `aegis gui`, incl
 
 See the [Research Guide](https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_GUIDE.md) for student project ideas, practitioner workflows, interpretation boundaries, and the Python API.
 
+## Research platform and large campaigns
+
+For larger Monte Carlo work, Aegis integrates Sinter instead of reimplementing its multiprocessing collector:
+
+```bash
+aegis campaign \
+  --distance 3 5 7 \
+  --p 0.003 0.006 0.01 \
+  --decoder pymatching aegis-pymatching \
+  --workers auto \
+  --max-shots 1000000 \
+  --max-errors 1000 \
+  --resume research_out/campaign.csv
+```
+
+Campaigns are durable and resumable. Sinter task identities bind the exact circuit, detector error model, decoder, and metadata. Aegis adds circuit and DEM hashes, confidence intervals, environment information, JSON summaries, and plots.
+
+Aegis also accepts existing Stim circuit files:
+
+```bash
+aegis campaign --circuit experiment.stim --workers auto
+```
+
+When two decoders must be compared on exactly the same detector shots, use the paired comparison path:
+
+```bash
+aegis compare \
+  --decoder aegis-pymatching aegis-pymatching-correlated \
+  --distance 5 --p 0.006 --shots 100000 --seed 1234
+```
+
+The comparison artifact hashes the shared detector and observable samples and reports pairwise decoder disagreement.
+
+Third-party research decoders can register through the `aegis_qec.decoders` entry-point group and then participate in campaigns and exact-shot comparisons without modifying Aegis itself.
+
+See [Platform](https://github.com/hamidbahri92/Aegis/blob/main/docs/PLATFORM.md) for the plug-in contract, Sinter architecture, hardware provenance rules, and campaign semantics.
+
 ## Benchmarking and validation
 
 Aegis deliberately separates different kinds of evidence because decoder-kernel speed, end-to-end application latency, structural correctness, and circuit-level logical performance are not interchangeable.
@@ -224,6 +261,9 @@ The primary command is `aegis`.
 aegis doctor
 aegis demo
 aegis study
+aegis campaign
+aegis compare
+aegis decoders
 aegis benchmark
 aegis gui
 ```
@@ -309,6 +349,7 @@ See [Contributing](https://github.com/hamidbahri92/Aegis/blob/main/CONTRIBUTING.
 - [Algorithms](https://github.com/hamidbahri92/Aegis/blob/main/docs/ALGORITHMS.md) — sparse-blossom MWPM, graph translation, DEM decoding, erasures, and experimental decoders.
 - [Benchmarking](https://github.com/hamidbahri92/Aegis/blob/main/docs/BENCHMARKING.md) — performance methodology, circuit acceptance, calibration experiments, structural sweeps, and reproducibility.
 - [Research Guide](https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_GUIDE.md) — circuit studies, student projects, practitioner workflows, uncertainty, artifacts, and reproducible reporting.
+- [Platform](https://github.com/hamidbahri92/Aegis/blob/main/docs/PLATFORM.md) — resumable Sinter campaigns, exact shared-shot comparisons, decoder plug-ins, and hardware provenance.
 
 ## Project scope
 
