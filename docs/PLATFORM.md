@@ -124,6 +124,24 @@ class MyDecoder:
 
 Detection-event input and observable predictions follow Sinter's little-endian bit-packed contract.
 
+## External detector-shot data
+
+Aegis can decode standard Stim detector-event files without generating the circuit itself:
+
+```bash
+aegis predict \
+  --dem experiment.dem \
+  --dets detector_shots.b8 \
+  --dets-format b8 \
+  --decoder aegis-pymatching \
+  --out observable_predictions.b8 \
+  --out-format b8
+```
+
+The prediction provenance artifact hashes the detector error model, detector-shot input, and observable-prediction output. This is the intended bridge for external simulators and hardware pipelines that already produce detector events.
+
+Stim-supported result formats can be selected with `--dets-format` and `--out-format`.
+
 ## Hardware provenance
 
 Hardware-derived research must never silently become simulated research.
