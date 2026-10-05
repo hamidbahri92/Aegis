@@ -191,6 +191,14 @@ aegis compare \
 
 The comparison artifact hashes the shared detector and observable samples and reports pairwise decoder disagreement.
 
+Aegis can also decode standard external detector-shot data:
+
+```bash
+aegis predict --dem experiment.dem --dets shots.b8 --out predictions.b8
+```
+
+The prediction provenance record hashes the DEM, detector shots, and output, making this path suitable for data produced outside Aegis.
+
 Third-party research decoders can register through the `aegis_qec.decoders` entry-point group and then participate in campaigns and exact-shot comparisons without modifying Aegis itself.
 
 See [Platform](https://github.com/hamidbahri92/Aegis/blob/main/docs/PLATFORM.md) for the plug-in contract, Sinter architecture, hardware provenance rules, and campaign semantics.
@@ -263,6 +271,7 @@ aegis demo
 aegis study
 aegis campaign
 aegis compare
+aegis predict
 aegis decoders
 aegis benchmark
 aegis gui
