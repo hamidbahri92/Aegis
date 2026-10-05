@@ -1,18 +1,18 @@
-# Aegis QEC
+# Aegis QEC — Quantum Error Correction Toolkit for Surface Codes
 
 [![PyPI](https://img.shields.io/pypi/v/aegis-qec.svg)](https://pypi.org/project/aegis-qec/)
 ![Python](https://img.shields.io/pypi/pyversions/aegis-qec.svg)
 [![CI](https://github.com/hamidbahri92/Aegis/actions/workflows/ci.yml/badge.svg)](https://github.com/hamidbahri92/Aegis/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/hamidbahri92/Aegis/blob/main/LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/hamidbahri92/Aegis?style=social)](https://github.com/hamidbahri92/Aegis/stargazers)
+**Aegis QEC is an open-source Python toolkit for quantum error correction and surface-code decoding. It connects Stim detector error models to PyMatching sparse-blossom MWPM, adds calibrated and erasure-aware decoding, reproducible benchmarks, explicit validation, and research workflows for fault-tolerant quantum computing.**
 
-**Aegis QEC is an open-source Python toolkit for quantum error correction, surface-code decoding, Stim detector error models, PyMatching sparse-blossom minimum-weight perfect matching, calibrated decoding experiments, benchmarking, and decoder research.**
-
-It is designed for researchers and engineers who need more than a single decoder call. Aegis provides surface-code graph construction, explicit noise and calibration handling, correction-edge reconstruction, faithful Stim DEM decoding, batch execution, reproducible validation, controlled decoder comparisons, an optional Streamlit workbench, and research paths for alternative decoders and reweighting methods.
+Use Aegis when you want to run complete QEC experiments rather than wire together a decoder, noise model, validation layer, benchmark harness, and reporting pipeline yourself. It provides surface-code graph construction, faithful Stim DEM decoding, calibrated edge costs, correction-edge reconstruction, batch execution, controlled decoder comparisons, a Python API, command-line tools, and an optional Streamlit workbench.
 
 The PyPI distribution is **`aegis-qec`**. The public Python namespace is **`aegis_qec`**. The historical **`a3d`** namespace remains importable for compatibility.
 
 ## Install Aegis QEC
+
+Install the surface-code QEC toolkit from PyPI and verify the decoder stack immediately:
 
 Aegis QEC requires Python 3.10 or newer.
 
@@ -289,9 +289,9 @@ See [Contributing](https://github.com/hamidbahri92/Aegis/blob/main/CONTRIBUTING.
 - [Algorithms](https://github.com/hamidbahri92/Aegis/blob/main/docs/ALGORITHMS.md) — sparse-blossom MWPM, graph translation, DEM decoding, erasures, and experimental decoders.
 - [Benchmarking](https://github.com/hamidbahri92/Aegis/blob/main/docs/BENCHMARKING.md) — performance methodology, circuit acceptance, calibration experiments, structural sweeps, and reproducibility.
 
-## Search terms and project scope
+## Project scope
 
-Aegis QEC is relevant to work involving **quantum error correction**, **QEC**, **surface codes**, **rotated surface codes**, **minimum-weight perfect matching**, **MWPM**, **sparse blossom**, **PyMatching**, **Stim**, **detector error models**, **quantum decoding**, **calibrated decoding**, **erasure-aware decoding**, **decoder benchmarking**, and **fault-tolerant quantum computing research**.
+Aegis QEC is built for **quantum error correction**, **surface-code and rotated-surface-code decoding**, **minimum-weight perfect matching (MWPM)**, **sparse blossom**, **PyMatching**, **Stim detector error models**, **calibrated and erasure-aware decoding**, **decoder benchmarking**, and **fault-tolerant quantum computing research**.
 
 ## Cite Aegis QEC
 
