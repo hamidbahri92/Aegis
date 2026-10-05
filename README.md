@@ -139,6 +139,25 @@ These experimental paths are useful for decoder research, but they do not all ha
 
 See [Algorithms](https://github.com/hamidbahri92/Aegis/blob/main/docs/ALGORITHMS.md) for implementation details and trust boundaries.
 
+## Reproducible circuit studies
+
+For student projects, theses, decoder integration work, and research prototypes, Aegis can run a complete Stim circuit-level study and preserve the result as reusable artifacts:
+
+```bash
+aegis study \
+  --distance 3 5 7 \
+  --p 0.003 0.006 0.01 \
+  --shots 5000 \
+  --basis x \
+  --seed 1234
+```
+
+The command generates rotated surface-code memory circuits with Stim, samples detector events and logical observables, decodes those exact shots through the Aegis direct DEM bridge, reports logical-error rates with 95 percent Wilson confidence intervals, and writes JSON, CSV, and PNG artifacts. The JSON includes the experiment parameters, per-point seeds, dependency versions, environment details, timings, and the exact noise-model mapping used by the study.
+
+The same workflow is available in the **Circuit study** tab of `aegis gui`, including downloadable reproducibility records.
+
+See the [Research Guide](https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_GUIDE.md) for student project ideas, practitioner workflows, interpretation boundaries, and the Python API.
+
 ## Benchmarking and validation
 
 Aegis deliberately separates different kinds of evidence because decoder-kernel speed, end-to-end application latency, structural correctness, and circuit-level logical performance are not interchangeable.
@@ -204,6 +223,7 @@ The primary command is `aegis`.
 ```text
 aegis doctor
 aegis demo
+aegis study
 aegis benchmark
 aegis gui
 ```
@@ -230,7 +250,7 @@ Installing `aegis-qec[gui]` provides the optional Streamlit workbench:
 aegis gui
 ```
 
-The GUI is intended for interactive exploration and does not replace the reproducible command-line and Python APIs used for published experiments.
+The GUI is intended for interactive exploration. Its Circuit study workflow uses the same research implementation as the CLI and can export the JSON and CSV records needed to reproduce a study. Scripted or published work should still preserve the exact command, version, seed, and exported artifacts.
 
 ## Package architecture
 
@@ -288,6 +308,7 @@ See [Contributing](https://github.com/hamidbahri92/Aegis/blob/main/CONTRIBUTING.
 - [Overview](https://github.com/hamidbahri92/Aegis/blob/main/docs/OVERVIEW.md) — architecture, package identity, graph model, interfaces, and validation surfaces.
 - [Algorithms](https://github.com/hamidbahri92/Aegis/blob/main/docs/ALGORITHMS.md) — sparse-blossom MWPM, graph translation, DEM decoding, erasures, and experimental decoders.
 - [Benchmarking](https://github.com/hamidbahri92/Aegis/blob/main/docs/BENCHMARKING.md) — performance methodology, circuit acceptance, calibration experiments, structural sweeps, and reproducibility.
+- [Research Guide](https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_GUIDE.md) — circuit studies, student projects, practitioner workflows, uncertainty, artifacts, and reproducible reporting.
 
 ## Project scope
 
