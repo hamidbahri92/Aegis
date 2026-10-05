@@ -49,6 +49,10 @@ def test_surface_code_study_is_reproducible_and_records_environment():
     assert point["shots"] == 64
     assert 0 <= point["logical_failures"] <= 64
     assert 0.0 <= point["ci95_low"] <= point["logical_error_rate"] <= point["ci95_high"] <= 1.0
+    assert len(point["circuit_sha256"]) == 64
+    assert len(point["dem_sha256"]) == 64
+    assert point["circuit_sha256"] == second_point["circuit_sha256"]
+    assert point["dem_sha256"] == second_point["dem_sha256"]
     assert point["logical_failures"] == second_point["logical_failures"]
     assert point["detection_events"] == second_point["detection_events"]
 
