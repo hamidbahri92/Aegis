@@ -124,6 +124,20 @@ class MyDecoder:
 
 Detection-event input and observable predictions follow Sinter's little-endian bit-packed contract.
 
+## Statistical scaling analysis
+
+Campaign collection and threshold-like interpretation are separate operations. After collecting a sufficiently dense campaign, use:
+
+```bash
+aegis scaling --campaign research_out/campaign.json --decoder pymatching
+```
+
+Aegis fits the aggregated binomial logical-failure counts to a first-order finite-size scaling model and profiles the critical physical-error probability over the scaling exponent. It also compares the scaling model with a distance-independent logistic trend using AIC.
+
+The analysis fails on obviously underdetermined inputs, requires at least three code distances and four physical-error points, and warns when fitted parameters or confidence intervals reach the sampled/search boundaries.
+
+This does not turn simulated evidence into hardware evidence. The provenance of the campaign still determines what kind of claim the fit can support.
+
 ## External detector-shot data
 
 Aegis can decode standard Stim detector-event files without generating the circuit itself:
