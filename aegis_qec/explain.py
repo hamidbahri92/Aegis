@@ -169,26 +169,10 @@ def explain_surface_code_shot(
     }
 
 
-def write_shot_explanation(
-    explanation: dict[str, Any],
-    *,
-    json_path: str | None = "research_out/shot-explanation.json",
-    plot_path: str | None = "research_out/shot-explanation.png",
-) -> None:
-    if json_path:
-        path = Path(json_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("w", encoding="utf-8") as handle:
-            json.dump(explanation, handle, indent=2, sort_keys=True)
-            handle.write("\n")
-
-    if not plot_path:
-        return
-
+def shot_explanation_figure(explanation: dict[str, Any]):
+    """Build a matplotlib figure for one shot explanation."""
     import matplotlib.pyplot as plt
 
-    path = Path(plot_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
     fig, ax = plt.subplots(figsize=(8.0, 6.0))
 
     fired = explanation.get("fired_detectors", [])
@@ -248,5 +232,29 @@ def write_shot_explanation(
     ax.grid(True, alpha=0.25)
     ax.set_aspect("equal", adjustable="datalim")
     fig.tight_layout()
+    return fig
+
+
+def write_shot_explanation(
+    explanation: dict[str, Any],
+    *,
+    json_path: str | None = "research_out/shot-explanation.json",
+    plot_path: str | None = "research_out/shot-explanation.png",
+) -> None:
+    if json_path:
+        path = Path(json_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8") as handle:
+            json.dump(explanation, handle, indent=2, sort_keys=True)
+            handle.write("\n")
+
+    if not plot_path:
+        return
+
+    import matplotlib.pyplot as plt
+
+    path = Path(plot_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig = shot_explanation_figure(explanation)
     fig.savefig(path, dpi=180)
     plt.close(fig)
