@@ -46,6 +46,8 @@ Please include the Aegis QEC version, Python version, operating system, command 
 
 If the issue concerns a numerical or decoder result, include the random seed and enough input data to reproduce it.
 
+For circuit-level studies, prefer `aegis study` and attach the generated JSON artifact. The repository's Research result issue form asks for the command, environment, raw artifacts, and interpretation separately so another researcher can reproduce the finding.
+
 ## Research claims
 
 Aegis distinguishes upstream PyMatching results, Aegis end-to-end measurements, structural stress tests, controlled graph experiments, and circuit-level logical-error results. New documentation and benchmarks should preserve those distinctions.
