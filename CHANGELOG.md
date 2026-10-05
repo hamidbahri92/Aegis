@@ -4,6 +4,10 @@ This file records user-visible changes to Aegis QEC.
 
 ## Unreleased
 
+### Finite-size scaling analysis
+
+Added first-order finite-size scaling analysis for campaign artifacts. The fit uses aggregated binomial logical-failure counts, profiles the critical physical-error probability over the scaling exponent, reports a profile-likelihood interval and AIC comparison, and warns when the sampled grid or search range cannot support a stable interpretation.
+
 ### Research platform
 
 Added resumable multiprocessing campaigns backed by Sinter, including durable CSV resume, maximum-shot and maximum-error stopping conditions, detection-event counting, JSON summaries, plots, and support for existing Stim circuit files.
