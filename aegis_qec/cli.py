@@ -147,6 +147,55 @@ def _benchmark(args: argparse.Namespace) -> int:
     return 0
 
 
+def _study(args: argparse.Namespace) -> int:
+    from aegis_qec.research import run_surface_code_study, write_study_artifacts
+
+    try:
+        study = run_surface_code_study(
+            distances=args.distance,
+            physical_error_rates=args.p,
+            shots=args.shots,
+            basis=args.basis,
+            rounds=args.rounds,
+            seed=args.seed,
+        )
+    except (RuntimeError, ValueError) as exc:
+        print(f"Study could not run: {exc}", file=sys.stderr)
+        return 2
+
+    write_study_artifacts(
+        study,
+        json_path=args.out_json,
+        csv_path=args.out_csv,
+        plot_path=args.plot,
+    )
+
+    print("Aegis QEC circuit-level surface-code study")
+    print(
+        "distance rounds p shots logical_failures logical_error_rate "
+        "ci95_low ci95_high decode_shots_per_second"
+    )
+    for point in study["points"]:
+        print(
+            f"{point['distance']} {point['rounds']} "
+            f"{float(point['physical_error_rate']):.6g} "
+            f"{point['shots']} {point['logical_failures']} "
+            f"{float(point['logical_error_rate']):.6g} "
+            f"{float(point['ci95_low']):.6g} "
+            f"{float(point['ci95_high']):.6g} "
+            f"{float(point['decode_shots_per_second']):.3f}"
+        )
+
+    if args.out_json:
+        print(f"JSON: {Path(args.out_json).resolve()}")
+    if args.out_csv:
+        print(f"CSV: {Path(args.out_csv).resolve()}")
+    if args.plot:
+        print(f"Plot: {Path(args.plot).resolve()}")
+    print(study["interpretation"])
+    return 0
+
+
 def _gui(_: argparse.Namespace) -> int:
     from scripts.run_gui import main as run_gui
 
@@ -186,6 +235,37 @@ def _parser() -> argparse.ArgumentParser:
     benchmark.add_argument("--out", default="bench_out/realtime_latency.csv")
     benchmark.set_defaults(handler=_benchmark)
 
+    study = sub.add_parser(
+        "study",
+        help="Run a reproducible Stim circuit-level surface-code study.",
+    )
+    study.add_argument(
+        "--distance",
+        nargs="+",
+        type=int,
+        default=[3, 5, 7],
+        help="Odd code distances to study. Default: 3 5 7.",
+    )
+    study.add_argument(
+        "--p",
+        nargs="+",
+        type=float,
+        default=[0.001, 0.003, 0.006, 0.01],
+        help="Physical error probabilities. Default: 0.001 0.003 0.006 0.01.",
+    )
+    study.add_argument("--shots", type=int, default=1000, help="Shots per study point.")
+    study.add_argument("--basis", choices=["x", "z"], default="x")
+    study.add_argument(
+        "--rounds",
+        type=int,
+        help="Syndrome rounds. When omitted, each distance uses rounds=distance.",
+    )
+    study.add_argument("--seed", type=int, default=1234)
+    study.add_argument("--out-json", default="research_out/study.json")
+    study.add_argument("--out-csv", default="research_out/study.csv")
+    study.add_argument("--plot", default="research_out/study.png")
+    study.set_defaults(handler=_study)
+
     gui = sub.add_parser("gui", help="Launch the optional interactive Streamlit application.")
     gui.set_defaults(handler=_gui)
     return parser
@@ -197,7 +277,7 @@ def main(argv: list[str] | None = None) -> int:
     handler = getattr(args, "handler", None)
     if handler is None:
         parser.print_help()
-        print("\nTry 'aegis doctor' first, then 'aegis demo' or 'aegis gui'.")
+        print("\nTry 'aegis doctor' first, then 'aegis demo', 'aegis study', or 'aegis gui'.")
         return 0
     return int(handler(args))
 
