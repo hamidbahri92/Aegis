@@ -329,6 +329,58 @@ def _predict(args: argparse.Namespace) -> int:
     return 0
 
 
+def _scaling(args: argparse.Namespace) -> int:
+    from aegis_qec.scaling import (
+        fit_surface_code_scaling,
+        load_campaign_json,
+        write_scaling_artifacts,
+    )
+
+    try:
+        campaign = load_campaign_json(args.campaign)
+        analysis = fit_surface_code_scaling(
+            campaign,
+            decoder=args.decoder,
+            nu_min=args.nu_min,
+            nu_max=args.nu_max,
+        )
+    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        print(f"Scaling analysis could not run: {exc}", file=sys.stderr)
+        return 2
+
+    write_scaling_artifacts(
+        campaign,
+        analysis,
+        json_path=args.out_json,
+        plot_path=args.plot,
+    )
+
+    ci_low, ci_high = analysis["critical_probability_ci95_profile"]
+    print("Aegis QEC finite-size scaling")
+    print(f"Decoder: {analysis['decoder']}")
+    print(
+        "Critical physical-error probability: "
+        f"{float(analysis['critical_probability']):.6g}"
+    )
+    print(
+        "Profile-likelihood 95% interval: "
+        f"[{float(ci_low):.6g}, {float(ci_high):.6g}]"
+    )
+    print(f"nu: {float(analysis['nu']):.6g}")
+    print(
+        "Delta AIC, null minus scaling: "
+        f"{float(analysis['delta_aic_null_minus_scaling']):.6g}"
+    )
+    for warning in analysis["warnings"]:
+        print(f"Warning: {warning}")
+    if args.out_json:
+        print(f"JSON: {Path(args.out_json).resolve()}")
+    if args.plot:
+        print(f"Plot: {Path(args.plot).resolve()}")
+    print(analysis["interpretation"])
+    return 0
+
+
 def _gui(_: argparse.Namespace) -> int:
     from scripts.run_gui import main as run_gui
 
@@ -474,6 +526,18 @@ def _parser() -> argparse.ArgumentParser:
     )
     predict.set_defaults(handler=_predict)
 
+    scaling = sub.add_parser(
+        "scaling",
+        help="Fit a finite-size scaling model to a campaign JSON artifact.",
+    )
+    scaling.add_argument("--campaign", required=True, help="Campaign JSON artifact.")
+    scaling.add_argument("--decoder", required=True)
+    scaling.add_argument("--nu-min", type=float, default=0.5)
+    scaling.add_argument("--nu-max", type=float, default=3.0)
+    scaling.add_argument("--out-json", default="research_out/scaling.json")
+    scaling.add_argument("--plot", default="research_out/scaling.png")
+    scaling.set_defaults(handler=_scaling)
+
     gui = sub.add_parser("gui", help="Launch the optional interactive Streamlit application.")
     gui.set_defaults(handler=_gui)
     return parser
@@ -487,7 +551,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         print(
             "\nTry 'aegis doctor', then 'aegis study', 'aegis campaign', "
-            "'aegis compare', 'aegis predict', or 'aegis gui'."
+            "'aegis compare', 'aegis scaling', 'aegis predict', or 'aegis gui'."
         )
         return 0
     return int(handler(args))
