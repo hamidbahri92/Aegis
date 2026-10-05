@@ -14,6 +14,7 @@ from .comparison import compare_decoders_exact_shots, write_comparison_json
 from .decoder_plugins import available_decoders, custom_decoder_registry
 from .io_decode import predict_observables_from_files
 from .research import run_surface_code_study, wilson_interval, write_study_artifacts
+from .scaling import fit_surface_code_scaling, load_campaign_json, write_scaling_artifacts
 
 try:
     __version__ = version("aegis-qec")
@@ -27,12 +28,15 @@ __all__ = [
     "available_decoders",
     "compare_decoders_exact_shots",
     "custom_decoder_registry",
+    "fit_surface_code_scaling",
+    "load_campaign_json",
     "predict_observables_from_files",
     "run_campaign",
     "run_surface_code_study",
     "wilson_interval",
     "write_campaign_summary",
     "write_comparison_json",
+    "write_scaling_artifacts",
     "write_study_artifacts",
     "__version__",
 ]
