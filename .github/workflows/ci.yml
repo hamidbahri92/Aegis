@@ -44,6 +44,7 @@ jobs:
           tests/test_public_namespace.py
           tests/test_platform_campaign.py
           tests/test_hardware_provenance.py
+          tests/test_scaling_analysis.py
           tests/test_decode_from_dem_optional.py
           tests/test_stim_adapter_deprecation.py
       - name: Run tests
