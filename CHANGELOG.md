@@ -4,6 +4,16 @@ This file records user-visible changes to Aegis QEC.
 
 ## Unreleased
 
+### Research platform
+
+Added resumable multiprocessing campaigns backed by Sinter, including durable CSV resume, maximum-shot and maximum-error stopping conditions, detection-event counting, JSON summaries, plots, and support for existing Stim circuit files.
+
+Added an extensible decoder registry using the `aegis_qec.decoders` entry-point group. Built-in Aegis adapters provide standard and correlated PyMatching modes.
+
+Added exact shared-shot decoder comparison with circuit, detector-error-model, detector-sample, and observable-sample hashes plus pairwise prediction disagreement statistics.
+
+IBM calibration access now fails closed instead of silently substituting synthetic calibration data. Synthetic fallback requires explicit opt-in and returned calibration objects identify their provenance.
+
 ### Research workbench
 
 Added a reproducible circuit-level surface-code study workflow through the main `aegis study` command and the Streamlit workbench. Studies generate Stim rotated-memory circuits, decode sampled detector events through Aegis's direct detector-error-model bridge, report logical-error rates with 95 percent Wilson intervals, and export JSON, CSV, and plot artifacts.
