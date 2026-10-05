@@ -4,7 +4,15 @@ This file records user-visible changes to Aegis QEC.
 
 ## Unreleased
 
-No user-visible changes recorded yet.
+### Research workbench
+
+Added a reproducible circuit-level surface-code study workflow through the main `aegis study` command and the Streamlit workbench. Studies generate Stim rotated-memory circuits, decode sampled detector events through Aegis's direct detector-error-model bridge, report logical-error rates with 95 percent Wilson intervals, and export JSON, CSV, and plot artifacts.
+
+Study records capture seeds, dependency versions, environment information, circuit parameters, detector counts, timings, and the explicit noise-model mapping. A new research guide documents student projects, practitioner workflows, uncertainty, and interpretation boundaries.
+
+### Community research
+
+Added a structured GitHub issue form for reproducible research results and comparisons.
 
 ## 1.1.1 — 2026-10-04
 
