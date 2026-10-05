@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import math
 import platform
@@ -122,11 +123,16 @@ def run_surface_code_study(
                 distance=distance,
                 rounds=point_rounds,
                 after_clifford_depolarization=physical_error_rate,
+                before_round_data_depolarization=physical_error_rate,
                 before_measure_flip_probability=physical_error_rate,
                 after_reset_flip_probability=physical_error_rate,
             )
 
             dem = circuit.detector_error_model(decompose_errors=True)
+            circuit_text = str(circuit)
+            dem_text = str(dem)
+            circuit_sha256 = hashlib.sha256(circuit_text.encode("utf-8")).hexdigest()
+            dem_sha256 = hashlib.sha256(dem_text.encode("utf-8")).hexdigest()
 
             sample_started = time.perf_counter()
             detector_samples, actual_observables = circuit.compile_detector_sampler(
@@ -138,7 +144,7 @@ def run_surface_code_study(
             sample_seconds = time.perf_counter() - sample_started
 
             decode_started = time.perf_counter()
-            predictions = decoder.decode_dem_batch(str(dem), detector_samples)
+            predictions = decoder.decode_dem_batch(dem_text, detector_samples)
             decode_seconds = time.perf_counter() - decode_started
 
             failures_by_shot = np.any(predictions != actual_observables, axis=1)
@@ -160,6 +166,8 @@ def run_surface_code_study(
                     "detectors": int(detector_samples.shape[1]),
                     "observables": int(actual_observables.shape[1]),
                     "detection_events": int(np.sum(detector_samples)),
+                    "circuit_sha256": circuit_sha256,
+                    "dem_sha256": dem_sha256,
                     "seed": int(point_seed),
                     "sample_seconds": float(sample_seconds),
                     "decode_seconds": float(decode_seconds),
@@ -182,6 +190,7 @@ def run_surface_code_study(
             "base_seed": int(seed),
             "noise_model": {
                 "after_clifford_depolarization": "p",
+                "before_round_data_depolarization": "p",
                 "before_measure_flip_probability": "p",
                 "after_reset_flip_probability": "p",
             },
@@ -240,6 +249,8 @@ def write_study_artifacts(
             "detectors",
             "observables",
             "detection_events",
+            "circuit_sha256",
+            "dem_sha256",
             "seed",
             "sample_seconds",
             "decode_seconds",
