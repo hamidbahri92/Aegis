@@ -1,8 +1,6 @@
 name: Research result or reproducibility report
 description: Share a reproducible Aegis QEC experiment, comparison, unexpected result, or research question.
 title: "[Research] "
-labels:
-  - research
 body:
   - type: markdown
     attributes:
