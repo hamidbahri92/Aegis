@@ -1,5 +1,9 @@
 name: aegis-qec-ci
 
+concurrency:
+  group: aegis-qec-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
