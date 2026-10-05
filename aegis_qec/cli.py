@@ -30,6 +30,7 @@ def _doctor_report() -> dict[str, Any]:
         "backend": None,
         "pymatching": _distribution_version("pymatching"),
         "stim": _distribution_version("stim"),
+        "sinter": _distribution_version("sinter"),
         "streamlit": _distribution_version("streamlit"),
         "self_test": "not-run",
     }
@@ -82,6 +83,7 @@ def _doctor(args: argparse.Namespace) -> int:
         print(f"MWPM backend: {report['backend'] or 'unavailable'}")
         print(f"PyMatching: {report['pymatching'] or 'not installed'}")
         print(f"Stim: {report['stim'] or 'not installed (optional)'}")
+        print(f"Sinter: {report['sinter'] or 'not installed (optional campaigns)'}")
         print(f"Streamlit: {report['streamlit'] or 'not installed (optional GUI)'}")
         print(f"Decoder self-test: {report['self_test']}")
         if report.get("error"):
