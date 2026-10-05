@@ -163,10 +163,8 @@ def run_surface_code_study(
                     "seed": int(point_seed),
                     "sample_seconds": float(sample_seconds),
                     "decode_seconds": float(decode_seconds),
-                    "decode_shots_per_second": (
-                        float(shots / decode_seconds)
-                        if decode_seconds > 0.0
-                        else float("inf")
+                    "decode_shots_per_second": float(
+                        shots / max(decode_seconds, 1.0e-12)
                     ),
                 }
             )
