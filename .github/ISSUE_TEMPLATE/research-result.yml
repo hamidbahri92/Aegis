@@ -1,0 +1,63 @@
+name: Research result or reproducibility report
+description: Share a reproducible Aegis QEC experiment, comparison, unexpected result, or research question.
+title: "[Research] "
+labels:
+  - research
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing a result. Reproducible positive and negative findings are both useful.
+        Please avoid reporting private or sensitive hardware data.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Research question or observation
+      description: What did you study, and what did you observe?
+      placeholder: Describe the question, result, or surprising behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Exact command or minimal code
+      description: Include the command, script, or notebook fragment needed to reproduce the experiment.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Paste the relevant output of aegis doctor, or provide Aegis, Python, Stim, PyMatching, OS, and CPU versions.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: artifacts
+    attributes:
+      label: Reproducibility artifacts
+      description: Attach or link the Aegis study JSON, CSV, plots, logs, or other raw result artifacts.
+      placeholder: Drag files here or provide links.
+
+  - type: textarea
+    id: interpretation
+    attributes:
+      label: Your interpretation
+      description: What do you think the result means? What alternative explanations should be considered?
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Reproducibility checks
+      options:
+        - label: I included the random seed or explained why the experiment is deterministic.
+          required: true
+        - label: I distinguished Aegis measurements from upstream PyMatching, Stim, or other project claims.
+          required: true
+        - label: I am not presenting a structural sweep as a physical threshold measurement.
+          required: true
