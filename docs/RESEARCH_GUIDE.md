@@ -92,9 +92,19 @@ Examples include:
 
 When studying a crossing or threshold-like behavior, use multiple distances, substantially more shots near the apparent crossing, a denser probability grid, and an explicit statistical model. Do not call a coarse visual crossing a measured hardware threshold.
 
+## Scaling from studies to campaigns
+
+Use `aegis study` for deterministic small experiments and teaching. When the question requires many code distances, many physical-error points, large shot counts, or interruption-safe execution, move to `aegis campaign`.
+
+Campaigns use Sinter multiprocessing and durable CSV resume. When comparing decoder implementations statistically, campaign rows are appropriate. When the conclusion depends on the exact same physical samples being shown to every decoder, use `aegis compare` instead.
+
+Third-party decoder packages can register through the `aegis_qec.decoders` entry-point group. This lets a thesis or research project test its own decoder in Aegis without forking Aegis.
+
+See [Platform](PLATFORM.md) for the extension contract and campaign semantics.
+
 ## Suggested practitioner workflows
 
-Practitioners can use Aegis as an experiment harness around Stim and PyMatching rather than reimplementing reproducibility plumbing.
+Practitioners can use Aegis as an experiment harness around Stim, Sinter, and PyMatching rather than reimplementing reproducibility plumbing.
 
 Useful workflows include:
 

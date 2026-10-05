@@ -1,5 +1,9 @@
 name: aegis-qec-ci
 
+concurrency:
+  group: aegis-qec-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
@@ -38,6 +42,8 @@ jobs:
           tests/test_circuit_acceptance.py
           tests/test_mwpm_sparse_blossom.py
           tests/test_public_namespace.py
+          tests/test_platform_campaign.py
+          tests/test_hardware_provenance.py
           tests/test_decode_from_dem_optional.py
           tests/test_stim_adapter_deprecation.py
       - name: Run tests
@@ -51,9 +57,47 @@ jobs:
           aegis doctor --json
           aegis demo --distance 3 --rounds 3 --error-probability 0
           aegis study --distance 3 --p 0.02 --shots 32 --basis x --seed 1234 --out-json research_out/smoke.json --out-csv research_out/smoke.csv --plot research_out/smoke.png
+          aegis decoders
+          aegis compare --decoder aegis-pymatching --distance 3 --p 0.02 --shots 32 --seed 1234 --out-json research_out/compare.json
           aegis-bench --help
           aegis-bench circuit-acceptance --distance 3 --rounds 3 --shots 32 --p 0.02 --seed 1234
           aegis-bench calibration-advantage --shots 2000 --seed 20260928 --out-json bench_out/calibration_advantage.json --plot bench_out/calibration_advantage.png
+
+  campaign-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install ".[full]"
+      - name: Run resumable Sinter campaign smoke test
+        run: >-
+          aegis campaign
+          --distance 3
+          --p 0.02
+          --decoder pymatching aegis-pymatching
+          --workers 1
+          --max-shots 32
+          --max-errors 8
+          --resume research_out/campaign-smoke.csv
+          --out-json research_out/campaign-smoke.json
+          --plot research_out/campaign-smoke.png
+          --quiet
+      - name: Resume campaign from durable CSV
+        run: >-
+          aegis campaign
+          --distance 3
+          --p 0.02
+          --decoder pymatching aegis-pymatching
+          --workers 1
+          --max-shots 32
+          --max-errors 8
+          --resume research_out/campaign-smoke.csv
+          --out-json research_out/campaign-smoke-resumed.json
+          --plot research_out/campaign-smoke-resumed.png
+          --quiet
 
   package:
     runs-on: ubuntu-latest

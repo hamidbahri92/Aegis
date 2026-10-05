@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "repository_name": "aegis-qec",
+  "product_name": "Aegis QEC",
+  "description": "Open-source Python quantum error correction toolkit and research platform for surface-code decoding with Stim, PyMatching MWPM, reproducible campaigns, decoder plugins, benchmarking, and circuit studies.",
+  "homepage": "https://pypi.org/project/aegis-qec/",
+  "discussions": true,
+  "topics": [
+    "quantum-error-correction",
+    "qec",
+    "surface-code",
+    "surface-codes",
+    "rotated-surface-code",
+    "quantum-computing",
+    "fault-tolerant-quantum-computing",
+    "fault-tolerance",
+    "quantum-decoder",
+    "quantum-information",
+    "pymatching",
+    "stim",
+    "sinter",
+    "mwpm",
+    "sparse-blossom",
+    "detector-error-model",
+    "quantum-research",
+    "python",
+    "benchmarking",
+    "monte-carlo"
+  ],
+  "notes": "Apply through GitHub repository Settings. Repository administration is intentionally separate from pull-request content."
+}
