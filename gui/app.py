@@ -379,6 +379,8 @@ def main():
                     "detectors",
                     "observables",
                     "detection_events",
+                    "circuit_sha256",
+                    "dem_sha256",
                     "seed",
                     "sample_seconds",
                     "decode_seconds",
