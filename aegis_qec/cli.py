@@ -381,6 +381,49 @@ def _scaling(args: argparse.Namespace) -> int:
     return 0
 
 
+def _explain(args: argparse.Namespace) -> int:
+    from aegis_qec.explain import explain_surface_code_shot, write_shot_explanation
+
+    try:
+        explanation = explain_surface_code_shot(
+            distance=args.distance,
+            physical_error_rate=args.p,
+            basis=args.basis,
+            rounds=args.rounds,
+            seed=args.seed,
+        )
+    except (RuntimeError, ValueError) as exc:
+        print(f"Shot explanation could not run: {exc}", file=sys.stderr)
+        return 2
+
+    write_shot_explanation(
+        explanation,
+        json_path=args.out_json,
+        plot_path=args.plot,
+    )
+    print("Aegis QEC one-shot explanation")
+    print(
+        f"Fired detectors: {explanation['fired_detector_count']} / "
+        f"{explanation['num_detectors']}"
+    )
+    print(
+        "Matched detection-event pairs: "
+        f"{len(explanation['matched_detection_events'])}"
+    )
+    print(f"Actual observables: {explanation['actual_observables']}")
+    print(f"Predicted observables: {explanation['predicted_observables']}")
+    print(
+        "Outcome: "
+        + ("logical failure" if explanation["logical_failure"] else "logical success")
+    )
+    if args.out_json:
+        print(f"JSON: {Path(args.out_json).resolve()}")
+    if args.plot:
+        print(f"Plot: {Path(args.plot).resolve()}")
+    print(explanation["interpretation"])
+    return 0
+
+
 def _gui(_: argparse.Namespace) -> int:
     from scripts.run_gui import main as run_gui
 
@@ -538,6 +581,25 @@ def _parser() -> argparse.ArgumentParser:
     scaling.add_argument("--plot", default="research_out/scaling.png")
     scaling.set_defaults(handler=_scaling)
 
+    explain = sub.add_parser(
+        "explain",
+        help="Generate and explain one surface-code memory shot.",
+    )
+    explain.add_argument("--distance", type=int, default=5)
+    explain.add_argument("--p", type=float, default=0.006)
+    explain.add_argument("--basis", choices=["x", "z"], default="x")
+    explain.add_argument("--rounds", type=int)
+    explain.add_argument("--seed", type=int, default=1234)
+    explain.add_argument(
+        "--out-json",
+        default="research_out/shot-explanation.json",
+    )
+    explain.add_argument(
+        "--plot",
+        default="research_out/shot-explanation.png",
+    )
+    explain.set_defaults(handler=_explain)
+
     gui = sub.add_parser("gui", help="Launch the optional interactive Streamlit application.")
     gui.set_defaults(handler=_gui)
     return parser
@@ -551,7 +613,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         print(
             "\nTry 'aegis doctor', then 'aegis study', 'aegis campaign', "
-            "'aegis compare', 'aegis scaling', 'aegis predict', or 'aegis gui'."
+            "'aegis compare', 'aegis scaling', 'aegis explain', "
+            "'aegis predict', or 'aegis gui'."
         )
         return 0
     return int(handler(args))

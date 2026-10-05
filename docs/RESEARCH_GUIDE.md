@@ -2,6 +2,20 @@
 
 Aegis QEC is intended to make quantum-error-correction experiments easier to run, inspect, reproduce, and extend. This guide focuses on the shortest path from installation to a defensible circuit-level study.
 
+## Learn by explaining one shot
+
+Before running a large sweep, it is often useful to understand a single shot:
+
+```bash
+aegis explain --distance 5 --p 0.01 --basis x --seed 1234
+```
+
+The explanation shows which detectors fired, their coordinates, which detection events MWPM paired with each other or with the virtual boundary, the correction-path edges used by the matching solution, and whether the predicted logical observable matched the sampled one.
+
+This is useful in three different ways. Students can connect syndrome events to decoding geometry. Decoder authors can inspect surprising decisions on a reproducible shot. Practitioners can attach a compact provenance record to a concrete failure case instead of reporting only an aggregate rate.
+
+The GUI exposes the same workflow in the **Explain one shot** tab.
+
 ## Start with a real circuit study
 
 Install the scientific dependencies:

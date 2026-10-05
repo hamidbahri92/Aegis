@@ -4,6 +4,10 @@ This file records user-visible changes to Aegis QEC.
 
 ## Unreleased
 
+### Single-shot explanation
+
+Added a reproducible one-shot surface-code debugger for education and decoder analysis. It records fired detector coordinates, MWPM detection-event pairings, correction-path edges, sampled and predicted logical observables, logical outcome, and provenance hashes. The same explanation is available from the CLI and graphical workbench.
+
 ### Finite-size scaling analysis
 
 Added first-order finite-size scaling analysis for campaign artifacts. The fit uses aggregated binomial logical-failure counts, profiles the critical physical-error probability over the scaling exponent, reports a profile-likelihood interval and AIC comparison, and warns when the sampled grid or search range cannot support a stable interpretation.

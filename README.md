@@ -139,6 +139,18 @@ These experimental paths are useful for decoder research, but they do not all ha
 
 See [Algorithms](https://github.com/hamidbahri92/Aegis/blob/main/docs/ALGORITHMS.md) for implementation details and trust boundaries.
 
+## Explain one QEC shot
+
+For teaching and decoder debugging, inspect one complete circuit-level shot instead of only aggregate rates:
+
+```bash
+aegis explain --distance 5 --p 0.01 --basis x --seed 1234
+```
+
+Aegis records the fired detector IDs and space-time coordinates, PyMatching MWPM defect pairings and boundary matches, the correction-path edges, actual and predicted logical observables, the logical outcome, and circuit/DEM/shot provenance hashes. It also writes a visualization of the fired detector geometry and matching pairs.
+
+The same workflow is available in the **Explain one shot** tab of `aegis gui`.
+
 ## Reproducible circuit studies
 
 For student projects, theses, decoder integration work, and research prototypes, Aegis can run a complete Stim circuit-level study and preserve the result as reusable artifacts:
@@ -284,6 +296,7 @@ aegis study
 aegis campaign
 aegis compare
 aegis scaling
+aegis explain
 aegis predict
 aegis decoders
 aegis benchmark

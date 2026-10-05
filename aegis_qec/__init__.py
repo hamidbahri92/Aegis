@@ -12,6 +12,7 @@ from a3d import AegisConfig, DecoderRuntime, RotatedSurfaceLayout
 from .campaign import run_campaign, write_campaign_summary
 from .comparison import compare_decoders_exact_shots, write_comparison_json
 from .decoder_plugins import available_decoders, custom_decoder_registry
+from .explain import explain_surface_code_shot, write_shot_explanation
 from .io_decode import predict_observables_from_files
 from .research import run_surface_code_study, wilson_interval, write_study_artifacts
 from .scaling import fit_surface_code_scaling, load_campaign_json, write_scaling_artifacts
@@ -28,6 +29,7 @@ __all__ = [
     "available_decoders",
     "compare_decoders_exact_shots",
     "custom_decoder_registry",
+    "explain_surface_code_shot",
     "fit_surface_code_scaling",
     "load_campaign_json",
     "predict_observables_from_files",
@@ -37,6 +39,7 @@ __all__ = [
     "write_campaign_summary",
     "write_comparison_json",
     "write_scaling_artifacts",
+    "write_shot_explanation",
     "write_study_artifacts",
     "__version__",
 ]
