@@ -199,6 +199,18 @@ aegis predict --dem experiment.dem --dets shots.b8 --out predictions.b8
 
 The prediction provenance record hashes the DEM, detector shots, and output, making this path suitable for data produced outside Aegis.
 
+Campaign artifacts can be analyzed with a first-order finite-size scaling model instead of eyeballing curve crossings:
+
+```bash
+aegis scaling \
+  --campaign research_out/campaign.json \
+  --decoder pymatching \
+  --out-json research_out/scaling.json \
+  --plot research_out/scaling.png
+```
+
+The scaling analysis fits aggregated binomial logical-failure counts, profiles the critical physical-error probability over the scaling exponent, reports a profile-likelihood interval and AIC comparison, and warns when the sampled grid cannot support a stable threshold-like conclusion.
+
 Third-party research decoders can register through the `aegis_qec.decoders` entry-point group and then participate in campaigns and exact-shot comparisons without modifying Aegis itself.
 
 See [Platform](https://github.com/hamidbahri92/Aegis/blob/main/docs/PLATFORM.md) for the plug-in contract, Sinter architecture, hardware provenance rules, and campaign semantics.
@@ -271,6 +283,7 @@ aegis demo
 aegis study
 aegis campaign
 aegis compare
+aegis scaling
 aegis predict
 aegis decoders
 aegis benchmark
