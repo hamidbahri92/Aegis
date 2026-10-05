@@ -102,6 +102,22 @@ Third-party decoder packages can register through the `aegis_qec.decoders` entry
 
 See [Platform](PLATFORM.md) for the extension contract and campaign semantics.
 
+## Finite-size scaling and threshold-like estimates
+
+After collecting a campaign with at least three code distances and at least four physical-error points, Aegis can fit a first-order finite-size scaling model:
+
+```bash
+aegis scaling \
+  --campaign research_out/campaign.json \
+  --decoder pymatching
+```
+
+The model is fitted to the logical-failure counts using a binomial likelihood. Aegis reports a best-fit critical physical-error probability, a profile-likelihood 95 percent interval, the fitted scaling exponent, and an AIC comparison against a simpler distance-independent logistic trend.
+
+Treat this as model-based evidence, not a magic threshold button. Expand the physical-error grid if the best fit or its interval reaches a sampled boundary. Increase shots near the crossing region, examine residual behavior, compare plausible scaling models, and preserve the campaign artifact used for the fit.
+
+A simulated circuit-level threshold is not automatically a hardware threshold. A hardware threshold claim requires hardware-derived inputs with validated provenance.
+
 ## Suggested practitioner workflows
 
 Practitioners can use Aegis as an experiment harness around Stim, Sinter, and PyMatching rather than reimplementing reproducibility plumbing.
