@@ -303,6 +303,32 @@ def _decoders(_: argparse.Namespace) -> int:
     return 0
 
 
+def _predict(args: argparse.Namespace) -> int:
+    from aegis_qec.io_decode import predict_observables_from_files
+
+    try:
+        result = predict_observables_from_files(
+            dem_path=args.dem,
+            dets_path=args.dets,
+            dets_format=args.dets_format,
+            output_path=args.out,
+            output_format=args.out_format,
+            decoder=args.decoder,
+            provenance_json=args.provenance_json,
+        )
+    except (RuntimeError, ValueError, NotImplementedError) as exc:
+        print(f"Prediction could not run: {exc}", file=sys.stderr)
+        return 2
+
+    print("Aegis QEC detector-shot prediction")
+    print(f"Decoder: {result['decoder']}")
+    print(f"Detectors: {result['num_detectors']}; observables: {result['num_observables']}")
+    print(f"Predictions: {Path(args.out).resolve()}")
+    if args.provenance_json:
+        print(f"Provenance: {Path(args.provenance_json).resolve()}")
+    return 0
+
+
 def _gui(_: argparse.Namespace) -> int:
     from scripts.run_gui import main as run_gui
 
@@ -432,6 +458,22 @@ def _parser() -> argparse.ArgumentParser:
     )
     decoders.set_defaults(handler=_decoders)
 
+    predict = sub.add_parser(
+        "predict",
+        help="Decode a Stim DEM plus detector-shot file into observable predictions.",
+    )
+    predict.add_argument("--dem", required=True, help="Detector error model file.")
+    predict.add_argument("--dets", required=True, help="Detector-shot data file.")
+    predict.add_argument("--dets-format", default="b8")
+    predict.add_argument("--out", required=True, help="Observable prediction output file.")
+    predict.add_argument("--out-format", default="b8")
+    predict.add_argument("--decoder", default="aegis-pymatching")
+    predict.add_argument(
+        "--provenance-json",
+        default="research_out/prediction-provenance.json",
+    )
+    predict.set_defaults(handler=_predict)
+
     gui = sub.add_parser("gui", help="Launch the optional interactive Streamlit application.")
     gui.set_defaults(handler=_gui)
     return parser
@@ -445,7 +487,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         print(
             "\nTry 'aegis doctor', then 'aegis study', 'aegis campaign', "
-            "'aegis compare', or 'aegis gui'."
+            "'aegis compare', 'aegis predict', or 'aegis gui'."
         )
         return 0
     return int(handler(args))
