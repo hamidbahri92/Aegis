@@ -196,6 +196,111 @@ def _study(args: argparse.Namespace) -> int:
     return 0
 
 
+def _campaign(args: argparse.Namespace) -> int:
+    from aegis_qec.campaign import run_campaign, write_campaign_summary
+
+    workers: int | str = args.workers
+    if workers != "auto":
+        workers = int(workers)
+
+    try:
+        campaign = run_campaign(
+            distances=args.distance,
+            physical_error_rates=args.p,
+            basis=args.basis,
+            rounds=args.rounds,
+            circuit_paths=args.circuit,
+            decoders=args.decoder,
+            workers=workers,
+            max_shots=args.max_shots,
+            max_errors=args.max_errors,
+            resume_csv=args.resume,
+            max_batch_seconds=args.max_batch_seconds,
+            print_progress=not args.quiet,
+        )
+    except (RuntimeError, ValueError) as exc:
+        print(f"Campaign could not run: {exc}", file=sys.stderr)
+        return 2
+
+    write_campaign_summary(
+        campaign,
+        json_path=args.out_json,
+        plot_path=args.plot,
+    )
+
+    print("Aegis QEC resumable campaign")
+    print("decoder shots errors logical_error_rate ci95_low ci95_high")
+    for row in campaign["rows"]:
+        rate = row["logical_error_rate"]
+        low = row["ci95_low"]
+        high = row["ci95_high"]
+        print(
+            f"{row['decoder']} {row['shots']} {row['errors']} "
+            f"{'n/a' if rate is None else f'{float(rate):.6g}'} "
+            f"{'n/a' if low is None else f'{float(low):.6g}'} "
+            f"{'n/a' if high is None else f'{float(high):.6g}'}"
+        )
+    print(f"Resume CSV: {Path(args.resume).resolve()}")
+    if args.out_json:
+        print(f"JSON: {Path(args.out_json).resolve()}")
+    if args.plot:
+        print(f"Plot: {Path(args.plot).resolve()}")
+    print(campaign["interpretation"])
+    return 0
+
+
+def _compare(args: argparse.Namespace) -> int:
+    from aegis_qec.comparison import (
+        compare_decoders_exact_shots,
+        write_comparison_json,
+    )
+
+    try:
+        comparison = compare_decoders_exact_shots(
+            decoders=args.decoder,
+            shots=args.shots,
+            seed=args.seed,
+            circuit_path=args.circuit,
+            distance=args.distance,
+            physical_error_rate=args.p,
+            basis=args.basis,
+            rounds=args.rounds,
+        )
+    except (RuntimeError, ValueError) as exc:
+        print(f"Comparison could not run: {exc}", file=sys.stderr)
+        return 2
+
+    write_comparison_json(comparison, args.out_json)
+    print("Aegis QEC exact shared-shot decoder comparison")
+    for row in comparison["rows"]:
+        print(
+            f"{row['decoder']}: errors={row['errors']}/{row['shots']} "
+            f"rate={float(row['logical_error_rate']):.6g} "
+            f"ci95=[{float(row['ci95_low']):.6g}, "
+            f"{float(row['ci95_high']):.6g}] "
+            f"throughput={float(row['decode_shots_per_second']):.3f} shots/s"
+        )
+    for row in comparison["pairwise_disagreements"]:
+        print(
+            f"disagreement {row['left']} vs {row['right']}: "
+            f"{row['disagreement_shots']}/{comparison['configuration']['shots']} "
+            f"({float(row['disagreement_rate']):.6g})"
+        )
+    print(f"JSON: {Path(args.out_json).resolve()}")
+    print(comparison["interpretation"])
+    return 0
+
+
+def _decoders(_: argparse.Namespace) -> int:
+    from aegis_qec.decoder_plugins import available_decoders
+
+    print("Aegis QEC custom decoder plugins")
+    for name in available_decoders():
+        print(name)
+    print("Sinter built-in decoders such as 'pymatching' can also be used by campaigns.")
+    return 0
+
+
 def _gui(_: argparse.Namespace) -> int:
     from scripts.run_gui import main as run_gui
 
@@ -266,6 +371,65 @@ def _parser() -> argparse.ArgumentParser:
     study.add_argument("--plot", default="research_out/study.png")
     study.set_defaults(handler=_study)
 
+    campaign = sub.add_parser(
+        "campaign",
+        help="Run a resumable multiprocessing Sinter research campaign.",
+    )
+    campaign.add_argument("--distance", nargs="+", type=int, default=[3, 5, 7])
+    campaign.add_argument("--p", nargs="+", type=float, default=[0.003, 0.006, 0.01])
+    campaign.add_argument("--basis", choices=["x", "z"], default="x")
+    campaign.add_argument("--rounds", type=int)
+    campaign.add_argument(
+        "--circuit",
+        action="append",
+        default=[],
+        help="Use a .stim circuit file instead of generating the default grid. Repeatable.",
+    )
+    campaign.add_argument(
+        "--decoder",
+        nargs="+",
+        default=["pymatching", "aegis-pymatching"],
+        help="Sinter built-in or Aegis/plugin decoder names.",
+    )
+    campaign.add_argument("--workers", default="auto")
+    campaign.add_argument("--max-shots", type=int, default=100000)
+    campaign.add_argument("--max-errors", type=int, default=1000)
+    campaign.add_argument(
+        "--resume",
+        default="research_out/campaign.csv",
+        help="Sinter CSV used for incremental durable resume.",
+    )
+    campaign.add_argument("--max-batch-seconds", type=int, default=30)
+    campaign.add_argument("--out-json", default="research_out/campaign.json")
+    campaign.add_argument("--plot", default="research_out/campaign.png")
+    campaign.add_argument("--quiet", action="store_true")
+    campaign.set_defaults(handler=_campaign)
+
+    compare = sub.add_parser(
+        "compare",
+        help="Compare custom decoders on the exact same detector shots.",
+    )
+    compare.add_argument(
+        "--decoder",
+        nargs="+",
+        default=["aegis-pymatching", "aegis-pymatching-correlated"],
+    )
+    compare.add_argument("--shots", type=int, default=10000)
+    compare.add_argument("--seed", type=int, default=1234)
+    compare.add_argument("--circuit", help="Optional .stim circuit file.")
+    compare.add_argument("--distance", type=int, default=5)
+    compare.add_argument("--p", type=float, default=0.006)
+    compare.add_argument("--basis", choices=["x", "z"], default="x")
+    compare.add_argument("--rounds", type=int)
+    compare.add_argument("--out-json", default="research_out/comparison.json")
+    compare.set_defaults(handler=_compare)
+
+    decoders = sub.add_parser(
+        "decoders",
+        help="List installed Aegis custom decoder plugins.",
+    )
+    decoders.set_defaults(handler=_decoders)
+
     gui = sub.add_parser("gui", help="Launch the optional interactive Streamlit application.")
     gui.set_defaults(handler=_gui)
     return parser
@@ -277,7 +441,10 @@ def main(argv: list[str] | None = None) -> int:
     handler = getattr(args, "handler", None)
     if handler is None:
         parser.print_help()
-        print("\nTry 'aegis doctor' first, then 'aegis demo', 'aegis study', or 'aegis gui'.")
+        print(
+            "\nTry 'aegis doctor', then 'aegis study', 'aegis campaign', "
+            "'aegis compare', or 'aegis gui'."
+        )
         return 0
     return int(handler(args))
 
