@@ -1,0 +1,38 @@
+name: Research use case or feature request
+description: Propose a workflow, integration, teaching feature, decoder interface, or research capability.
+title: "[Use case] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Research or teaching problem
+      description: What are you trying to study, teach, validate, or build?
+    validations:
+      required: true
+
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Desired workflow
+      description: Describe the inputs, steps, and outputs you would like Aegis to support.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current workaround
+      description: Which tools or scripts do you use today, and where is the friction?
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: References or example data
+      description: Link papers, formats, APIs, example circuits, or public datasets that define the requirement.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: I am willing to help test this workflow or provide a minimal public example.

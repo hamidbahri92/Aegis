@@ -9,6 +9,8 @@ from importlib.metadata import PackageNotFoundError, version
 
 from a3d import AegisConfig, DecoderRuntime, RotatedSurfaceLayout
 
+from .research import run_surface_code_study, wilson_interval, write_study_artifacts
+
 try:
     __version__ = version("aegis-qec")
 except PackageNotFoundError:  # source checkout
@@ -18,5 +20,8 @@ __all__ = [
     "AegisConfig",
     "DecoderRuntime",
     "RotatedSurfaceLayout",
+    "run_surface_code_study",
+    "wilson_interval",
+    "write_study_artifacts",
     "__version__",
 ]

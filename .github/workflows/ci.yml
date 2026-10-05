@@ -50,6 +50,7 @@ jobs:
           aegis --version
           aegis doctor --json
           aegis demo --distance 3 --rounds 3 --error-probability 0
+          aegis study --distance 3 --p 0.02 --shots 32 --basis x --seed 1234 --out-json research_out/smoke.json --out-csv research_out/smoke.csv --plot research_out/smoke.png
           aegis-bench --help
           aegis-bench circuit-acceptance --distance 3 --rounds 3 --shots 32 --p 0.02 --seed 1234
           aegis-bench calibration-advantage --shots 2000 --seed 20260928 --out-json bench_out/calibration_advantage.json --plot bench_out/calibration_advantage.png
