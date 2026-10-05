@@ -112,7 +112,7 @@ If you obtain a surprising result, open a GitHub issue using the Research result
 The circuit-study API is available directly:
 
 ```python
-from aegis_qec.research import run_surface_code_study, write_study_artifacts
+from aegis_qec import run_surface_code_study, write_study_artifacts
 
 study = run_surface_code_study(
     distances=[3, 5, 7],
