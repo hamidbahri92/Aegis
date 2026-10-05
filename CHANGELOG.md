@@ -12,6 +12,8 @@ Added an extensible decoder registry using the `aegis_qec.decoders` entry-point 
 
 Added exact shared-shot decoder comparison with circuit, detector-error-model, detector-sample, and observable-sample hashes plus pairwise prediction disagreement statistics.
 
+Added standard-file prediction for existing Stim detector error models and detector-shot data, with input/output provenance hashes for external simulator and hardware pipelines.
+
 IBM calibration access now fails closed instead of silently substituting synthetic calibration data. Synthetic fallback requires explicit opt-in and returned calibration objects identify their provenance.
 
 ### Research workbench
