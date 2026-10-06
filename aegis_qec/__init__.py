@@ -11,7 +11,13 @@ from a3d import AegisConfig, DecoderRuntime, RotatedSurfaceLayout
 
 from .campaign import run_campaign, write_campaign_summary
 from .comparison import compare_decoders_exact_shots, write_comparison_json
-from .decoder_plugins import available_decoders, custom_decoder_registry
+from .decoder_plugins import (
+    DecoderPluginAdapter,
+    available_decoders,
+    custom_decoder_registry,
+    normalize_decoder_plugin,
+    validate_decoder_plugin,
+)
 from .experiment import (
     create_research_bundle,
     load_experiment_manifest,
@@ -30,6 +36,7 @@ except PackageNotFoundError:  # source checkout
 
 __all__ = [
     "AegisConfig",
+    "DecoderPluginAdapter",
     "DecoderRuntime",
     "RotatedSurfaceLayout",
     "available_decoders",
@@ -40,10 +47,12 @@ __all__ = [
     "fit_surface_code_scaling",
     "load_campaign_json",
     "load_experiment_manifest",
+    "normalize_decoder_plugin",
     "predict_observables_from_files",
     "run_campaign",
     "run_experiment_manifest",
     "run_surface_code_study",
+    "validate_decoder_plugin",
     "wilson_interval",
     "write_campaign_summary",
     "write_comparison_json",
