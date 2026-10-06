@@ -54,6 +54,9 @@ manifest hashes. Manuscript prose, result claims, evidence declarations, and
 artifact inventory can be completed afterward without invalidating the
 scientific protocol.
 
+A confirmatory project fails its project audit if no valid protocol lock is
+present. The caller does not have to remember an extra strictness flag.
+
 If a locked file changes, the project audit reports the protocol deviation.
 This does not mean that a changed experiment is scientifically invalid. It
 means the change is visible instead of silently disappearing into notebook
@@ -221,13 +224,28 @@ The output directory contains:
 - REPRODUCE.md
 - CLAIM_EVIDENCE.md
 - SUBMISSION_CHECKLIST.md
+- submission-readiness.json
 - audit.json
 - environment.json
 - artifact-inventory.json
+- experiment-inventory.json
+- croissant-inventory.json
 - MANIFEST.json
 - checksums.sha256
 - manuscript/
+- experiments/
 - artifacts/
+- dataset-metadata/
+
+The exact declared experiment manifests are copied into experiments/ so a
+reviewer receives the definitions whose hashes appear in the audit instead of
+only receiving references to them.
+
+Package integrity and submission readiness are deliberately different.
+`aegis paper verify` can report that a ZIP is internally untampered while
+`submission-readiness.json` still reports scientific/editorial omissions such
+as missing bibliography, code/data availability, disclosure, compute
+information, or a required confirmatory protocol lock.
 
 A ZIP with deterministic archive metadata is also created.
 
@@ -253,3 +271,42 @@ A rigorous package should still be reviewed by a human researcher for:
 - prose quality and authorship responsibility.
 
 The strongest use of Aegis is to make those decisions explicit and auditable.
+
+
+## Dataset contribution metadata
+
+When a declared artifact has kind §dataset§, Aegis can emit Croissant 1.0
+JSON-LD metadata into §dataset-metadata/<artifact-id>/croissant.json§.
+
+A dataset artifact can declare:
+
+    {
+      "id": "decoder-dataset",
+      "path": "research_out/dataset.h5",
+      "kind": "dataset",
+      "name": "Surface-code decoder workload",
+      "description": "Syndromes and logical observables used in the paper.",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "url": "https://example.org/datasets/dataset.h5",
+      "encoding_format": "application/x-hdf5",
+      "croissant": true
+    }
+
+Croissant generation requires description, license, and URL. This is useful
+for dataset-focused venues and long-term machine-readable discovery. Aegis
+does not claim that generated metadata replaces the venue's current
+responsible-data questionnaire or hosting requirements.
+
+## Venue-aware readiness
+
+The project paper field can set §venue§ to §generic§, §joss§, §neurips§, or
+§neurips-ed§.
+
+The generated readiness report adds venue-focused checks while deliberately
+remaining a preparation aid rather than a promise of acceptance. Examples
+include JOSS statement-of-need/state-of-field/design/impact sections and
+NeurIPS reproduction commands, compute-resource disclosure, statistical
+methods, and Croissant metadata for dataset contributions.
+
+Venue policies change. Always compare the generated checklist to the current
+official call before submission.
