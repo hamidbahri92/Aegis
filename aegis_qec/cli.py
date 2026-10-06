@@ -303,6 +303,29 @@ def _decoders(_: argparse.Namespace) -> int:
     return 0
 
 
+def _validate_decoder(args: argparse.Namespace) -> int:
+    from aegis_qec.decoder_plugins import validate_decoder_plugin
+
+    try:
+        report = validate_decoder_plugin(args.name)
+    except (RuntimeError, TypeError, ValueError) as exc:
+        print(f"Decoder validation could not run: {exc}", file=sys.stderr)
+        return 2
+
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+    else:
+        print(f"Aegis QEC decoder conformance: {report['decoder']}")
+        print(f"Contract: {report['contract']}")
+        for check_name, check in report["checks"].items():
+            state = "PASS" if check.get("passed") else "FAIL"
+            print(f"{check_name}: {state}")
+            if check.get("error"):
+                print(f"  {check['error']}")
+        print(f"Overall: {'PASS' if report['passed'] else 'FAIL'}")
+    return 0 if report["passed"] else 1
+
+
 def _predict(args: argparse.Namespace) -> int:
     from aegis_qec.io_decode import predict_observables_from_files
 
@@ -553,6 +576,18 @@ def _parser() -> argparse.ArgumentParser:
     )
     decoders.set_defaults(handler=_decoders)
 
+    validate_decoder = sub.add_parser(
+        "validate-decoder",
+        help="Run the Aegis/Sinter conformance suite for a decoder plugin.",
+    )
+    validate_decoder.add_argument("name", help="Installed Aegis decoder plugin name.")
+    validate_decoder.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit the conformance report as JSON.",
+    )
+    validate_decoder.set_defaults(handler=_validate_decoder)
+
     predict = sub.add_parser(
         "predict",
         help="Decode a Stim DEM plus detector-shot file into observable predictions.",
@@ -614,7 +649,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             "\nTry 'aegis doctor', then 'aegis study', 'aegis campaign', "
             "'aegis compare', 'aegis scaling', 'aegis explain', "
-            "'aegis predict', or 'aegis gui'."
+            "'aegis validate-decoder', 'aegis predict', or 'aegis gui'."
         )
         return 0
     return int(handler(args))
