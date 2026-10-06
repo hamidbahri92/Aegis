@@ -4,6 +4,10 @@ This file records user-visible changes to Aegis QEC.
 
 ## Unreleased
 
+### Fixed-dataset decoder evaluation
+
+Added `aegis dataset evaluate` for paired decoder comparison on identical stored syndrome rows. Evaluation artifacts hash the exact selected detector and observable subset and report logical-error intervals, throughput, and pairwise decoder disagreement.
+
 ### Reusable QEC datasets
 
 Added resumable HDF5 syndrome datasets for decoder benchmarking, ML training, coursework, and regression studies. Datasets preserve syndromes, observables, deterministic train/validation/test labels, circuit and DEM provenance, sparse raw error-mechanism incidence, optional dense mechanism matrices, and content hashes.
