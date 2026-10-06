@@ -164,6 +164,23 @@ def load_research_project(path: str) -> dict[str, Any]:
         if not str(experiment.get("manifest", "")).strip():
             raise ValueError(f"experiments[{index}].manifest is required")
 
+    discoveries = project.get("discoveries", [])
+    if not isinstance(discoveries, list):
+        raise ValueError("discoveries must be a list")
+    discovery_ids: set[str] = set()
+    for index, discovery in enumerate(discoveries):
+        if not isinstance(discovery, dict):
+            raise ValueError(f"discoveries[{index}] must be an object")
+        discovery_id = _require_safe_id(
+            discovery.get("id", ""),
+            field=f"discoveries[{index}].id",
+        )
+        if discovery_id in discovery_ids:
+            raise ValueError(f"duplicate discovery id {discovery_id!r}")
+        discovery_ids.add(discovery_id)
+        if not str(discovery.get("manifest", "")).strip():
+            raise ValueError(f"discoveries[{index}].manifest is required")
+
     artifacts = project.get("artifacts", [])
     if not isinstance(artifacts, list):
         raise ValueError("artifacts must be a list")
@@ -423,6 +440,37 @@ def audit_research_project(
                 )
         experiment_records.append(record)
 
+    discovery_records: list[dict[str, Any]] = []
+    from .discovery import load_discovery_manifest
+
+    for discovery in project.get("discoveries", []):
+        discovery_id = str(discovery["id"])
+        manifest_path = _resolve_path(
+            project_path,
+            str(discovery["manifest"]),
+        )
+        record = {
+            "id": discovery_id,
+            "manifest_path": str(manifest_path),
+            "exists": manifest_path.is_file(),
+        }
+        if not manifest_path.is_file():
+            errors.append(
+                f"discovery {discovery_id!r} manifest does not exist: "
+                f"{manifest_path}"
+            )
+        else:
+            try:
+                manifest = load_discovery_manifest(str(manifest_path))
+                record["algorithm"] = manifest["algorithm"]
+                record["budget"] = manifest["budget"]
+                record["sha256"] = _sha256_file(manifest_path)
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
+                errors.append(
+                    f"discovery {discovery_id!r} manifest is invalid: {exc}"
+                )
+        discovery_records.append(record)
+
     bibliography_records: list[dict[str, Any]] = []
     for raw_path in project.get("bibliography_files", []):
         bib_path = _resolve_path(project_path, str(raw_path))
@@ -495,6 +543,7 @@ def audit_research_project(
         "errors": errors,
         "warnings": warnings,
         "experiments": experiment_records,
+        "discoveries": discovery_records,
         "artifacts": artifacts,
         "claims": claim_results,
         "bibliography": bibliography_records,
@@ -509,6 +558,7 @@ def _protocol_projection(project: dict[str, Any]) -> dict[str, Any]:
         "hypotheses": project.get("hypotheses", []),
         "protocol": project.get("protocol", {}),
         "experiments": project.get("experiments", []),
+        "discoveries": project.get("discoveries", []),
     }
 
 
@@ -532,6 +582,12 @@ def freeze_research_protocol(
     project = load_research_project(str(source))
     protocol = project.get("protocol", {})
     if str(protocol.get("mode", "exploratory")).lower() == "confirmatory":
+        if project.get("discoveries"):
+            raise ValueError(
+                "confirmatory projects cannot contain adaptive discovery runs; "
+                "run discovery in an exploratory project and confirm selected "
+                "candidates with fixed experiment manifests"
+            )
         required = ["primary_outcome", "analysis_plan", "stopping_rule"]
         missing = [
             name
@@ -553,6 +609,20 @@ def freeze_research_protocol(
         files.append(
             {
                 "role": f"experiment:{experiment['id']}",
+                "path": str(path),
+                "sha256": _sha256_file(path),
+            }
+        )
+
+    for discovery in project.get("discoveries", []):
+        path = _resolve_path(source, str(discovery["manifest"]))
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"discovery manifest does not exist: {path}"
+            )
+        files.append(
+            {
+                "role": f"discovery:{discovery['id']}",
                 "path": str(path),
                 "sha256": _sha256_file(path),
             }
@@ -634,6 +704,15 @@ def verify_protocol_lock(
         )
         for experiment in project.get("experiments", [])
     }
+    experiment_by_role.update(
+        {
+            f"discovery:{discovery['id']}": _resolve_path(
+                source,
+                str(discovery["manifest"]),
+            )
+            for discovery in project.get("discoveries", [])
+        }
+    )
     locked_roles = {
         str(item.get("role", ""))
         for item in lock.get("files", [])
@@ -647,11 +726,11 @@ def verify_protocol_lock(
         if path is None:
             continue
         if not path.is_file():
-            failures.append(f"locked experiment manifest is missing: {path}")
+            failures.append(f"locked protocol input is missing: {path}")
             continue
         actual = _sha256_file(path)
         if actual != str(item.get("sha256", "")):
-            failures.append(f"locked experiment manifest changed: {path}")
+            failures.append(f"locked protocol input changed: {path}")
 
     return {
         "schema_version": 1,
@@ -710,6 +789,42 @@ def run_research_project(
             }
         )
 
+    discovery_runs: list[dict[str, Any]] = []
+    if project.get("discoveries"):
+        mode = str(
+            project.get("protocol", {}).get("mode", "exploratory")
+        ).lower()
+        if mode == "confirmatory":
+            raise ValueError(
+                "confirmatory projects cannot execute adaptive discovery runs"
+            )
+        from .discovery import run_discovery
+
+        for discovery in project.get("discoveries", []):
+            discovery_id = str(discovery["id"])
+            manifest_path = _resolve_path(
+                source,
+                str(discovery["manifest"]),
+            )
+            discovery_dir = destination / "discovery" / discovery_id
+            report = run_discovery(
+                str(manifest_path),
+                output_dir=str(discovery_dir),
+            )
+            discovery_runs.append(
+                {
+                    "id": discovery_id,
+                    "manifest_path": str(manifest_path),
+                    "manifest_sha256": _sha256_file(manifest_path),
+                    "result_path": report["path"],
+                    "result_sha256": report["sha256"],
+                    "pareto_count": len(report["pareto_front"]),
+                    "confirmation_manifests": report[
+                        "confirmation_manifests"
+                    ],
+                }
+            )
+
     project_run = {
         "schema_version": 1,
         "record_type": "aegis_qec_research_project_run",
@@ -718,6 +833,7 @@ def run_research_project(
         "project_sha256": _sha256_file(source),
         "workspace": str(destination),
         "experiments": experiment_runs,
+        "discoveries": discovery_runs,
     }
     output = destination / "project-run.json"
     output.write_text(
@@ -791,6 +907,7 @@ def write_research_project_template(
                 "manifest": experiment_path.name,
             }
         ],
+        "discoveries": [],
         "artifacts": [],
         "claims": [],
         "bibliography_files": [],
