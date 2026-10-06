@@ -223,9 +223,17 @@ aegis scaling \
 
 The scaling analysis fits aggregated binomial logical-failure counts, profiles the critical physical-error probability over the scaling exponent, reports a profile-likelihood interval and AIC comparison, and warns when the sampled grid cannot support a stable threshold-like conclusion.
 
-Third-party research decoders can register through the `aegis_qec.decoders` entry-point group and then participate in campaigns and exact-shot comparisons without modifying Aegis itself.
+Third-party research decoders can register through the `aegis_qec.decoders` entry-point group and then participate in campaigns, exact-shot comparisons, and detector-file prediction without modifying Aegis itself. A plug-in may implement either Sinter's compiled batch interface or its file interface; Aegis supplies the missing side automatically.
 
-See [Platform](https://github.com/hamidbahri92/Aegis/blob/main/docs/PLATFORM.md) for the plug-in contract, Sinter architecture, hardware provenance rules, and campaign semantics.
+Before publishing a decoder plug-in:
+
+```bash
+aegis validate-decoder my-decoder
+```
+
+The conformance suite checks bit-packed dtype and shape, a deterministic known-answer decode, file round-trip behavior, and multiprocessing picklability.
+
+See [Decoder Plug-in SDK](https://github.com/hamidbahri92/Aegis/blob/main/docs/DECODER_PLUGINS.md) for the extension contract, and [Platform](https://github.com/hamidbahri92/Aegis/blob/main/docs/PLATFORM.md) for the plug-in contract, Sinter architecture, hardware provenance rules, and campaign semantics.
 
 ## Version-controlled experiments
 
@@ -321,6 +329,7 @@ aegis experiment
 aegis verify-bundle
 aegis predict
 aegis decoders
+aegis validate-decoder
 aegis benchmark
 aegis gui
 ```
@@ -408,6 +417,7 @@ See [Contributing](https://github.com/hamidbahri92/Aegis/blob/main/CONTRIBUTING.
 - [Research Guide](https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_GUIDE.md) — circuit studies, student projects, practitioner workflows, uncertainty, artifacts, and reproducible reporting.
 - [Platform](https://github.com/hamidbahri92/Aegis/blob/main/docs/PLATFORM.md) — resumable Sinter campaigns, exact shared-shot comparisons, decoder plug-ins, and hardware provenance.
 - [Experiments](https://github.com/hamidbahri92/Aegis/blob/main/docs/EXPERIMENTS.md) — version-controlled manifests, hashed run records, portable research bundles, and integrity verification.
+- [Decoder Plug-in SDK](https://github.com/hamidbahri92/Aegis/blob/main/docs/DECODER_PLUGINS.md) — third-party decoder registration, interoperability contract, conformance tests, and deployment into campaigns.
 
 ## Project scope
 
