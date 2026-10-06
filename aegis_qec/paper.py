@@ -550,25 +550,31 @@ def _checklist(project: dict[str, Any], audit: dict[str, Any]) -> str:
 
 def _redacted_protocol_lock(path: Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
-    redacted = {
+    protocol = copy.deepcopy(value.get("project_protocol", {}))
+    for experiment in protocol.get("experiments", []):
+        if isinstance(experiment, dict) and experiment.get("manifest"):
+            experiment["manifest"] = Path(
+                str(experiment["manifest"])
+            ).name
+
+    return {
         "schema_version": value.get("schema_version", 1),
         "lock_type": value.get("lock_type"),
         "created_utc": value.get("created_utc"),
-        "project_title": value.get("project_title"),
+        "project_title_at_freeze": value.get("project_title_at_freeze"),
+        "project_protocol": protocol,
+        "project_protocol_sha256": value.get("project_protocol_sha256"),
         "protocol_sha256": value.get("protocol_sha256"),
         "redacted": True,
-        "files": [],
-    }
-    for item in value.get("files", []):
-        redacted["files"].append(
+        "files": [
             {
                 "role": item.get("role"),
                 "path": Path(str(item.get("path", ""))).name,
                 "sha256": item.get("sha256"),
             }
-        )
-    return redacted
-
+            for item in value.get("files", [])
+        ],
+    }
 
 def _copy_artifacts(
     audit: dict[str, Any],
