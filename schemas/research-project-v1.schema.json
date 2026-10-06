@@ -42,6 +42,18 @@
       ]
     },
     "research_question": {"type": "string", "minLength": 1},
+    "protocol": {
+      "type": "object",
+      "properties": {
+        "mode": {"enum": ["exploratory", "confirmatory"]},
+        "primary_outcome": {"type": "string"},
+        "analysis_plan": {"type": "string"},
+        "stopping_rule": {"type": "string"},
+        "search_plan": {"type": "string"},
+        "multiple_comparisons": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
     "hypotheses": {
       "type": "array",
       "items": {
