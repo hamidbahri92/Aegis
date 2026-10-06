@@ -14,43 +14,83 @@
     "paper"
   ],
   "properties": {
-    "$schema": {"type": "string"},
-    "schema_version": {"const": 1},
-    "title": {"type": "string", "minLength": 1},
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
     "authors": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "properties": {
-          "name": {"type": "string", "minLength": 1},
-          "affiliation": {"type": "string"},
-          "orcid": {"type": "string"},
-          "email": {"type": "string"}
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "affiliation": {
+            "type": "string"
+          },
+          "orcid": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
         },
         "additionalProperties": true
       }
     },
     "keywords": {
       "oneOf": [
-        {"type": "string"},
+        {
+          "type": "string"
+        },
         {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         }
       ]
     },
-    "research_question": {"type": "string", "minLength": 1},
+    "research_question": {
+      "type": "string",
+      "minLength": 1
+    },
     "protocol": {
       "type": "object",
       "properties": {
-        "mode": {"enum": ["exploratory", "confirmatory"]},
-        "primary_outcome": {"type": "string"},
-        "analysis_plan": {"type": "string"},
-        "stopping_rule": {"type": "string"},
-        "search_plan": {"type": "string"},
-        "multiple_comparisons": {"type": "string"}
+        "mode": {
+          "enum": [
+            "exploratory",
+            "confirmatory"
+          ]
+        },
+        "primary_outcome": {
+          "type": "string"
+        },
+        "analysis_plan": {
+          "type": "string"
+        },
+        "stopping_rule": {
+          "type": "string"
+        },
+        "search_plan": {
+          "type": "string"
+        },
+        "multiple_comparisons": {
+          "type": "string"
+        }
       },
       "additionalProperties": true
     },
@@ -58,10 +98,17 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "text"],
+        "required": [
+          "id",
+          "text"
+        ],
         "properties": {
-          "id": {"type": "string"},
-          "text": {"type": "string"}
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
         },
         "additionalProperties": true
       }
@@ -70,10 +117,17 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "manifest"],
+        "required": [
+          "id",
+          "manifest"
+        ],
         "properties": {
-          "id": {"type": "string"},
-          "manifest": {"type": "string"}
+          "id": {
+            "type": "string"
+          },
+          "manifest": {
+            "type": "string"
+          }
         },
         "additionalProperties": true
       }
@@ -82,12 +136,38 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "path"],
+        "required": [
+          "id",
+          "path"
+        ],
         "properties": {
-          "id": {"type": "string"},
-          "path": {"type": "string"},
-          "kind": {"type": "string"},
-          "description": {"type": "string"}
+          "id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "license": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "encoding_format": {
+            "type": "string"
+          },
+          "croissant": {
+            "type": "boolean"
+          }
         },
         "additionalProperties": true
       }
@@ -96,9 +176,15 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "text", "evidence"],
+        "required": [
+          "id",
+          "text",
+          "evidence"
+        ],
         "properties": {
-          "id": {"type": "string"},
+          "id": {
+            "type": "string"
+          },
           "type": {
             "enum": [
               "result",
@@ -108,16 +194,26 @@
               "limitation"
             ]
           },
-          "text": {"type": "string"},
+          "text": {
+            "type": "string"
+          },
           "evidence": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["artifact"],
+              "required": [
+                "artifact"
+              ],
               "properties": {
-                "artifact": {"type": "string"},
-                "json_pointer": {"type": "string"},
-                "predicate": {"type": "object"}
+                "artifact": {
+                  "type": "string"
+                },
+                "json_pointer": {
+                  "type": "string"
+                },
+                "predicate": {
+                  "type": "object"
+                }
               },
               "additionalProperties": true
             }
@@ -128,27 +224,96 @@
     },
     "bibliography_files": {
       "type": "array",
-      "items": {"type": "string"}
+      "items": {
+        "type": "string"
+      }
     },
     "paper": {
       "type": "object",
       "properties": {
-        "venue": {"type": "string"},
-        "abstract": {"type": "string"},
-        "statement_of_need": {"type": "string"},
-        "state_of_field": {"type": "string"},
-        "software_design": {"type": "string"},
-        "methods": {"type": "string"},
-        "results_context": {"type": "string"},
-        "limitations": {"type": "string"},
-        "impact": {"type": "string"},
-        "data_availability": {"type": "string"},
-        "code_availability": {"type": "string"},
-        "ai_usage_disclosure": {"type": "string"},
-        "competing_interests": {"type": "string"},
-        "funding": {"type": "string"}
+        "venue": {
+          "type": "string"
+        },
+        "abstract": {
+          "type": "string"
+        },
+        "statement_of_need": {
+          "type": "string"
+        },
+        "state_of_field": {
+          "type": "string"
+        },
+        "software_design": {
+          "type": "string"
+        },
+        "methods": {
+          "type": "string"
+        },
+        "results_context": {
+          "type": "string"
+        },
+        "limitations": {
+          "type": "string"
+        },
+        "impact": {
+          "type": "string"
+        },
+        "data_availability": {
+          "type": "string"
+        },
+        "code_availability": {
+          "type": "string"
+        },
+        "ai_usage_disclosure": {
+          "type": "string"
+        },
+        "competing_interests": {
+          "type": "string"
+        },
+        "funding": {
+          "type": "string"
+        }
       },
       "additionalProperties": true
+    },
+    "code_url": {
+      "type": "string"
+    },
+    "data_url": {
+      "type": "string"
+    },
+    "reproduction_commands": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "compute_resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "cpu": {
+            "type": "string"
+          },
+          "gpu": {
+            "type": "string"
+          },
+          "memory": {
+            "type": "string"
+          },
+          "wall_time": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
     }
   },
   "additionalProperties": true
