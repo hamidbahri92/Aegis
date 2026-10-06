@@ -679,3 +679,88 @@ def run_research_project(
     project_run["path"] = str(output)
     project_run["sha256"] = _sha256_file(output)
     return project_run
+
+
+
+def write_research_project_template(
+    output_path: str,
+    *,
+    author_name: str = "Researcher",
+    overwrite: bool = False,
+) -> dict[str, str]:
+    """Create an editable research project and a runnable starter experiment."""
+
+    destination = Path(output_path).resolve()
+    experiment_path = destination.parent / "experiment.json"
+    if destination.exists() and not overwrite:
+        raise FileExistsError(
+            f"{destination} already exists; use overwrite=True or --force"
+        )
+    if experiment_path.exists() and not overwrite:
+        raise FileExistsError(
+            f"{experiment_path} already exists; use overwrite=True or --force"
+        )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    from .template_catalog import write_experiment_template
+
+    write_experiment_template(
+        "first-study",
+        str(experiment_path),
+        overwrite=overwrite,
+    )
+
+    project = {
+        "$schema": (
+            "https://raw.githubusercontent.com/hamidbahri92/Aegis/"
+            "main/schemas/research-project-v1.schema.json"
+        ),
+        "schema_version": 1,
+        "title": "Untitled Aegis QEC research project",
+        "authors": [{"name": str(author_name)}],
+        "keywords": [
+            "quantum error correction",
+            "surface code",
+            "reproducible research",
+        ],
+        "research_question": "Replace with the precise research question.",
+        "hypotheses": [
+            {
+                "id": "H1",
+                "text": "Replace with a falsifiable hypothesis.",
+            }
+        ],
+        "experiments": [
+            {
+                "id": "study",
+                "manifest": experiment_path.name,
+            }
+        ],
+        "artifacts": [],
+        "claims": [],
+        "bibliography_files": [],
+        "paper": {
+            "venue": "generic",
+            "abstract": "",
+            "statement_of_need": "",
+            "state_of_field": "",
+            "software_design": "",
+            "methods": "",
+            "results_context": "",
+            "limitations": "",
+            "impact": "",
+            "data_availability": "",
+            "code_availability": "",
+            "ai_usage_disclosure": "",
+            "competing_interests": "",
+            "funding": "",
+        },
+    }
+    destination.write_text(
+        json.dumps(project, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "project_path": str(destination),
+        "experiment_path": str(experiment_path),
+    }
