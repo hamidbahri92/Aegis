@@ -8,7 +8,6 @@ from typing import Any
 
 import numpy as np
 
-
 _DATASET_FORMAT = "aegis-qec-dataset-v1"
 
 
