@@ -4,6 +4,50 @@ Aegis QEC can generate reusable HDF5 syndrome datasets for decoder benchmarking,
 
 The goal is simple: sample an experiment once, preserve enough provenance to understand exactly what was sampled, and let many decoder implementations evaluate the same evidence.
 
+## Import hardware or external shot data
+
+Aegis can ingest existing Stim-compatible detector and logical-observable shot data into the same HDF5 evidence format used by generated datasets.
+
+For a single `dets` file containing detector and logical-observable records:
+
+```bash
+aegis dataset import \
+  --dem experiment.dem \
+  --shots hardware-shots.dets \
+  --format dets \
+  --out research_out/hardware.h5
+```
+
+For separate bit-packed detector and observable streams:
+
+```bash
+aegis dataset import \
+  --dem experiment.dem \
+  --shots detectors.b8 \
+  --observables observables.b8 \
+  --format b8 \
+  --out research_out/hardware.h5
+```
+
+The imported HDF5 records SHA-256 values for the source DEM and shot files, the imported shot format, deterministic train/validation/test labels, the DEM mechanism representation, and the same scientific-content hashes used by generated datasets.
+
+Bit-packed `b8` import is streamed in bounded chunks instead of materializing the entire shot corpus in memory. Other Stim shot formats are parsed through Stim's own shot-data reader.
+
+Imported dataset files are immutable: Aegis refuses to overwrite an existing output path.
+
+The provided DEM must describe the detector and logical-observable indexing used by the shot data. Aegis verifies structural consistency and file integrity, but it cannot infer whether a hardware calibration, detector mapping, or experimental labeling convention is scientifically correct.
+
+After import, the ordinary evaluator works unchanged:
+
+```bash
+aegis dataset inspect research_out/hardware.h5
+aegis dataset evaluate research_out/hardware.h5 \
+  --decoder aegis-pymatching my-decoder \
+  --split test
+```
+
+This is the preferred path for bringing device-derived or external-simulator evidence into the Aegis comparison and publication pipeline.
+
 ## Generate a dataset
 
 ```bash
