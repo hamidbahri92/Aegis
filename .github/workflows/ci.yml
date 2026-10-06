@@ -45,6 +45,7 @@ jobs:
           tests/test_platform_campaign.py
           tests/test_hardware_provenance.py
           tests/test_experiment_manifest.py
+          tests/test_decoder_plugin_sdk.py
           tests/test_scaling_analysis.py
           tests/test_shot_explainer.py
           tests/test_decode_from_dem_optional.py
@@ -61,6 +62,7 @@ jobs:
           aegis demo --distance 3 --rounds 3 --error-probability 0
           aegis study --distance 3 --p 0.02 --shots 32 --basis x --seed 1234 --out-json research_out/smoke.json --out-csv research_out/smoke.csv --plot research_out/smoke.png
           aegis decoders
+          aegis validate-decoder aegis-pymatching --json
           aegis compare --decoder aegis-pymatching --distance 3 --p 0.02 --shots 32 --seed 1234 --out-json research_out/compare.json
           aegis explain --distance 3 --p 0.02 --seed 1234 --out-json research_out/explain.json --plot research_out/explain.png
           aegis experiment examples/experiment-smoke.json --output-dir research_out/manifest-smoke --bundle research_out/manifest-smoke.aegis.zip
