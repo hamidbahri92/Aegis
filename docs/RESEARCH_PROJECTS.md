@@ -37,9 +37,22 @@ Verify the final directory or ZIP:
 
 Exploratory work and confirmatory work are not the same thing.
 
-Aegis can freeze the project manifest, experiment manifests, and declared
-bibliography before a confirmatory run. The lock contains hashes of those
-inputs.
+The project protocol can declare:
+
+- mode: exploratory or confirmatory;
+- primary outcome;
+- analysis plan;
+- stopping rule;
+- search plan;
+- multiple-comparison policy.
+
+Confirmatory freezes require a primary outcome, analysis plan, and stopping rule.
+
+Aegis freezes the scientific projection of the project: research question,
+hypotheses, protocol fields, experiment definitions, and exact experiment
+manifest hashes. Manuscript prose, result claims, evidence declarations, and
+artifact inventory can be completed afterward without invalidating the
+scientific protocol.
 
 If a locked file changes, the project audit reports the protocol deviation.
 This does not mean that a changed experiment is scientifically invalid. It
