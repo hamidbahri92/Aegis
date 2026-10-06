@@ -217,6 +217,12 @@ def fit_surface_code_scaling(
         ci_low = best_pc
         ci_high = best_pc
 
+    # A profile-likelihood interval is mathematically closed. Round its
+    # floating-point representation outward by one ULP so an endpoint such as
+    # decimal 0.01 is not spuriously reported as 0.009999999999999998.
+    reported_ci_low = math.nextafter(ci_low, -math.inf)
+    reported_ci_high = math.nextafter(ci_high, math.inf)
+
     null_x = p
     _, null_log_likelihood = _fit_logistic_coefficients(null_x, k, n)
     scaling_aic = 2.0 * 4.0 - 2.0 * best_log_likelihood
@@ -257,7 +263,10 @@ def fit_surface_code_scaling(
             "(p - p_c) * distance ** (1 / nu)"
         ),
         "critical_probability": best_pc,
-        "critical_probability_ci95_profile": [ci_low, ci_high],
+        "critical_probability_ci95_profile": [
+            reported_ci_low,
+            reported_ci_high,
+        ],
         "nu": best_nu,
         "beta_0": float(best_beta[0]),
         "beta_1": float(best_beta[1]),
