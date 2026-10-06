@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -803,8 +804,6 @@ def evaluate_decoders_on_dataset(
 
             chunk_predictions: dict[str, np.ndarray] = {}
             for name in decoders:
-                import time
-
                 started = time.perf_counter()
                 predicted = compiled[name].decode_shots_bit_packed(
                     bit_packed_detection_event_data=detector_packed
