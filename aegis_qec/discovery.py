@@ -841,19 +841,19 @@ def write_discovery_template(
         "base_experiment": base_experiment,
         "algorithm": "evolutionary",
         "seed": 1234,
-        "budget": 12,
+        "budget": 16,
         "population_size": 4,
         "mutation_probability": 0.35,
         "parameters": [
             {
-                "path": "/parameters/physical_error_rates/0",
+                "path": "/parameters/distances/0",
                 "type": "choice",
-                "values": [0.003, 0.006, 0.01],
+                "values": [3, 5, 7, 9],
             },
             {
-                "path": "/parameters/shots",
+                "path": "/parameters/rounds",
                 "type": "choice",
-                "values": [250, 500, 1000],
+                "values": [3, 5, 7, 9],
             },
         ],
         "objectives": [
@@ -877,3 +877,46 @@ def write_discovery_template(
         encoding="utf-8",
     )
     return str(destination)
+
+
+
+def write_discovery_starter(
+    discovery_path: str,
+    *,
+    overwrite: bool = False,
+) -> dict[str, str]:
+    """Create a small runnable base experiment plus discovery configuration."""
+
+    destination = Path(discovery_path).resolve()
+    base_path = destination.parent / "discovery-experiment.json"
+    if base_path.exists() and not overwrite:
+        raise FileExistsError(
+            f"{base_path} already exists; use --force to replace it"
+        )
+    base = {
+        "schema_version": 1,
+        "name": "surface-code-design-search",
+        "operation": "study",
+        "parameters": {
+            "distances": [3],
+            "physical_error_rates": [0.006],
+            "shots": 500,
+            "basis": "x",
+            "rounds": 3,
+            "seed": 1234,
+        },
+    }
+    base_path.parent.mkdir(parents=True, exist_ok=True)
+    base_path.write_text(
+        json.dumps(base, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    write_discovery_template(
+        str(destination),
+        base_experiment=base_path.name,
+        overwrite=overwrite,
+    )
+    return {
+        "discovery_path": str(destination),
+        "base_experiment_path": str(base_path),
+    }
