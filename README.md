@@ -279,6 +279,10 @@ aegis dataset generate \
   --chunk-size 50000
 
 aegis dataset inspect research_out/surface-d5-p006.h5
+
+aegis dataset evaluate research_out/surface-d5-p006.h5 \
+  --decoder aegis-pymatching aegis-pymatching-correlated \
+  --split test
 ```
 
 The file preserves syndromes, logical observables, deterministic train/validation/test labels, the exact circuit and detector error model, raw error-mechanism probabilities, sparse detector/observable incidence, optional dense check/observable matrices, and content hashes.
@@ -363,6 +367,7 @@ aegis experiment
 aegis verify-bundle
 aegis dataset generate
 aegis dataset inspect
+aegis dataset evaluate
 aegis predict
 aegis decoders
 aegis validate-decoder

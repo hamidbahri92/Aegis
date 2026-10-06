@@ -495,6 +495,59 @@ def _dataset_generate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _dataset_evaluate(args: argparse.Namespace) -> int:
+    from aegis_qec.dataset import (
+        evaluate_decoders_on_dataset,
+        write_dataset_evaluation_json,
+    )
+
+    try:
+        report = evaluate_decoders_on_dataset(
+            args.path,
+            decoders=args.decoder,
+            split_name=args.split,
+            max_shots=args.max_shots,
+            batch_size=args.batch_size,
+            verify_dataset=not args.no_verify,
+        )
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        print(f"Dataset evaluation could not run: {exc}", file=sys.stderr)
+        return 2
+
+    if args.out_json:
+        write_dataset_evaluation_json(report, args.out_json)
+
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 0
+
+    print("Aegis QEC fixed-dataset decoder evaluation")
+    print(
+        f"Dataset: {report['dataset']['path']} "
+        f"({report['dataset']['split']}; "
+        f"{report['dataset']['selected_shots']} shots)"
+    )
+    for row in report["rows"]:
+        print(
+            f"{row['decoder']}: errors={row['errors']}/{row['shots']} "
+            f"rate={float(row['logical_error_rate']):.6g} "
+            f"ci95=[{float(row['ci95_low']):.6g}, "
+            f"{float(row['ci95_high']):.6g}] "
+            f"throughput={float(row['decode_shots_per_second']):.3f} shots/s"
+        )
+    for row in report["pairwise_disagreements"]:
+        print(
+            f"disagreement {row['left']} vs {row['right']}: "
+            f"{row['disagreement_shots']}/"
+            f"{report['dataset']['selected_shots']} "
+            f"({float(row['disagreement_rate']):.6g})"
+        )
+    if args.out_json:
+        print(f"JSON: {Path(args.out_json).resolve()}")
+    print(report["interpretation"])
+    return 0
+
+
 def _dataset_inspect(args: argparse.Namespace) -> int:
     from aegis_qec.dataset import inspect_qec_dataset
 
@@ -856,6 +909,36 @@ def _parser() -> argparse.ArgumentParser:
     dataset_generate.add_argument("--json", action="store_true")
     dataset_generate.set_defaults(handler=_dataset_generate)
 
+    dataset_evaluate = dataset_sub.add_parser(
+        "evaluate",
+        help="Compare decoders on identical rows from a stored QEC dataset.",
+    )
+    dataset_evaluate.add_argument("path", help="HDF5 dataset path.")
+    dataset_evaluate.add_argument(
+        "--decoder",
+        nargs="+",
+        required=True,
+        help="Installed Aegis decoder names.",
+    )
+    dataset_evaluate.add_argument(
+        "--split",
+        choices=["train", "validation", "test", "all"],
+        default="test",
+    )
+    dataset_evaluate.add_argument("--max-shots", type=int)
+    dataset_evaluate.add_argument("--batch-size", type=int, default=10000)
+    dataset_evaluate.add_argument(
+        "--no-verify",
+        action="store_true",
+        help="Skip full dataset integrity verification before evaluation.",
+    )
+    dataset_evaluate.add_argument(
+        "--out-json",
+        default="research_out/dataset-evaluation.json",
+    )
+    dataset_evaluate.add_argument("--json", action="store_true")
+    dataset_evaluate.set_defaults(handler=_dataset_evaluate)
+
     dataset_inspect = dataset_sub.add_parser(
         "inspect",
         help="Inspect and verify an Aegis QEC dataset.",
@@ -932,7 +1015,8 @@ def main(argv: list[str] | None = None) -> int:
         print(
             "\nTry 'aegis doctor', then 'aegis study', 'aegis campaign', "
             "'aegis compare', 'aegis scaling', 'aegis explain', "
-            "'aegis dataset generate', 'aegis templates', 'aegis experiment', "
+            "'aegis dataset generate', 'aegis dataset evaluate', "
+            "'aegis templates', 'aegis experiment', "
             "'aegis validate-decoder', 'aegis predict', or 'aegis gui'."
         )
         return 0
