@@ -49,12 +49,14 @@ dependencies = [
 
 [project.optional-dependencies]
 full = [
+  "h5py>=3.9",
   "pyarrow>=10.0.0",
   "stim>=1.16,<2",
   "sinter>=1.16,<2",
 ]
 dev = [
   "build>=1.2",
+  "h5py>=3.9",
   "pytest>=7.0.0",
   "ruff>=0.6",
   "stim>=1.16,<2",
