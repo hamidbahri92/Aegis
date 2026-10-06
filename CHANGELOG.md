@@ -4,6 +4,16 @@ This file records user-visible changes to Aegis QEC.
 
 ## Unreleased
 
+### Version-controlled experiments
+
+Added JSON experiment manifests that can execute studies, Sinter campaigns, exact shared-shot comparisons, detector-shot prediction, finite-size scaling, and one-shot explanations through one reviewable contract.
+
+Every manifest run writes a hashed `aegis-run.json` record containing the manifest identity, environment versions, local input hashes, generated artifact hashes, and machine-readable result.
+
+Added self-verifying `.aegis.zip` research bundles plus `aegis verify-bundle`. Bundle verification rejects missing, modified, unexpected, or unsafe entries.
+
+Added a JSON Schema and version-controlled example manifests for editor, CI, coursework, and team workflows.
+
 ### Single-shot explanation
 
 Added a reproducible one-shot surface-code debugger for education and decoder analysis. It records fired detector coordinates, MWPM detection-event pairings, correction-path edges, sampled and predicted logical observables, logical outcome, and provenance hashes. The same explanation is available from the CLI and graphical workbench.
