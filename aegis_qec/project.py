@@ -456,7 +456,9 @@ def audit_research_project(
                 f"protocol lock: {message}"
                 for message in lock_result["failures"]
             )
-    elif require_protocol_lock:
+    elif require_protocol_lock or str(
+        project.get("protocol", {}).get("mode", "exploratory")
+    ).lower() == "confirmatory":
         errors.append(
             f"protocol lock required but not found: {lock_path}"
         )
@@ -792,6 +794,13 @@ def write_research_project_template(
         "artifacts": [],
         "claims": [],
         "bibliography_files": [],
+        "code_url": "",
+        "data_url": "",
+        "reproduction_commands": [
+            "python -m pip install -U 'aegis-qec[full]'",
+            "aegis project audit research-project.json",
+        ],
+        "compute_resources": [],
         "paper": {
             "venue": "generic",
             "abstract": "",
