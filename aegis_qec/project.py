@@ -202,6 +202,10 @@ def load_research_project(path: str) -> dict[str, Any]:
         if not isinstance(evidence, list):
             raise ValueError(f"claims[{index}].evidence must be a list")
 
+    protocol = project.get("protocol", {})
+    if not isinstance(protocol, dict):
+        raise ValueError("protocol must be an object")
+
     paper = project.get("paper", {})
     if not isinstance(paper, dict):
         raise ValueError("paper must be an object")
@@ -494,22 +498,35 @@ def audit_research_project(
     }
 
 
+def _protocol_projection(project: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_version": int(project["schema_version"]),
+        "research_question": project["research_question"],
+        "hypotheses": project.get("hypotheses", []),
+        "protocol": project.get("protocol", {}),
+        "experiments": project.get("experiments", []),
+    }
+
+
+def _protocol_projection_sha256(project: dict[str, Any]) -> str:
+    canonical = json.dumps(
+        _protocol_projection(project),
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return _sha256_bytes(canonical)
+
+
 def freeze_research_protocol(
     project_path: str,
     *,
     output_path: str | None = None,
 ) -> dict[str, Any]:
-    """Freeze the project and experiment definitions before confirmatory work."""
+    """Freeze scientific protocol inputs before confirmatory work."""
 
     source = Path(project_path).resolve()
     project = load_research_project(str(source))
-    files: list[dict[str, Any]] = [
-        {
-            "role": "project",
-            "path": str(source),
-            "sha256": _sha256_file(source),
-        }
-    ]
+    files: list[dict[str, Any]] = []
 
     for experiment in project.get("experiments", []):
         path = _resolve_path(source, str(experiment["manifest"]))
@@ -525,25 +542,15 @@ def freeze_research_protocol(
             }
         )
 
-    for raw_path in project.get("bibliography_files", []):
-        path = _resolve_path(source, str(raw_path))
-        if not path.is_file():
-            raise FileNotFoundError(
-                f"bibliography file does not exist: {path}"
-            )
-        files.append(
-            {
-                "role": "bibliography",
-                "path": str(path),
-                "sha256": _sha256_file(path),
-            }
-        )
-
+    protocol_projection = _protocol_projection(project)
     lock = {
         "schema_version": 1,
         "lock_type": "aegis_qec_research_protocol",
         "created_utc": datetime.now(timezone.utc).isoformat(),
-        "project_title": project["title"],
+        "project_title_at_freeze": project["title"],
+        "project_path": str(source),
+        "project_protocol": protocol_projection,
+        "project_protocol_sha256": _protocol_projection_sha256(project),
         "files": files,
     }
     canonical = json.dumps(
@@ -567,14 +574,14 @@ def freeze_research_protocol(
     lock["file_sha256"] = _sha256_file(destination)
     return lock
 
-
 def verify_protocol_lock(
     project_path: str,
     lock_path: str,
 ) -> dict[str, Any]:
-    """Verify that a frozen protocol still matches its project inputs."""
+    """Verify a frozen scientific protocol against current definitions."""
 
     source = Path(project_path).resolve()
+    project = load_research_project(str(source))
     lock_file = Path(lock_path).resolve()
     lock = json.loads(lock_file.read_text(encoding="utf-8"))
     failures: list[str] = []
@@ -582,29 +589,52 @@ def verify_protocol_lock(
     if lock.get("lock_type") != "aegis_qec_research_protocol":
         failures.append("not an Aegis research protocol lock")
 
-    expected_project = str(source)
-    project_entries = [
-        item
+    stored_protocol_hash = str(lock.get("project_protocol_sha256", ""))
+    actual_protocol_hash = _protocol_projection_sha256(project)
+    if stored_protocol_hash != actual_protocol_hash:
+        failures.append("scientific protocol changed after freeze")
+
+    expected_lock_hash = str(lock.get("protocol_sha256", ""))
+    lock_without_hash = {
+        key: value
+        for key, value in lock.items()
+        if key != "protocol_sha256"
+    }
+    actual_lock_hash = _sha256_bytes(
+        json.dumps(
+            lock_without_hash,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    )
+    if expected_lock_hash != actual_lock_hash:
+        failures.append("protocol lock metadata failed its own integrity hash")
+
+    experiment_by_role = {
+        f"experiment:{experiment['id']}": _resolve_path(
+            source,
+            str(experiment["manifest"]),
+        )
+        for experiment in project.get("experiments", [])
+    }
+    locked_roles = {
+        str(item.get("role", ""))
         for item in lock.get("files", [])
-        if item.get("role") == "project"
-    ]
-    if len(project_entries) != 1:
-        failures.append("protocol lock must contain exactly one project entry")
-    elif str(Path(project_entries[0]["path"]).resolve()) != expected_project:
-        failures.append("protocol lock belongs to a different project")
+    }
+    if locked_roles != set(experiment_by_role):
+        failures.append("experiment set changed after protocol freeze")
 
     for item in lock.get("files", []):
-        path = Path(str(item.get("path", "")))
+        role = str(item.get("role", ""))
+        path = experiment_by_role.get(role)
+        if path is None:
+            continue
         if not path.is_file():
-            failures.append(
-                f"locked file is missing: {path}"
-            )
+            failures.append(f"locked experiment manifest is missing: {path}")
             continue
         actual = _sha256_file(path)
         if actual != str(item.get("sha256", "")):
-            failures.append(
-                f"locked file changed: {path}"
-            )
+            failures.append(f"locked experiment manifest changed: {path}")
 
     return {
         "schema_version": 1,
@@ -613,8 +643,8 @@ def verify_protocol_lock(
         "valid": not failures,
         "failures": failures,
         "protocol_sha256": lock.get("protocol_sha256"),
+        "project_protocol_sha256": actual_protocol_hash,
     }
-
 
 def run_research_project(
     project_path: str,
@@ -724,6 +754,14 @@ def write_research_project_template(
             "reproducible research",
         ],
         "research_question": "Replace with the precise research question.",
+        "protocol": {
+            "mode": "exploratory",
+            "primary_outcome": "",
+            "analysis_plan": "",
+            "stopping_rule": "",
+            "search_plan": "",
+            "multiple_comparisons": "",
+        },
         "hypotheses": [
             {
                 "id": "H1",
