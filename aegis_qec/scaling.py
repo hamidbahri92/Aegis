@@ -318,7 +318,7 @@ def write_scaling_artifacts(
     if not plot_path:
         return
 
-    import matplotlib.pyplot as plt
+    from .plotting import new_agg_figure
 
     points = _extract_campaign_points(
         campaign,
@@ -326,7 +326,7 @@ def write_scaling_artifacts(
     )
     path = Path(plot_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    fig, ax = plt.subplots(figsize=(7.5, 5.0))
+    fig, ax = new_agg_figure(figsize=(7.5, 5.0))
 
     critical_probability = float(analysis["critical_probability"])
     nu = float(analysis["nu"])
@@ -400,4 +400,4 @@ def write_scaling_artifacts(
     ax.legend()
     fig.tight_layout()
     fig.savefig(path, dpi=180)
-    plt.close(fig)
+    fig.clear()
