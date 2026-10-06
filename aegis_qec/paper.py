@@ -469,32 +469,71 @@ Project SHA-256: {audit["project_sha256"]}
 """
 
 
-def _reproduce(project_path: Path, audit: dict[str, Any]) -> str:
+def _reproduce(
+    project_path: Path,
+    project: dict[str, Any],
+    audit: dict[str, Any],
+) -> str:
     command = "aegis project audit " + project_path.name
     if audit.get("protocol_lock") is not None:
         command += " --require-protocol-lock"
-    return f"""# Reproduction and verification
 
-Verify the project:
+    lines = [
+        "# Reproduction and verification",
+        "",
+        "Verify the project:",
+        "",
+        "    " + command,
+        "",
+    ]
 
-    {command}
+    commands = project.get("reproduction_commands", [])
+    lines.extend(["Exact project reproduction commands:", ""])
+    if commands:
+        for item in commands:
+            lines.append("    " + str(item))
+    else:
+        lines.append("    No project-level reproduction commands declared.")
 
-Verify individual experiment bundles:
+    lines.extend(
+        [
+            "",
+            "Verify individual experiment bundles:",
+            "",
+            "    aegis verify-bundle path/to/experiment.aegis.zip",
+            "",
+            "Verify reusable datasets:",
+            "",
+            "    aegis dataset inspect path/to/dataset.h5 --json",
+            "",
+            "Re-run a paired decoder comparison:",
+            "",
+            (
+                "    aegis dataset evaluate path/to/dataset.h5 "
+                "--decoder DECODER_A DECODER_B --split test --json"
+            ),
+            "",
+            "Compute resources declared by the project:",
+            "",
+        ]
+    )
+    resources = project.get("compute_resources", [])
+    if resources:
+        for resource in resources:
+            lines.append("    " + json.dumps(resource, sort_keys=True))
+    else:
+        lines.append("    None declared.")
 
-    aegis verify-bundle path/to/experiment.aegis.zip
-
-Verify reusable datasets:
-
-    aegis dataset inspect path/to/dataset.h5 --json
-
-Re-run a paired decoder comparison:
-
-    aegis dataset evaluate path/to/dataset.h5 --decoder DECODER_A DECODER_B --split test --json
-
-See environment.json for package and platform versions observed when this
-submission package was assembled. MANIFEST.json and checksums.sha256 cover the
-packaged payload.
-"""
+    lines.extend(
+        [
+            "",
+            "See environment.json for package and platform versions observed when",
+            "this submission package was assembled. MANIFEST.json and",
+            "checksums.sha256 cover the packaged payload.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def _claim_map(audit: dict[str, Any]) -> str:
@@ -1009,8 +1048,12 @@ def build_submission_package(
     destination.mkdir(parents=True)
     manuscript = destination / "manuscript"
     artifacts = destination / "artifacts"
+    experiments = destination / "experiments"
+    dataset_metadata = destination / "dataset-metadata"
     manuscript.mkdir()
     artifacts.mkdir()
+    experiments.mkdir()
+    dataset_metadata.mkdir()
 
     packaged_project = (
         _anonymize_project(project)
@@ -1055,11 +1098,22 @@ def build_submission_package(
         encoding="utf-8",
     )
     (destination / "REPRODUCE.md").write_text(
-        _reproduce(Path("research-project.json"), packaged_audit) + "\n",
+        _reproduce(
+            Path("research-project.json"),
+            packaged_project,
+            packaged_audit,
+        )
+        + "\n",
         encoding="utf-8",
     )
-    (destination / "SUBMISSION_CHECKLIST.md").write_text(
-        _checklist(packaged_project, packaged_audit) + "\n",
+
+    experiment_inventory = _copy_experiment_manifests(
+        source,
+        project,
+        experiments,
+    )
+    (destination / "experiment-inventory.json").write_text(
+        json.dumps(experiment_inventory, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
 
@@ -1070,6 +1124,37 @@ def build_submission_package(
     )
     (destination / "artifact-inventory.json").write_text(
         json.dumps(inventory, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    croissant = _write_croissant_metadata(
+        project,
+        inventory,
+        dataset_metadata,
+    )
+    (destination / "croissant-inventory.json").write_text(
+        json.dumps(croissant, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    readiness = _submission_readiness(
+        project,
+        audit,
+        croissant_records=croissant,
+    )
+    (destination / "submission-readiness.json").write_text(
+        json.dumps(readiness, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    checklist = _checklist(packaged_project, packaged_audit)
+    if readiness["failures"]:
+        checklist += "\n\nMachine-audited readiness failures:\n\n"
+        for item in readiness["failures"]:
+            checklist += "- [ ] " + item["message"] + "\n"
+    else:
+        checklist += "\n\nMachine-audited readiness: PASS\n"
+    (destination / "SUBMISSION_CHECKLIST.md").write_text(
+        checklist + "\n",
         encoding="utf-8",
     )
 
@@ -1104,7 +1189,11 @@ def build_submission_package(
         "project_title": packaged_project["title"],
         "project_sha256": audit["project_sha256"],
         "audit_valid": audit["valid"],
+        "submission_ready": readiness["ready"],
+        "submission_readiness": readiness,
         "anonymized": bool(anonymize),
+        "experiment_count": len(experiment_inventory),
+        "croissant_count": len(croissant),
         "payload": payload,
     }
     manifest_path = destination / "MANIFEST.json"
@@ -1137,8 +1226,12 @@ def build_submission_package(
         "zip_path": str(zip_path),
         "zip_sha256": _sha256_file(zip_path),
         "audit_valid": audit["valid"],
+        "submission_ready": readiness["ready"],
+        "submission_readiness": readiness,
         "compile": compile_result,
         "artifact_count": len(inventory),
+        "experiment_count": len(experiment_inventory),
+        "croissant_count": len(croissant),
         "claim_count": len(audit["claims"]),
     }
 
