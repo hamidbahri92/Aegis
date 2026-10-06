@@ -265,6 +265,28 @@ Manifest version 1 supports studies, campaigns, exact-shot comparisons, external
 
 See [Experiments](https://github.com/hamidbahri92/Aegis/blob/main/docs/EXPERIMENTS.md) for the manifest format, bundle integrity model, team workflow, and Python API.
 
+## Reusable syndrome datasets
+
+For decoder training, exact dataset reuse, machine-learning experiments, or repeated benchmarking, Aegis can generate a resumable HDF5 dataset:
+
+```bash
+aegis dataset generate \
+  --out research_out/surface-d5-p006.h5 \
+  --distance 5 \
+  --p 0.006 \
+  --shots 1000000 \
+  --seed 1234 \
+  --chunk-size 50000
+
+aegis dataset inspect research_out/surface-d5-p006.h5
+```
+
+The file preserves syndromes, logical observables, deterministic train/validation/test labels, the exact circuit and detector error model, raw error-mechanism probabilities, sparse detector/observable incidence, optional dense check/observable matrices, and content hashes.
+
+Generation can stop after a bounded number of chunks and resume later without changing the resulting scientific sample hashes. Resume requests with incompatible configuration are rejected.
+
+See [Datasets](https://github.com/hamidbahri92/Aegis/blob/main/docs/DATASETS.md) for the HDF5 schema, integrity model, sparse hyperedge representation, and large-dataset workflow.
+
 ## Benchmarking and validation
 
 Aegis deliberately separates different kinds of evidence because decoder-kernel speed, end-to-end application latency, structural correctness, and circuit-level logical performance are not interchangeable.
@@ -339,6 +361,8 @@ aegis templates
 aegis init-experiment
 aegis experiment
 aegis verify-bundle
+aegis dataset generate
+aegis dataset inspect
 aegis predict
 aegis decoders
 aegis validate-decoder
@@ -430,6 +454,7 @@ See [Contributing](https://github.com/hamidbahri92/Aegis/blob/main/CONTRIBUTING.
 - [Platform](https://github.com/hamidbahri92/Aegis/blob/main/docs/PLATFORM.md) — resumable Sinter campaigns, exact shared-shot comparisons, decoder plug-ins, and hardware provenance.
 - [Experiments](https://github.com/hamidbahri92/Aegis/blob/main/docs/EXPERIMENTS.md) — version-controlled manifests, hashed run records, portable research bundles, and integrity verification.
 - [Decoder Plug-in SDK](https://github.com/hamidbahri92/Aegis/blob/main/docs/DECODER_PLUGINS.md) — third-party decoder registration, interoperability contract, conformance tests, and deployment into campaigns.
+- [Datasets](https://github.com/hamidbahri92/Aegis/blob/main/docs/DATASETS.md) — resumable HDF5 syndrome datasets, deterministic splits, error-mechanism incidence, and integrity verification.
 
 ## Project scope
 
