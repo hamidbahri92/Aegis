@@ -447,6 +447,87 @@ def _explain(args: argparse.Namespace) -> int:
     return 0
 
 
+def _dataset_generate(args: argparse.Namespace) -> int:
+    from aegis_qec.dataset import generate_qec_dataset
+
+    try:
+        report = generate_qec_dataset(
+            args.out,
+            shots=args.shots,
+            seed=args.seed,
+            chunk_size=args.chunk_size,
+            max_chunks_per_run=args.max_chunks_per_run,
+            train_fraction=args.train_fraction,
+            validation_fraction=args.validation_fraction,
+            circuit_path=args.circuit,
+            distance=args.distance,
+            physical_error_rate=args.p,
+            basis=args.basis,
+            rounds=args.rounds,
+            dense_matrix_max_cells=args.dense_matrix_max_cells,
+        )
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(f"Dataset generation could not run: {exc}", file=sys.stderr)
+        return 2
+
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 0
+
+    print("Aegis QEC reusable decoder dataset")
+    print(f"Path: {report['path']}")
+    print(
+        f"Shots: {report['written_shots']} / {report['target_shots']} "
+        f"({'complete' if report['complete'] else 'partial'})"
+    )
+    print(
+        f"Detectors: {report['num_detectors']}; "
+        f"observables: {report['num_observables']}; "
+        f"error mechanisms: {report['num_error_mechanisms']}"
+    )
+    print(f"Dataset identity: {report['identity_sha256']}")
+    if report["complete"]:
+        print(f"Syndrome SHA-256: {report['syndromes_sha256']}")
+        print(f"Observable SHA-256: {report['observables_sha256']}")
+        print(f"Split SHA-256: {report['split_sha256']}")
+    else:
+        print("Run the same command again to resume from the durable HDF5 file.")
+    return 0
+
+
+def _dataset_inspect(args: argparse.Namespace) -> int:
+    from aegis_qec.dataset import inspect_qec_dataset
+
+    try:
+        report = inspect_qec_dataset(
+            args.path,
+            verify=not args.no_verify,
+        )
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(f"Dataset inspection could not run: {exc}", file=sys.stderr)
+        return 2
+
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+    else:
+        print("Aegis QEC dataset inspection")
+        print(f"Path: {report['path']}")
+        print(
+            f"Shots: {report['written_shots']} / {report['target_shots']} "
+            f"({'complete' if report['complete'] else 'partial'})"
+        )
+        print(
+            "Splits: "
+            f"train={report['split_counts']['train']}, "
+            f"validation={report['split_counts']['validation']}, "
+            f"test={report['split_counts']['test']}"
+        )
+        print(f"Valid: {'yes' if report['valid'] else 'no'}")
+        for failure in report["failures"]:
+            print(f"Failure: {failure}")
+    return 0 if report["valid"] else 1
+
+
 def _templates(args: argparse.Namespace) -> int:
     from aegis_qec.template_catalog import list_experiment_templates
 
@@ -733,6 +814,61 @@ def _parser() -> argparse.ArgumentParser:
     )
     explain.set_defaults(handler=_explain)
 
+    dataset = sub.add_parser(
+        "dataset",
+        help="Generate, resume, and inspect reusable QEC syndrome datasets.",
+    )
+    dataset_sub = dataset.add_subparsers(dest="dataset_command")
+
+    dataset_generate = dataset_sub.add_parser(
+        "generate",
+        help="Generate or resume an HDF5 decoder-training/benchmark dataset.",
+    )
+    dataset_generate.add_argument("--out", required=True, help="HDF5 output path.")
+    dataset_generate.add_argument("--shots", type=int, default=100000)
+    dataset_generate.add_argument("--seed", type=int, default=1234)
+    dataset_generate.add_argument("--chunk-size", type=int, default=10000)
+    dataset_generate.add_argument(
+        "--max-chunks-per-run",
+        type=int,
+        help="Stop after this many new chunks; rerun the same command to resume.",
+    )
+    dataset_generate.add_argument("--train-fraction", type=float, default=0.8)
+    dataset_generate.add_argument(
+        "--validation-fraction",
+        type=float,
+        default=0.1,
+    )
+    dataset_generate.add_argument(
+        "--circuit",
+        help="Optional Stim circuit file instead of a generated rotated memory circuit.",
+    )
+    dataset_generate.add_argument("--distance", type=int, default=5)
+    dataset_generate.add_argument("--p", type=float, default=0.006)
+    dataset_generate.add_argument("--basis", choices=["x", "z"], default="x")
+    dataset_generate.add_argument("--rounds", type=int)
+    dataset_generate.add_argument(
+        "--dense-matrix-max-cells",
+        type=int,
+        default=20000000,
+        help="Skip dense mechanism matrices above this many cells. Use 0 to disable.",
+    )
+    dataset_generate.add_argument("--json", action="store_true")
+    dataset_generate.set_defaults(handler=_dataset_generate)
+
+    dataset_inspect = dataset_sub.add_parser(
+        "inspect",
+        help="Inspect and verify an Aegis QEC dataset.",
+    )
+    dataset_inspect.add_argument("path", help="HDF5 dataset path.")
+    dataset_inspect.add_argument(
+        "--no-verify",
+        action="store_true",
+        help="Skip full sample hash verification.",
+    )
+    dataset_inspect.add_argument("--json", action="store_true")
+    dataset_inspect.set_defaults(handler=_dataset_inspect)
+
     templates = sub.add_parser(
         "templates",
         help="List experiment templates bundled with Aegis QEC.",
@@ -796,7 +932,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             "\nTry 'aegis doctor', then 'aegis study', 'aegis campaign', "
             "'aegis compare', 'aegis scaling', 'aegis explain', "
-            "'aegis templates', 'aegis experiment', "
+            "'aegis dataset generate', 'aegis templates', 'aegis experiment', "
             "'aegis validate-decoder', 'aegis predict', or 'aegis gui'."
         )
         return 0
