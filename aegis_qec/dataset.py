@@ -199,6 +199,26 @@ def _hash_uint8_dataset(dataset, *, rows_per_chunk: int = 65536) -> str:
     return digest.hexdigest()
 
 
+def _count_split_labels(
+    dataset,
+    *,
+    rows_per_chunk: int = 1_000_000,
+) -> dict[str, int]:
+    counts = np.zeros(3, dtype=np.int64)
+    for start in range(0, dataset.shape[0], rows_per_chunk):
+        stop = min(dataset.shape[0], start + rows_per_chunk)
+        values = np.asarray(dataset[start:stop], dtype=np.uint8)
+        chunk_counts = np.bincount(values, minlength=3)
+        if len(chunk_counts) > 3:
+            raise ValueError("dataset split contains an unknown label")
+        counts += chunk_counts[:3]
+    return {
+        "train": int(counts[0]),
+        "validation": int(counts[1]),
+        "test": int(counts[2]),
+    }
+
+
 def _split_labels(
     count: int,
     *,
@@ -611,11 +631,7 @@ def inspect_qec_dataset(
             "dense_mechanism_matrices": bool(
                 handle.attrs.get("dense_mechanism_matrices", False)
             ),
-            "split_counts": {
-                "train": int(np.count_nonzero(split[:] == 0)),
-                "validation": int(np.count_nonzero(split[:] == 1)),
-                "test": int(np.count_nonzero(split[:] == 2)),
-            },
+            "split_counts": _count_split_labels(split),
         }
 
         failures: list[str] = []
