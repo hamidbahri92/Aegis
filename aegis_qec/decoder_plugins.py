@@ -235,18 +235,27 @@ class DecoderPluginAdapter:
 
     def compile_decoder_for_dem(self, *, dem: Any):
         if self.has_compile:
-            compiled = self.decoder.compile_decoder_for_dem(dem=dem)
-            if not callable(
-                getattr(compiled, "decode_shots_bit_packed", None)
-            ):
-                raise TypeError(
-                    f"Decoder plugin {self.name!r} returned a compiled object "
-                    "without decode_shots_bit_packed."
+            try:
+                compiled = self.decoder.compile_decoder_for_dem(dem=dem)
+            except NotImplementedError:
+                compiled = None
+            if compiled is not None:
+                if not callable(
+                    getattr(compiled, "decode_shots_bit_packed", None)
+                ):
+                    raise TypeError(
+                        f"Decoder plugin {self.name!r} returned a compiled object "
+                        "without decode_shots_bit_packed."
+                    )
+                return _ValidatedCompiledDecoder(
+                    compiled,
+                    decoder_name=self.name,
+                    num_observables=int(dem.num_observables),
                 )
-            return _ValidatedCompiledDecoder(
-                compiled,
-                decoder_name=self.name,
-                num_observables=int(dem.num_observables),
+
+        if not self.has_file:
+            raise NotImplementedError(
+                f"Decoder plugin {self.name!r} has no usable compiled or file decoder."
             )
 
         return _FileBackedCompiledDecoder(
