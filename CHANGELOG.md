@@ -14,7 +14,11 @@ Added project execution across declared experiment manifests with preserved Aegi
 
 Added LaTeX and Markdown manuscript generation plus reviewer-grade submission packages containing claim-to-evidence maps, reproduction instructions, environment metadata, artifact inventories, checksums, readiness checklists, and optional PDF compilation through Tectonic or latexmk.
 
-Added blind-review packaging that redacts declared author identity and local source paths, plus directory/ZIP package verification and tamper detection.
+Added blind-review packaging that redacts declared author identity, repository/data URLs, and local source paths, plus directory/ZIP package verification and tamper detection.
+
+Submission packages now include exact experiment manifests, a separate machine-readable submission-readiness verdict, venue-focused readiness checks, reproduction commands, compute-resource disclosure, and optional Croissant 1.0 JSON-LD metadata for declared dataset contributions.
+
+Confirmatory project audits now fail closed when a valid frozen protocol is absent.
 
 ### Paired decoder inference
 
