@@ -6,6 +6,7 @@ import io
 import json
 import random
 import time
+from pathlib import Path
 
 try:
     import streamlit as st
@@ -45,6 +46,435 @@ def _percentile(samples, fraction):
     return ordered[index]
 
 
+def _research_project_tab():
+    from aegis_qec.project import (
+        freeze_research_protocol,
+        run_research_project,
+        write_research_project_template,
+    )
+
+    st.write(
+        "Create a reviewable research project, freeze confirmatory protocols, "
+        "and execute all declared experiments from one project file."
+    )
+    col1, col2 = st.columns(2)
+    with col1:
+        project_path = st.text_input(
+            "Research project path",
+            value="research-project.json",
+            key="studio_project_path",
+            help="JSON project contract containing the question, protocol, evidence, and paper metadata.",
+        )
+        author = st.text_input(
+            "Lead author",
+            value="Researcher",
+            key="studio_project_author",
+        )
+    with col2:
+        workspace = st.text_input(
+            "Project run workspace",
+            value="research_out/project",
+            key="studio_project_workspace",
+        )
+        overwrite = st.checkbox(
+            "Replace starter files if they already exist",
+            value=False,
+            key="studio_project_overwrite",
+        )
+
+    create_col, freeze_col, run_col = st.columns(3)
+    with create_col:
+        if st.button(
+            "Create starter project",
+            type="primary",
+            key="studio_create_project",
+            use_container_width=True,
+        ):
+            try:
+                created = write_research_project_template(
+                    project_path,
+                    author_name=author,
+                    overwrite=overwrite,
+                )
+                st.session_state["studio_project_created"] = created
+                st.success(f"Created {created['project_path']}")
+            except Exception as exc:
+                st.error(f"Project creation failed: {type(exc).__name__}: {exc}")
+
+    with freeze_col:
+        if st.button(
+            "Freeze protocol",
+            key="studio_freeze_project",
+            use_container_width=True,
+        ):
+            try:
+                lock = freeze_research_protocol(project_path)
+                st.session_state["studio_protocol_lock"] = lock
+                st.success("Protocol frozen.")
+                st.code(lock["protocol_sha256"])
+            except Exception as exc:
+                st.error(f"Protocol freeze failed: {type(exc).__name__}: {exc}")
+
+    with run_col:
+        if st.button(
+            "Run project",
+            key="studio_run_project",
+            use_container_width=True,
+        ):
+            try:
+                report = run_research_project(
+                    project_path,
+                    workspace=workspace,
+                )
+                st.session_state["studio_project_run"] = report
+                st.success("Project run completed.")
+            except Exception as exc:
+                st.error(f"Project run failed: {type(exc).__name__}: {exc}")
+
+    report = st.session_state.get("studio_project_run")
+    if report:
+        st.subheader("Latest project run")
+        metrics = st.columns(3)
+        metrics[0].metric("Experiments", len(report.get("experiments", [])))
+        metrics[1].metric("Discoveries", len(report.get("discoveries", [])))
+        metrics[2].metric(
+            "Evidence record",
+            "saved" if report.get("path") else "missing",
+        )
+        rows = []
+        for item in report.get("experiments", []):
+            rows.append(
+                {
+                    "kind": "experiment",
+                    "id": item["id"],
+                    "evidence": item["bundle"]["path"],
+                }
+            )
+        for item in report.get("discoveries", []):
+            rows.append(
+                {
+                    "kind": "discovery",
+                    "id": item["id"],
+                    "evidence": item["result_path"],
+                }
+            )
+        if rows:
+            st.dataframe(rows, use_container_width=True, hide_index=True)
+        st.caption(
+            "Project execution preserves experiment bundles and discovery records; "
+            "it does not convert exploratory search into confirmatory evidence."
+        )
+
+
+def _research_discovery_tab():
+    from aegis_qec.discovery import run_discovery, write_discovery_starter
+
+    st.write(
+        "Search declared experiment parameters while preserving every candidate, "
+        "objective value, failure, and confirmation proposal."
+    )
+    col1, col2 = st.columns(2)
+    with col1:
+        discovery_path = st.text_input(
+            "Discovery configuration",
+            value="discovery.json",
+            key="studio_discovery_path",
+        )
+    with col2:
+        discovery_out = st.text_input(
+            "Discovery workspace",
+            value="research_out/discovery",
+            key="studio_discovery_out",
+        )
+
+    create_col, run_col = st.columns(2)
+    with create_col:
+        if st.button(
+            "Create discovery starter",
+            key="studio_create_discovery",
+            use_container_width=True,
+        ):
+            try:
+                created = write_discovery_starter(discovery_path)
+                st.session_state["studio_discovery_created"] = created
+                st.success("Discovery starter created.")
+                st.write(created)
+            except Exception as exc:
+                st.error(
+                    f"Discovery starter failed: {type(exc).__name__}: {exc}"
+                )
+
+    with run_col:
+        if st.button(
+            "Run or resume discovery",
+            type="primary",
+            key="studio_run_discovery",
+            use_container_width=True,
+        ):
+            try:
+                report = run_discovery(
+                    discovery_path,
+                    output_dir=discovery_out,
+                )
+                st.session_state["studio_discovery_report"] = report
+                st.success("Exploratory discovery completed.")
+            except Exception as exc:
+                st.error(f"Discovery failed: {type(exc).__name__}: {exc}")
+
+    report = st.session_state.get("studio_discovery_report")
+    if report:
+        metrics = st.columns(4)
+        metrics[0].metric("Evaluated", report["evaluated"])
+        metrics[1].metric("Succeeded", report["successful"])
+        metrics[2].metric("Failed", report["failed"])
+        metrics[3].metric("Pareto candidates", len(report["pareto_front"]))
+
+        if report["pareto_front"]:
+            rows = []
+            for rank, item in enumerate(report["pareto_front"], start=1):
+                row = {
+                    "rank": rank,
+                    "candidate": item["key"],
+                }
+                row.update(
+                    {
+                        f"objective:{name}": value
+                        for name, value in item["objectives"].items()
+                    }
+                )
+                row.update(
+                    {
+                        f"parameter:{name}": value
+                        for name, value in item["assignment"].items()
+                    }
+                )
+                rows.append(row)
+            st.subheader("Pareto front")
+            st.dataframe(rows, use_container_width=True, hide_index=True)
+
+        if report["confirmation_manifests"]:
+            st.subheader("Independent confirmation candidates")
+            st.dataframe(
+                report["confirmation_manifests"],
+                use_container_width=True,
+                hide_index=True,
+            )
+        st.warning(report["interpretation"])
+
+
+def _research_evidence_tab():
+    from aegis_qec.project import audit_research_project
+
+    st.write(
+        "Audit claims against declared files and exact JSON fields before writing "
+        "or submitting conclusions."
+    )
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        project_path = st.text_input(
+            "Project to audit",
+            value=st.session_state.get(
+                "studio_project_path",
+                "research-project.json",
+            ),
+            key="studio_audit_path",
+        )
+    with col2:
+        require_lock = st.checkbox(
+            "Require protocol lock",
+            value=False,
+            key="studio_audit_lock",
+        )
+
+    if st.button(
+        "Audit evidence",
+        type="primary",
+        key="studio_audit_project",
+    ):
+        try:
+            report = audit_research_project(
+                project_path,
+                require_protocol_lock=require_lock,
+            )
+            st.session_state["studio_audit_report"] = report
+        except Exception as exc:
+            st.error(f"Audit failed to run: {type(exc).__name__}: {exc}")
+
+    report = st.session_state.get("studio_audit_report")
+    if report:
+        if report["valid"]:
+            st.success("Project evidence audit passed.")
+        else:
+            st.error("Project evidence audit failed.")
+
+        metrics = st.columns(4)
+        metrics[0].metric("Claims", len(report.get("claims", [])))
+        metrics[1].metric("Artifacts", len(report.get("artifacts", {})))
+        metrics[2].metric("Experiments", len(report.get("experiments", [])))
+        metrics[3].metric("Discoveries", len(report.get("discoveries", [])))
+
+        if report["errors"]:
+            st.subheader("Blocking errors")
+            for error in report["errors"]:
+                st.write(f"- {error}")
+        if report["warnings"]:
+            with st.expander("Warnings"):
+                for warning in report["warnings"]:
+                    st.write(f"- {warning}")
+
+        if report.get("claims"):
+            st.subheader("Claim-to-evidence status")
+            st.dataframe(
+                [
+                    {
+                        "claim": item["id"],
+                        "type": item["type"],
+                        "passed": item["passed"],
+                        "text": item["text"],
+                        "evidence_items": len(item["evidence"]),
+                    }
+                    for item in report["claims"]
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
+
+
+def _research_submission_tab():
+    from aegis_qec.paper import (
+        build_submission_package,
+        verify_submission_package,
+    )
+
+    st.write(
+        "Generate LaTeX/Markdown manuscript sources plus the reviewer evidence "
+        "package. Package integrity and scientific submission readiness are "
+        "reported separately."
+    )
+    project_path = st.text_input(
+        "Project for manuscript",
+        value=st.session_state.get(
+            "studio_project_path",
+            "research-project.json",
+        ),
+        key="studio_submission_project",
+    )
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        output = st.text_input(
+            "Submission directory",
+            value="research_out/submission",
+            key="studio_submission_out",
+        )
+    with col2:
+        compile_mode = st.selectbox(
+            "PDF compilation",
+            ["auto", "never", "required"],
+            index=0,
+            key="studio_compile_mode",
+            help="Auto uses Tectonic or latexmk when installed.",
+        )
+    with col3:
+        anonymous = st.checkbox(
+            "Blind-review package",
+            value=False,
+            key="studio_anonymous",
+        )
+        require_lock = st.checkbox(
+            "Require protocol lock",
+            value=False,
+            key="studio_submission_lock",
+        )
+
+    if st.button(
+        "Build reviewer package",
+        type="primary",
+        key="studio_build_submission",
+    ):
+        try:
+            report = build_submission_package(
+                project_path,
+                output_dir=output,
+                compile_mode=compile_mode,
+                require_protocol_lock=require_lock,
+                anonymize=anonymous,
+                overwrite=True,
+            )
+            verification = verify_submission_package(report["zip_path"])
+            st.session_state["studio_submission_report"] = report
+            st.session_state["studio_submission_verification"] = verification
+        except Exception as exc:
+            st.error(
+                f"Submission package failed: {type(exc).__name__}: {exc}"
+            )
+
+    report = st.session_state.get("studio_submission_report")
+    verification = st.session_state.get("studio_submission_verification")
+    if report:
+        metrics = st.columns(4)
+        metrics[0].metric(
+            "Evidence audit",
+            "PASS" if report["audit_valid"] else "FAIL",
+        )
+        metrics[1].metric(
+            "Submission readiness",
+            "PASS" if report.get("submission_ready") else "INCOMPLETE",
+        )
+        metrics[2].metric(
+            "Package integrity",
+            (
+                "PASS"
+                if verification and verification.get("valid")
+                else "FAIL"
+            ),
+        )
+        metrics[3].metric(
+            "PDF",
+            "built" if report["compile"].get("compiled") else "source only",
+        )
+
+        failures = report.get("submission_readiness", {}).get("failures", [])
+        if failures:
+            st.subheader("Readiness gaps")
+            for failure in failures:
+                st.write(f"- {failure['message']}")
+        else:
+            st.success(
+                "Machine-audited readiness checks pass. Human scientific and "
+                "venue-specific review is still required."
+            )
+
+        st.write(f"Reviewer ZIP: {report['zip_path']}")
+        zip_path = Path(report["zip_path"])
+        if zip_path.is_file():
+            st.download_button(
+                "Download reviewer ZIP",
+                data=zip_path.read_bytes(),
+                file_name=zip_path.name,
+                mime="application/zip",
+                key="studio_download_submission",
+            )
+
+
+def _research_studio():
+    st.header("Research Studio")
+    st.caption(
+        "Move from a research question to exploratory discovery, evidence audit, "
+        "and a reviewer-grade manuscript package using one evidence model."
+    )
+    project_tab, discovery_tab, evidence_tab, submission_tab = st.tabs(
+        ["Project", "Discovery", "Evidence", "Submission"]
+    )
+    with project_tab:
+        _research_project_tab()
+    with discovery_tab:
+        _research_discovery_tab()
+    with evidence_tab:
+        _research_evidence_tab()
+    with submission_tab:
+        _research_submission_tab()
+
+
 def main():
     if not STREAMLIT_OK:
         print("Aegis QEC GUI requires the optional GUI extra.")
@@ -73,6 +503,14 @@ def main():
         "benchmark against NetworkX. Results in this application are Aegis end-to-end measurements."
     )
 
+    _research_studio()
+
+    st.divider()
+    st.header("Decoder and circuit lab")
+    st.caption(
+        "Use these lower-level tools for teaching, debugging, controlled sweeps, "
+        "and circuit studies. Publication workflows should preserve the exported evidence."
+    )
     st.subheader("Experiment configuration")
     col1, col2, col3 = st.columns(3)
 
