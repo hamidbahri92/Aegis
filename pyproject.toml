@@ -91,3 +91,7 @@ py-modules = ["main", "main_metrics", "main_threshold", "main_export_header", "c
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["a3d*", "aegis_qec*", "bench*", "gui*", "scripts*"]
+
+
+[tool.setuptools.package-data]
+aegis_qec = ["templates/*.json"]
