@@ -509,11 +509,16 @@ def create_research_bundle(
     bundle = Path(bundle_path).resolve()
     bundle.parent.mkdir(parents=True, exist_ok=True)
 
+    run_record_info = run_record.get("run_record", {})
+    run_record_path = Path(str(run_record_info.get("path", "")))
+    if not run_record_path.is_file():
+        raise FileNotFoundError(
+            "run_record does not point to the exact on-disk aegis-run.json"
+        )
+
     payloads: dict[str, bytes] = {
         "experiment.json": source.read_bytes(),
-        "aegis-run.json": (
-            json.dumps(run_record, indent=2, sort_keys=True) + "\n"
-        ).encode("utf-8"),
+        "aegis-run.json": run_record_path.read_bytes(),
     }
 
     for category in ("inputs", "artifacts"):
