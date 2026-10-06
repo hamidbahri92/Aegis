@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from importlib import resources
 import json
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
