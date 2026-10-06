@@ -178,6 +178,16 @@ This file is intentionally declarative because repository name, Topics, homepage
 
 The intended automation path is to have an authenticated browser or repository-administration integration read that file and apply it. This avoids maintaining those values manually in multiple places.
 
+## Experiment manifests and evidence bundles
+
+The platform layer also provides a versioned JSON experiment contract. This separates experiment intent from an interactive shell command and gives teams a stable unit for code review and CI.
+
+`aegis experiment` dispatches the manifest to the existing study, campaign, comparison, prediction, scaling, or explanation engines. It records input and output hashes plus environment metadata and emits a tamper-evident research bundle.
+
+`aegis verify-bundle` validates that bundle without extracting it.
+
+See [Experiments](EXPERIMENTS.md) for the full contract.
+
 ## Trust boundaries
 
 Aegis owns experiment definition, provenance, plug-in discovery, comparison semantics, artifact generation, and user-facing workflows.
