@@ -52,6 +52,7 @@ jobs:
           tests/test_dataset_evaluation.py
           tests/test_research_project.py
           tests/test_submission_package.py
+          tests/test_discovery.py
           tests/test_scaling_analysis.py
           tests/test_shot_explainer.py
           tests/test_decode_from_dem_optional.py
@@ -83,6 +84,7 @@ jobs:
           aegis project audit research_out/project-smoke.json --require-protocol-lock --json
           aegis paper build research_out/project-smoke.json --out research_out/submission-smoke --compile never --require-protocol-lock
           aegis paper verify research_out/submission-smoke.zip --json
+          aegis discover init --out research_out/discovery-smoke.json
           aegis-bench --help
           aegis-bench circuit-acceptance --distance 3 --rounds 3 --shots 32 --p 0.02 --seed 1234
           aegis-bench calibration-advantage --shots 2000 --seed 20260928 --out-json bench_out/calibration_advantage.json --plot bench_out/calibration_advantage.png
@@ -149,4 +151,5 @@ jobs:
           aegis project audit wheel-project.json --require-protocol-lock --json
           aegis paper build wheel-project.json --out wheel-submission --compile never --require-protocol-lock
           aegis paper verify wheel-submission.zip --json
+          aegis discover init --out wheel-discovery.json
           python -c "import aegis_qec; assert aegis_qec.__version__ == '1.1.1'"
