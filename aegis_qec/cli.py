@@ -447,6 +447,43 @@ def _explain(args: argparse.Namespace) -> int:
     return 0
 
 
+def _templates(args: argparse.Namespace) -> int:
+    from aegis_qec.template_catalog import list_experiment_templates
+
+    templates = list_experiment_templates()
+    if args.json:
+        print(json.dumps(templates, indent=2, sort_keys=True))
+        return 0
+
+    print("Aegis QEC experiment templates")
+    for item in templates:
+        print(
+            f"{item['name']}: {item['title']} "
+            f"[{item['level']}; {item['audience']}]"
+        )
+        print(f"  {item['description']}")
+    return 0
+
+
+def _init_experiment(args: argparse.Namespace) -> int:
+    from aegis_qec.template_catalog import write_experiment_template
+
+    output = args.out or f"{args.template}.json"
+    try:
+        path = write_experiment_template(
+            args.template,
+            output,
+            overwrite=args.force,
+        )
+    except (FileExistsError, OSError, ValueError) as exc:
+        print(f"Could not create experiment manifest: {exc}", file=sys.stderr)
+        return 2
+
+    print(f"Experiment manifest: {Path(path).resolve()}")
+    print(f"Next: aegis experiment {path}")
+    return 0
+
+
 def _experiment(args: argparse.Namespace) -> int:
     from aegis_qec.experiment import (
         create_research_bundle,
@@ -696,6 +733,33 @@ def _parser() -> argparse.ArgumentParser:
     )
     explain.set_defaults(handler=_explain)
 
+    templates = sub.add_parser(
+        "templates",
+        help="List experiment templates bundled with Aegis QEC.",
+    )
+    templates.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit the template catalog as JSON.",
+    )
+    templates.set_defaults(handler=_templates)
+
+    init_experiment = sub.add_parser(
+        "init-experiment",
+        help="Create an editable experiment manifest from a packaged template.",
+    )
+    init_experiment.add_argument(
+        "template",
+        help="Template name from aegis templates.",
+    )
+    init_experiment.add_argument("--out", help="Output manifest path.")
+    init_experiment.add_argument(
+        "--force",
+        action="store_true",
+        help="Replace an existing output file.",
+    )
+    init_experiment.set_defaults(handler=_init_experiment)
+
     experiment = sub.add_parser(
         "experiment",
         help="Run a version-controlled experiment manifest and create a research bundle.",
@@ -732,8 +796,8 @@ def main(argv: list[str] | None = None) -> int:
         print(
             "\nTry 'aegis doctor', then 'aegis study', 'aegis campaign', "
             "'aegis compare', 'aegis scaling', 'aegis explain', "
-            "'aegis experiment', 'aegis validate-decoder', "
-            "'aegis predict', or 'aegis gui'."
+            "'aegis templates', 'aegis experiment', "
+            "'aegis validate-decoder', 'aegis predict', or 'aegis gui'."
         )
         return 0
     return int(handler(args))
