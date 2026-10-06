@@ -29,6 +29,27 @@ def _project_with_evidence(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
 
+    experiment = tmp_path / "experiment.json"
+    experiment.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "name": "paper-package-study",
+                "operation": "study",
+                "parameters": {
+                    "distances": [3],
+                    "physical_error_rates": [0.02],
+                    "shots": 8,
+                    "basis": "x",
+                    "seed": 1234
+                }
+            },
+            indent=2
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
     bibliography = tmp_path / "references.bib"
     bibliography.write_text(
         "@article{example,title={Example reference},author={Researcher, Ada},year={2026}}\n",
@@ -56,7 +77,12 @@ def _project_with_evidence(tmp_path: Path) -> Path:
                         "text": "Logical error rate is below 0.1.",
                     }
                 ],
-                "experiments": [],
+                "experiments": [
+                    {
+                        "id": "study",
+                        "manifest": "experiment.json"
+                    }
+                ],
                 "artifacts": [
                     {
                         "id": "evaluation",
@@ -142,6 +168,7 @@ def test_submission_package_contains_manuscript_and_evidence(tmp_path):
     assert (output / "MANIFEST.json").is_file()
     assert (output / "submission-readiness.json").is_file()
     assert (output / "experiment-inventory.json").is_file()
+    assert (output / "experiments" / "study.json").is_file()
     assert (output / "croissant-inventory.json").is_file()
     assert Path(report["zip_path"]).is_file()
 
