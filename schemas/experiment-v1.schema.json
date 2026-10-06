@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/hamidbahri92/Aegis/blob/main/schemas/experiment-v1.schema.json",
+  "title": "Aegis QEC experiment manifest v1",
+  "type": "object",
+  "required": ["schema_version", "operation"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operation": {
+      "enum": [
+        "study",
+        "campaign",
+        "compare",
+        "predict",
+        "scaling",
+        "explain"
+      ]
+    },
+    "parameters": {
+      "type": "object"
+    },
+    "outputs": {
+      "type": "object"
+    }
+  }
+}
