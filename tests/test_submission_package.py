@@ -315,3 +315,64 @@ def test_submission_integrity_can_pass_while_readiness_fails(tmp_path):
 
     verified = verify_submission_package(report["zip_path"])
     assert verified["valid"] is True
+
+
+def test_submission_package_includes_declared_discovery_definition(tmp_path):
+    project = _project_with_evidence(tmp_path)
+    discovery = tmp_path / "discovery.json"
+    discovery.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "base_experiment": "experiment.json",
+                "algorithm": "random",
+                "seed": 1,
+                "budget": 1,
+                "population_size": 1,
+                "parameters": [
+                    {
+                        "path": "/parameters/rounds",
+                        "type": "choice",
+                        "values": [3],
+                    }
+                ],
+                "objectives": [
+                    {
+                        "name": "logical_error_rate",
+                        "json_pointer": "/result/points/0/logical_error_rate",
+                        "direction": "minimize",
+                    }
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    value = json.loads(project.read_text(encoding="utf-8"))
+    value["discoveries"] = [
+        {
+            "id": "search",
+            "manifest": "discovery.json",
+        }
+    ]
+    project.write_text(
+        json.dumps(value, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    freeze_research_protocol(str(project))
+
+    output = tmp_path / "submission-discovery"
+    report = build_submission_package(
+        str(project),
+        output_dir=str(output),
+        compile_mode="never",
+        require_protocol_lock=True,
+    )
+
+    assert report["discovery_count"] == 1
+    assert (output / "discoveries" / "search.json").is_file()
+    inventory = json.loads(
+        (output / "discovery-inventory.json").read_text(encoding="utf-8")
+    )
+    assert inventory[0]["id"] == "search"
