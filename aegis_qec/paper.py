@@ -84,6 +84,24 @@ def _authors(project: dict[str, Any]) -> str:
 def _anonymize_project(project: dict[str, Any]) -> dict[str, Any]:
     value = copy.deepcopy(project)
     value["authors"] = [{"name": "Anonymous Authors"}]
+    if "code_url" in value:
+        value["code_url"] = "withheld for blind review"
+    if "data_url" in value:
+        value["data_url"] = "withheld for blind review"
+    for experiment in value.get("experiments", []):
+        if isinstance(experiment, dict) and experiment.get("manifest"):
+            experiment["manifest"] = Path(
+                str(experiment["manifest"])
+            ).name
+    for artifact in value.get("artifacts", []):
+        if isinstance(artifact, dict) and artifact.get("path"):
+            artifact["path"] = Path(str(artifact["path"])).name
+        if isinstance(artifact, dict) and artifact.get("url"):
+            artifact["url"] = "withheld for blind review"
+    value["bibliography_files"] = [
+        Path(str(path)).name
+        for path in value.get("bibliography_files", [])
+    ]
     return value
 
 
