@@ -4,6 +4,25 @@ Aegis QEC experiment manifests turn an interactive command into a file that can 
 
 A manifest is JSON with a schema version, an operation, parameters, and optional output names.
 
+## Start from a packaged template
+
+A normal PyPI installation includes curated experiment manifests. List them with:
+
+```bash
+aegis templates
+```
+
+Create an editable copy:
+
+```bash
+aegis init-experiment first-study --out experiment.json
+aegis experiment experiment.json
+```
+
+The catalog includes beginner learning paths, an exact-shot decoder comparison, a resumable finite-size-scaling campaign, and a compact practitioner regression campaign. Templates are ordinary version-1 manifests after materialization, so they can be edited, committed, reviewed, and bundled like any other experiment.
+
+The template files are packaged inside the `aegis-qec` wheel; cloning the GitHub repository is not required.
+
 ## Small circuit study
 
 ```json
