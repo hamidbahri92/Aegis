@@ -208,9 +208,18 @@ def _environment() -> dict[str, Any]:
     }
 
 
-def _aegis_bib() -> str:
+def _aegis_bib(*, anonymize: bool) -> str:
     version = _version("aegis-qec") or "source"
     year = datetime.now(timezone.utc).year
+    if anonymize:
+        return f"""@software{{aegis_qec,
+  author = {{Anonymous}},
+  title = {{Aegis QEC research platform}},
+  version = {{{version}}},
+  year = {{{year}}},
+  note = {{Repository identity withheld for blind review}}
+}}
+"""
     return f"""@software{{aegis_qec,
   author = {{Bahri, Hamid}},
   title = {{Aegis QEC: reproducible quantum error-correction research platform}},
@@ -221,8 +230,17 @@ def _aegis_bib() -> str:
 """
 
 
-def _references(project_path: Path, project: dict[str, Any]) -> str:
-    blocks = [_aegis_bib(), _STIM_BIB, _PYMATCHING_BIB]
+def _references(
+    project_path: Path,
+    project: dict[str, Any],
+    *,
+    anonymize: bool,
+) -> str:
+    blocks = [
+        _aegis_bib(anonymize=anonymize),
+        _STIM_BIB,
+        _PYMATCHING_BIB,
+    ]
     for value in project.get("bibliography_files", []):
         path = Path(value)
         if not path.is_absolute():
@@ -787,7 +805,11 @@ def build_submission_package(
         encoding="utf-8",
     )
     (manuscript / "references.bib").write_text(
-        _references(source, project),
+        _references(
+            source,
+            project,
+            anonymize=anonymize,
+        ),
         encoding="utf-8",
     )
 
