@@ -12,13 +12,13 @@ from a3d import AegisConfig, DecoderRuntime, RotatedSurfaceLayout
 from .campaign import run_campaign, write_campaign_summary
 from .comparison import compare_decoders_exact_shots, write_comparison_json
 from .decoder_plugins import available_decoders, custom_decoder_registry
-from .explain import explain_surface_code_shot, write_shot_explanation
 from .experiment import (
     create_research_bundle,
     load_experiment_manifest,
     run_experiment_manifest,
     verify_research_bundle,
 )
+from .explain import explain_surface_code_shot, write_shot_explanation
 from .io_decode import predict_observables_from_files
 from .research import run_surface_code_study, wilson_interval, write_study_artifacts
 from .scaling import fit_surface_code_scaling, load_campaign_json, write_scaling_artifacts
