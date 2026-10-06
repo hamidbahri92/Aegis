@@ -48,6 +48,7 @@ jobs:
           tests/test_decoder_plugin_sdk.py
           tests/test_headless_plotting.py
           tests/test_template_catalog.py
+          tests/test_dataset.py
           tests/test_scaling_analysis.py
           tests/test_shot_explainer.py
           tests/test_decode_from_dem_optional.py
@@ -71,6 +72,8 @@ jobs:
           aegis verify-bundle research_out/manifest-smoke.aegis.zip
           aegis templates --json
           aegis init-experiment shot-explanation --out research_out/template-smoke.json
+          aegis dataset generate --out research_out/dataset-smoke.h5 --shots 24 --seed 1234 --chunk-size 8 --distance 3 --p 0.02 --json
+          aegis dataset inspect research_out/dataset-smoke.h5 --json
           aegis-bench --help
           aegis-bench circuit-acceptance --distance 3 --rounds 3 --shots 32 --p 0.02 --seed 1234
           aegis-bench calibration-advantage --shots 2000 --seed 20260928 --out-json bench_out/calibration_advantage.json --plot bench_out/calibration_advantage.png
