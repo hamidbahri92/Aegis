@@ -385,6 +385,11 @@ def _research_submission_tab():
             value=False,
             key="studio_submission_lock",
         )
+        replace_output = st.checkbox(
+            "Replace existing submission output",
+            value=False,
+            key="studio_submission_overwrite",
+        )
 
     if st.button(
         "Build reviewer package",
@@ -398,7 +403,7 @@ def _research_submission_tab():
                 compile_mode=compile_mode,
                 require_protocol_lock=require_lock,
                 anonymize=anonymous,
-                overwrite=True,
+                overwrite=replace_output,
             )
             verification = verify_submission_package(report["zip_path"])
             st.session_state["studio_submission_report"] = report
