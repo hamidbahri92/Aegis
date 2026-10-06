@@ -63,6 +63,22 @@ def load_experiment_manifest(path: str) -> dict[str, Any]:
         raise ValueError("manifest parameters must be an object")
     if not isinstance(outputs, dict):
         raise ValueError("manifest outputs must be an object")
+
+    required_parameters = {
+        "predict": ("dem_path", "dets_path"),
+        "scaling": ("campaign_json", "decoder"),
+    }
+    missing = [
+        key
+        for key in required_parameters.get(operation, ())
+        if key not in parameters
+    ]
+    if missing:
+        raise ValueError(
+            f"{operation} manifest is missing required parameter(s): "
+            + ", ".join(missing)
+        )
+
     value["operation"] = operation
     return value
 
