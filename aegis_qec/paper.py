@@ -566,6 +566,259 @@ def _checklist(project: dict[str, Any], audit: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _project_relative_path(project_path: Path, value: str) -> Path:
+    path = Path(value)
+    if not path.is_absolute():
+        path = project_path.parent / path
+    return path.resolve()
+
+
+def _copy_experiment_manifests(
+    project_path: Path,
+    project: dict[str, Any],
+    root: Path,
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    root.mkdir(parents=True, exist_ok=True)
+    for experiment in project.get("experiments", []):
+        experiment_id = str(experiment["id"])
+        source = _project_relative_path(
+            project_path,
+            str(experiment["manifest"]),
+        )
+        if not source.is_file():
+            continue
+        target = root / (experiment_id + source.suffix)
+        shutil.copy2(source, target)
+        records.append(
+            {
+                "id": experiment_id,
+                "packaged": str(target.relative_to(root.parent)),
+                "sha256": _sha256_file(target),
+                "bytes": target.stat().st_size,
+            }
+        )
+    return records
+
+
+def _croissant_metadata(
+    project: dict[str, Any],
+    artifact_spec: dict[str, Any],
+    artifact_record: dict[str, Any],
+) -> dict[str, Any]:
+    license_value = str(artifact_spec.get("license", "")).strip()
+    url = str(artifact_spec.get("url", "")).strip()
+    description = str(artifact_spec.get("description", "")).strip()
+    if not license_value or not url or not description:
+        raise ValueError(
+            "Croissant export requires dataset description, license, and url "
+            f"for artifact {artifact_spec.get('id')!r}"
+        )
+    return {
+        "@context": {
+            "@language": "en",
+            "@vocab": "https://schema.org/",
+            "sc": "https://schema.org/",
+            "cr": "http://mlcommons.org/croissant/",
+            "dct": "http://purl.org/dc/terms/",
+            "conformsTo": "dct:conformsTo",
+        },
+        "@type": "sc:Dataset",
+        "name": str(
+            artifact_spec.get("name")
+            or artifact_spec.get("id")
+        ),
+        "description": description,
+        "license": license_value,
+        "url": url,
+        "conformsTo": "http://mlcommons.org/croissant/1.0",
+        "distribution": [
+            {
+                "@type": "cr:FileObject",
+                "@id": Path(artifact_record["packaged"]).name,
+                "name": Path(artifact_record["packaged"]).name,
+                "contentSize": f"{artifact_record['bytes']} B",
+                "contentUrl": url,
+                "encodingFormat": str(
+                    artifact_spec.get(
+                        "encoding_format",
+                        "application/octet-stream",
+                    )
+                ),
+                "sha256": artifact_record["sha256"],
+            }
+        ],
+    }
+
+
+def _write_croissant_metadata(
+    project: dict[str, Any],
+    artifact_inventory: list[dict[str, Any]],
+    root: Path,
+) -> list[dict[str, Any]]:
+    by_id = {
+        str(item["id"]): item
+        for item in project.get("artifacts", [])
+    }
+    result: list[dict[str, Any]] = []
+    for record in artifact_inventory:
+        spec = by_id.get(record["id"], {})
+        if str(spec.get("kind", "")).lower() != "dataset":
+            continue
+        requested = bool(spec.get("croissant", False))
+        metadata_ready = all(
+            str(spec.get(key, "")).strip()
+            for key in ("description", "license", "url")
+        )
+        if not requested and not metadata_ready:
+            continue
+        metadata = _croissant_metadata(project, spec, record)
+        target_dir = root / record["id"]
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target = target_dir / "croissant.json"
+        target.write_text(
+            json.dumps(metadata, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        result.append(
+            {
+                "artifact": record["id"],
+                "packaged": str(target.relative_to(root.parent)),
+                "sha256": _sha256_file(target),
+                "bytes": target.stat().st_size,
+            }
+        )
+    return result
+
+
+def _submission_readiness(
+    project: dict[str, Any],
+    audit: dict[str, Any],
+    *,
+    croissant_records: list[dict[str, Any]],
+) -> dict[str, Any]:
+    paper = project.get("paper", {})
+    venue = str(paper.get("venue", "generic")).strip().lower()
+    protocol_mode = str(
+        project.get("protocol", {}).get("mode", "exploratory")
+    ).lower()
+    artifact_specs = {
+        str(item["id"]): item
+        for item in project.get("artifacts", [])
+    }
+    dataset_ids = {
+        artifact_id
+        for artifact_id, item in artifact_specs.items()
+        if str(item.get("kind", "")).lower() == "dataset"
+    }
+    croissant_ids = {
+        str(item["artifact"])
+        for item in croissant_records
+    }
+
+    checks: list[dict[str, Any]] = []
+
+    def add(identifier: str, passed: bool, message: str) -> None:
+        checks.append(
+            {
+                "id": identifier,
+                "passed": bool(passed),
+                "message": message,
+            }
+        )
+
+    add(
+        "claim_evidence",
+        bool(audit.get("valid")),
+        "All declared scientific claims and artifacts pass the project audit.",
+    )
+    add(
+        "confirmatory_protocol_lock",
+        protocol_mode != "confirmatory"
+        or bool(audit.get("protocol_lock", {}).get("valid")),
+        "Confirmatory projects require a valid frozen protocol.",
+    )
+    add(
+        "reproduction_commands",
+        bool(project.get("reproduction_commands")),
+        "Exact reproduction commands are declared.",
+    )
+    add(
+        "code_availability",
+        bool(str(project.get("code_url", "")).strip())
+        or bool(str(paper.get("code_availability", "")).strip()),
+        "Code access or a code-availability statement is declared.",
+    )
+    add(
+        "data_availability",
+        bool(str(project.get("data_url", "")).strip())
+        or bool(str(paper.get("data_availability", "")).strip()),
+        "Data access or a data-availability statement is declared.",
+    )
+    add(
+        "limitations",
+        bool(str(paper.get("limitations", "")).strip()),
+        "Limitations are explicitly documented.",
+    )
+    add(
+        "ai_usage",
+        bool(str(paper.get("ai_usage_disclosure", "")).strip()),
+        "Generative-AI use is explicitly disclosed.",
+    )
+    add(
+        "bibliography",
+        bool(project.get("bibliography_files")),
+        "At least one project bibliography file is declared.",
+    )
+
+    if venue == "joss":
+        for key, label in [
+            ("statement_of_need", "JOSS statement of need is present."),
+            ("state_of_field", "JOSS state of the field is present."),
+            ("software_design", "JOSS software design section is present."),
+            ("impact", "JOSS research impact statement is present."),
+        ]:
+            add(
+                "joss_" + key,
+                bool(str(paper.get(key, "")).strip()),
+                label,
+            )
+
+    if venue in {"neurips", "neurips-ed"}:
+        add(
+            "compute_resources",
+            bool(project.get("compute_resources")),
+            "Experimental compute resources are documented.",
+        )
+        add(
+            "statistical_uncertainty",
+            any(
+                "ci" in str(evidence).lower()
+                or "p_value" in str(evidence).lower()
+                for claim in audit.get("claims", [])
+                for evidence in claim.get("evidence", [])
+            )
+            or bool(project.get("claims")),
+            "Main experimental claims include uncertainty/statistical evidence.",
+        )
+
+    if venue == "neurips-ed" and dataset_ids:
+        add(
+            "croissant",
+            dataset_ids <= croissant_ids,
+            "Every dataset contribution has Croissant 1.0 metadata.",
+        )
+
+    failed = [item for item in checks if not item["passed"]]
+    return {
+        "schema_version": 1,
+        "venue": venue,
+        "ready": not failed,
+        "checks": checks,
+        "failures": failed,
+    }
+
+
 def _redacted_protocol_lock(path: Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
     protocol = copy.deepcopy(value.get("project_protocol", {}))
