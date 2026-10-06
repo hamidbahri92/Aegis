@@ -659,3 +659,256 @@ def inspect_qec_dataset(
     result["file_sha256"] = _sha256_file(file_path)
     result["bytes"] = int(file_path.stat().st_size)
     return result
+
+
+
+def evaluate_decoders_on_dataset(
+    path: str,
+    *,
+    decoders: list[str],
+    split_name: str = "test",
+    max_shots: int | None = None,
+    batch_size: int = 10000,
+    include_external_plugins: bool = True,
+    verify_dataset: bool = True,
+) -> dict[str, Any]:
+    """Evaluate multiple decoders on identical stored detector-shot rows."""
+
+    if not decoders:
+        raise ValueError("at least one decoder is required")
+    if len(set(decoders)) != len(decoders):
+        raise ValueError("decoder names must be unique")
+    if batch_size < 1:
+        raise ValueError("batch_size must be positive")
+    if max_shots is not None and int(max_shots) < 1:
+        raise ValueError("max_shots must be positive")
+
+    split_name = str(split_name).lower()
+    split_labels = {
+        "train": 0,
+        "validation": 1,
+        "test": 2,
+    }
+    if split_name != "all" and split_name not in split_labels:
+        raise ValueError(
+            "split_name must be one of: train, validation, test, all"
+        )
+
+    inspection = inspect_qec_dataset(path, verify=verify_dataset)
+    if not inspection["valid"]:
+        raise ValueError(
+            "dataset integrity verification failed: "
+            + "; ".join(inspection["failures"])
+        )
+    if not inspection["complete"]:
+        raise ValueError("decoder evaluation requires a completed dataset")
+
+    h5py, stim = _require_dependencies()
+    from .decoder_plugins import custom_decoder_registry
+    from .research import wilson_interval
+
+    registry = custom_decoder_registry(
+        include_external=include_external_plugins,
+    )
+    unknown = [name for name in decoders if name not in registry]
+    if unknown:
+        raise ValueError(
+            "Unknown dataset decoder(s): "
+            + ", ".join(unknown)
+            + ". Available: "
+            + ", ".join(sorted(registry))
+        )
+
+    file_path = Path(path).resolve()
+    syndrome_digest = hashlib.sha256()
+    observable_digest = hashlib.sha256()
+    syndrome_digest.update(
+        f"{_DATASET_FORMAT}|selected-syndromes|{split_name}|".encode("ascii")
+    )
+    observable_digest.update(
+        f"{_DATASET_FORMAT}|selected-observables|{split_name}|".encode("ascii")
+    )
+
+    decoder_errors = {name: 0 for name in decoders}
+    decoder_seconds = {name: 0.0 for name in decoders}
+    pairwise_disagreements = {
+        (left, right): 0
+        for left_index, left in enumerate(decoders)
+        for right in decoders[left_index + 1 :]
+    }
+    selected_shots = 0
+
+    with h5py.File(file_path, "r") as handle:
+        syndromes = handle["syndromes"]
+        observables = handle["observables"]
+        split = handle["split"]
+
+        dem_text = handle["decoding_detector_error_model"][()]
+        if isinstance(dem_text, bytes):
+            dem_text = dem_text.decode("utf-8")
+        if not dem_text:
+            dem_text = handle["detector_error_model"][()]
+            if isinstance(dem_text, bytes):
+                dem_text = dem_text.decode("utf-8")
+        dem = stim.DetectorErrorModel(str(dem_text))
+
+        compiled = {
+            name: registry[name].compile_decoder_for_dem(dem=dem)
+            for name in decoders
+        }
+
+        for start in range(0, int(syndromes.shape[0]), int(batch_size)):
+            if max_shots is not None and selected_shots >= int(max_shots):
+                break
+
+            stop = min(int(syndromes.shape[0]), start + int(batch_size))
+            detector_chunk = np.asarray(
+                syndromes[start:stop],
+                dtype=np.bool_,
+            )
+            observable_chunk = np.asarray(
+                observables[start:stop],
+                dtype=np.bool_,
+            )
+
+            if split_name != "all":
+                split_chunk = np.asarray(split[start:stop], dtype=np.uint8)
+                mask = split_chunk == split_labels[split_name]
+                detector_chunk = detector_chunk[mask]
+                observable_chunk = observable_chunk[mask]
+
+            if detector_chunk.shape[0] == 0:
+                continue
+
+            if max_shots is not None:
+                remaining = int(max_shots) - selected_shots
+                detector_chunk = detector_chunk[:remaining]
+                observable_chunk = observable_chunk[:remaining]
+
+            detector_packed = np.packbits(
+                detector_chunk,
+                axis=1,
+                bitorder="little",
+            )
+            observable_packed = np.packbits(
+                observable_chunk,
+                axis=1,
+                bitorder="little",
+            )
+            detector_packed = np.asarray(detector_packed, dtype=np.uint8)
+            observable_packed = np.asarray(observable_packed, dtype=np.uint8)
+
+            syndrome_digest.update(detector_packed.tobytes(order="C"))
+            observable_digest.update(observable_packed.tobytes(order="C"))
+
+            chunk_predictions: dict[str, np.ndarray] = {}
+            for name in decoders:
+                import time
+
+                started = time.perf_counter()
+                predicted = compiled[name].decode_shots_bit_packed(
+                    bit_packed_detection_event_data=detector_packed
+                )
+                decoder_seconds[name] += time.perf_counter() - started
+                predicted = np.asarray(predicted, dtype=np.uint8)
+                chunk_predictions[name] = predicted
+
+                failures = np.any(
+                    np.bitwise_xor(predicted, observable_packed) != 0,
+                    axis=1,
+                )
+                decoder_errors[name] += int(np.count_nonzero(failures))
+
+            for pair in pairwise_disagreements:
+                left, right = pair
+                disagreement = np.any(
+                    np.bitwise_xor(
+                        chunk_predictions[left],
+                        chunk_predictions[right],
+                    )
+                    != 0,
+                    axis=1,
+                )
+                pairwise_disagreements[pair] += int(
+                    np.count_nonzero(disagreement)
+                )
+
+            selected_shots += int(detector_chunk.shape[0])
+
+    if selected_shots < 1:
+        raise ValueError(
+            f"dataset split {split_name!r} contains no selected shots"
+        )
+
+    rows: list[dict[str, Any]] = []
+    for name in decoders:
+        errors = int(decoder_errors[name])
+        ci_low, ci_high = wilson_interval(errors, selected_shots)
+        seconds = float(decoder_seconds[name])
+        rows.append(
+            {
+                "decoder": name,
+                "shots": selected_shots,
+                "errors": errors,
+                "logical_error_rate": float(errors / selected_shots),
+                "ci95_low": float(ci_low),
+                "ci95_high": float(ci_high),
+                "decode_seconds": seconds,
+                "decode_shots_per_second": float(
+                    selected_shots / max(seconds, 1.0e-12)
+                ),
+            }
+        )
+
+    disagreements = []
+    for (left, right), count in pairwise_disagreements.items():
+        disagreements.append(
+            {
+                "left": left,
+                "right": right,
+                "disagreement_shots": int(count),
+                "disagreement_rate": float(count / selected_shots),
+            }
+        )
+
+    return {
+        "schema_version": 1,
+        "evaluation_type": "fixed_qec_dataset",
+        "dataset": {
+            "path": str(file_path),
+            "identity_sha256": inspection["identity_sha256"],
+            "file_sha256": inspection["file_sha256"],
+            "circuit_sha256": inspection["circuit_sha256"],
+            "raw_dem_sha256": inspection["raw_dem_sha256"],
+            "split": split_name,
+            "selected_shots": selected_shots,
+            "selected_syndromes_sha256": syndrome_digest.hexdigest(),
+            "selected_observables_sha256": observable_digest.hexdigest(),
+        },
+        "configuration": {
+            "decoders": list(decoders),
+            "max_shots": max_shots,
+            "batch_size": int(batch_size),
+            "verify_dataset": bool(verify_dataset),
+        },
+        "rows": rows,
+        "pairwise_disagreements": disagreements,
+        "interpretation": (
+            "Every decoder received the identical stored detector-shot rows. "
+            "Differences therefore reflect paired decoder behavior on a fixed "
+            "dataset rather than independent Monte Carlo sampling."
+        ),
+    }
+
+
+def write_dataset_evaluation_json(
+    evaluation: dict[str, Any],
+    path: str,
+) -> None:
+    """Write a fixed-dataset decoder evaluation artifact."""
+    output = Path(path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(
+        json.dumps(evaluation, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
