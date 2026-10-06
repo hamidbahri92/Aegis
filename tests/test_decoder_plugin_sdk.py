@@ -5,12 +5,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-stim = pytest.importorskip("stim")
-
 from aegis_qec.decoder_plugins import (
     normalize_decoder_plugin,
     validate_decoder_plugin,
 )
+
+stim = pytest.importorskip("stim")
 
 
 class _CompileOnlyCompiled:
