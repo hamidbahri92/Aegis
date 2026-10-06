@@ -27,6 +27,10 @@ keywords = [
   "research-platform",
   "reproducible-research",
   "research-software",
+  "scientific-workflow",
+  "research-reproducibility",
+  "latex",
+  "artifact-evaluation",
   "detector-error-model",
   "fault-tolerant-quantum-computing",
 ]
@@ -75,6 +79,7 @@ Changelog = "https://github.com/hamidbahri92/Aegis/blob/main/CHANGELOG.md"
 Citation = "https://github.com/hamidbahri92/Aegis/blob/main/CITATION.cff"
 Research = "https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_GUIDE.md"
 "Decoder SDK" = "https://github.com/hamidbahri92/Aegis/blob/main/docs/DECODER_PLUGINS.md"
+"Research Projects" = "https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_PROJECTS.md"
 PyPI = "https://pypi.org/project/aegis-qec/"
 
 [project.scripts]

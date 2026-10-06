@@ -50,6 +50,8 @@ jobs:
           tests/test_template_catalog.py
           tests/test_dataset.py
           tests/test_dataset_evaluation.py
+          tests/test_research_project.py
+          tests/test_submission_package.py
           tests/test_scaling_analysis.py
           tests/test_shot_explainer.py
           tests/test_decode_from_dem_optional.py
@@ -76,6 +78,11 @@ jobs:
           aegis dataset generate --out research_out/dataset-smoke.h5 --shots 24 --seed 1234 --chunk-size 8 --distance 3 --p 0.02 --json
           aegis dataset inspect research_out/dataset-smoke.h5 --json
           aegis dataset evaluate research_out/dataset-smoke.h5 --decoder aegis-pymatching aegis-pymatching-correlated --split all --out-json research_out/dataset-evaluation-smoke.json --json
+          aegis project init --out research_out/project-smoke.json --author "CI Researcher"
+          aegis project freeze research_out/project-smoke.json
+          aegis project audit research_out/project-smoke.json --require-protocol-lock --json
+          aegis paper build research_out/project-smoke.json --out research_out/submission-smoke --compile never --require-protocol-lock
+          aegis paper verify research_out/submission-smoke.zip --json
           aegis-bench --help
           aegis-bench circuit-acceptance --distance 3 --rounds 3 --shots 32 --p 0.02 --seed 1234
           aegis-bench calibration-advantage --shots 2000 --seed 20260928 --out-json bench_out/calibration_advantage.json --plot bench_out/calibration_advantage.png
@@ -137,4 +144,9 @@ jobs:
           aegis doctor --json
           aegis templates --json
           aegis init-experiment shot-explanation --out wheel-template-smoke.json
+          aegis project init --out wheel-project.json --author "Wheel CI"
+          aegis project freeze wheel-project.json
+          aegis project audit wheel-project.json --require-protocol-lock --json
+          aegis paper build wheel-project.json --out wheel-submission --compile never --require-protocol-lock
+          aegis paper verify wheel-submission.zip --json
           python -c "import aegis_qec; assert aegis_qec.__version__ == '1.1.1'"

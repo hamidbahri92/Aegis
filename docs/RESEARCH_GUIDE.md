@@ -145,6 +145,28 @@ The bundle contains the exact manifest, run record, local input artifacts, gener
 
 See [Experiments](EXPERIMENTS.md) for the schema and integrity model.
 
+## Move from experiments to a research project
+
+When several experiments support one scientific question, create a research project instead of maintaining independent shell commands and notebook state:
+
+    aegis project init --out research-project.json --author "Your Name"
+
+Before confirmatory work, freeze the protocol:
+
+    aegis project freeze research-project.json
+
+After results exist, declare the evidence artifacts and connect result claims to exact JSON pointers or artifact hashes. Then audit:
+
+    aegis project audit research-project.json --require-protocol-lock
+
+For a manuscript and reviewer package:
+
+    aegis paper build research-project.json --out submission --require-protocol-lock
+
+The package contains LaTeX and Markdown manuscript sources, an evidence appendix, reviewer roadmap, reproduction instructions, environment metadata, checksums, and declared artifacts.
+
+See [Research Projects](RESEARCH_PROJECTS.md) for the project schema and scientific boundaries.
+
 ## Suggested practitioner workflows
 
 Practitioners can use Aegis as an experiment harness around Stim, Sinter, and PyMatching rather than reimplementing reproducibility plumbing.

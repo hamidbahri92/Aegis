@@ -684,6 +684,157 @@ def _verify_bundle(args: argparse.Namespace) -> int:
     return 0 if result["valid"] else 1
 
 
+def _project_init(args: argparse.Namespace) -> int:
+    from aegis_qec.project import write_research_project_template
+
+    try:
+        created = write_research_project_template(
+            args.out,
+            author_name=args.author,
+            overwrite=args.force,
+        )
+    except (FileExistsError, OSError, ValueError) as exc:
+        print(f"Research project could not be created: {exc}", file=sys.stderr)
+        return 2
+
+    print("Aegis QEC research project created")
+    print(f"Project: {created['project_path']}")
+    print(f"Starter experiment: {created['experiment_path']}")
+    print(f"Next: aegis project freeze {created['project_path']}")
+    print(
+        "Then edit the research question, hypothesis, paper fields, "
+        "and experiment before confirmatory work."
+    )
+    return 0
+
+
+def _project_freeze(args: argparse.Namespace) -> int:
+    from aegis_qec.project import freeze_research_protocol
+
+    try:
+        lock = freeze_research_protocol(
+            args.project,
+            output_path=args.out,
+        )
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(f"Research protocol could not be frozen: {exc}", file=sys.stderr)
+        return 2
+
+    print("Aegis QEC research protocol frozen")
+    print(f"Lock: {lock['path']}")
+    print(f"Protocol SHA-256: {lock['protocol_sha256']}")
+    return 0
+
+
+def _project_audit(args: argparse.Namespace) -> int:
+    from aegis_qec.project import audit_research_project
+
+    try:
+        report = audit_research_project(
+            args.project,
+            require_protocol_lock=args.require_protocol_lock,
+        )
+    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        print(f"Research project audit could not run: {exc}", file=sys.stderr)
+        return 2
+
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+    else:
+        print("Aegis QEC research project audit")
+        print(f"Project: {report['project_path']}")
+        print(f"Valid: {'yes' if report['valid'] else 'no'}")
+        print(
+            f"Artifacts: {len(report['artifacts'])}; "
+            f"claims: {len(report['claims'])}; "
+            f"experiments: {len(report['experiments'])}"
+        )
+        for error in report["errors"]:
+            print(f"ERROR: {error}")
+        for warning in report["warnings"]:
+            print(f"Warning: {warning}")
+    return 0 if report["valid"] else 1
+
+
+def _project_run(args: argparse.Namespace) -> int:
+    from aegis_qec.project import run_research_project
+
+    try:
+        report = run_research_project(
+            args.project,
+            workspace=args.workspace,
+        )
+    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        print(f"Research project could not run: {exc}", file=sys.stderr)
+        return 2
+
+    print("Aegis QEC research project run completed")
+    print(f"Workspace: {report['workspace']}")
+    print(f"Project run record: {report['path']}")
+    print(f"SHA-256: {report['sha256']}")
+    for experiment in report["experiments"]:
+        print(
+            f"{experiment['id']}: "
+            f"{experiment['bundle']['path']}"
+        )
+    return 0
+
+
+def _paper_build(args: argparse.Namespace) -> int:
+    from aegis_qec.paper import build_submission_package
+
+    try:
+        report = build_submission_package(
+            args.project,
+            output_dir=args.out,
+            compile_mode=args.compile,
+            require_protocol_lock=args.require_protocol_lock,
+            allow_invalid=args.allow_invalid,
+            anonymize=args.anonymous,
+            overwrite=args.force,
+        )
+    except (FileExistsError, OSError, RuntimeError, ValueError) as exc:
+        print(f"Submission package could not be built: {exc}", file=sys.stderr)
+        return 2
+
+    print("Aegis QEC submission package built")
+    print(f"Directory: {report['path']}")
+    print(f"ZIP: {report['zip_path']}")
+    print(f"ZIP SHA-256: {report['zip_sha256']}")
+    print(f"Audit valid: {'yes' if report['audit_valid'] else 'no'}")
+    print(
+        "PDF: "
+        + (
+            "compiled"
+            if report["compile"].get("compiled")
+            else "not compiled; LaTeX source included"
+        )
+    )
+    return 0
+
+
+def _paper_verify(args: argparse.Namespace) -> int:
+    from aegis_qec.paper import verify_submission_package
+
+    try:
+        report = verify_submission_package(args.path)
+    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        print(f"Submission package verification failed to run: {exc}", file=sys.stderr)
+        return 2
+
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+    else:
+        print("Aegis QEC submission package verification")
+        print(f"Path: {report['path']}")
+        print(f"Valid: {'yes' if report['valid'] else 'no'}")
+        for failure in report["failures"]:
+            print(f"Failure: {failure}")
+        if report.get("zip_sha256"):
+            print(f"ZIP SHA-256: {report['zip_sha256']}")
+    return 0 if report["valid"] else 1
+
+
 def _gui(_: argparse.Namespace) -> int:
     from scripts.run_gui import main as run_gui
 
@@ -1009,6 +1160,110 @@ def _parser() -> argparse.ArgumentParser:
     verify_bundle.add_argument("bundle", help="Path to an .aegis.zip research bundle.")
     verify_bundle.set_defaults(handler=_verify_bundle)
 
+    project = sub.add_parser(
+        "project",
+        help="Create, freeze, run, and audit end-to-end research projects.",
+    )
+    project_sub = project.add_subparsers(dest="project_command")
+
+    project_init = project_sub.add_parser(
+        "init",
+        help="Create a research project plus a runnable starter experiment.",
+    )
+    project_init.add_argument(
+        "--out",
+        default="research-project.json",
+        help="Research-project JSON path.",
+    )
+    project_init.add_argument(
+        "--author",
+        default="Researcher",
+        help="Initial author display name.",
+    )
+    project_init.add_argument("--force", action="store_true")
+    project_init.set_defaults(handler=_project_init)
+
+    project_freeze = project_sub.add_parser(
+        "freeze",
+        help="Freeze project and experiment definitions before confirmatory work.",
+    )
+    project_freeze.add_argument("project", help="Research-project JSON path.")
+    project_freeze.add_argument("--out", help="Optional protocol lock output path.")
+    project_freeze.set_defaults(handler=_project_freeze)
+
+    project_run = project_sub.add_parser(
+        "run",
+        help="Run every experiment declared by a research project.",
+    )
+    project_run.add_argument("project", help="Research-project JSON path.")
+    project_run.add_argument(
+        "--workspace",
+        default="research_out/project",
+        help="Workspace for experiment outputs and bundles.",
+    )
+    project_run.set_defaults(handler=_project_run)
+
+    project_audit = project_sub.add_parser(
+        "audit",
+        help="Audit project artifacts and claim-to-evidence links.",
+    )
+    project_audit.add_argument("project", help="Research-project JSON path.")
+    project_audit.add_argument(
+        "--require-protocol-lock",
+        action="store_true",
+        help="Fail if a valid frozen research protocol is absent.",
+    )
+    project_audit.add_argument("--json", action="store_true")
+    project_audit.set_defaults(handler=_project_audit)
+
+    paper = sub.add_parser(
+        "paper",
+        help="Build and verify manuscript plus reviewer submission packages.",
+    )
+    paper_sub = paper.add_subparsers(dest="paper_command")
+
+    paper_build = paper_sub.add_parser(
+        "build",
+        help="Generate LaTeX/Markdown manuscript sources and a reviewer package.",
+    )
+    paper_build.add_argument("project", help="Research-project JSON path.")
+    paper_build.add_argument(
+        "--out",
+        default="submission",
+        help="Submission package output directory.",
+    )
+    paper_build.add_argument(
+        "--compile",
+        choices=["auto", "never", "required"],
+        default="auto",
+        help="Compile paper.pdf with tectonic/latexmk when available.",
+    )
+    paper_build.add_argument(
+        "--require-protocol-lock",
+        action="store_true",
+        help="Require a valid frozen protocol before packaging.",
+    )
+    paper_build.add_argument(
+        "--allow-invalid",
+        action="store_true",
+        help="Build a draft package even when claim/evidence audit fails.",
+    )
+    paper_build.add_argument(
+        "--anonymous",
+        action="store_true",
+        help="Redact author identity and local source paths for blind review.",
+    )
+    paper_build.add_argument("--force", action="store_true")
+    paper_build.set_defaults(handler=_paper_build)
+
+    paper_verify = paper_sub.add_parser(
+        "verify",
+        help="Verify hashes in a submission directory or ZIP.",
+    )
+    paper_verify.add_argument("path")
+    paper_verify.add_argument("--json", action="store_true")
+    paper_verify.set_defaults(handler=_paper_verify)
+
     gui = sub.add_parser("gui", help="Launch the optional interactive Streamlit application.")
     gui.set_defaults(handler=_gui)
     return parser
@@ -1024,8 +1279,9 @@ def main(argv: list[str] | None = None) -> int:
             "\nTry 'aegis doctor', then 'aegis study', 'aegis campaign', "
             "'aegis compare', 'aegis scaling', 'aegis explain', "
             "'aegis dataset generate', 'aegis dataset evaluate', "
-            "'aegis templates', 'aegis experiment', "
-            "'aegis validate-decoder', 'aegis predict', or 'aegis gui'."
+            "'aegis templates', 'aegis experiment', 'aegis project init', "
+            "'aegis paper build', 'aegis validate-decoder', "
+            "'aegis predict', or 'aegis gui'."
         )
         return 0
     return int(handler(args))

@@ -198,6 +198,27 @@ The platform layer also provides a versioned JSON experiment contract. This sepa
 
 See [Experiments](EXPERIMENTS.md) for the full contract.
 
+## Research-project layer
+
+Above individual experiments and datasets, Aegis provides a versioned research-project contract.
+
+The project layer owns scientific workflow metadata that should not live inside a decoder or simulator:
+
+- research questions and hypotheses;
+- protocol locks for confirmatory work;
+- experiment-manifest references;
+- declared artifacts;
+- result and interpretation claims;
+- claim-to-evidence JSON pointers and predicates;
+- manuscript/disclosure metadata;
+- reviewer-facing submission packaging.
+
+The project layer does not alter lower-level scientific results. It records lineage between those results and the claims made from them.
+
+Submission packaging is intentionally downstream of project audit. Manuscript generation cannot turn a failed evidence predicate into a passing scientific claim.
+
+See [Research Projects](RESEARCH_PROJECTS.md).
+
 ## Trust boundaries
 
 Aegis owns experiment definition, provenance, plug-in discovery, comparison semantics, artifact generation, and user-facing workflows.

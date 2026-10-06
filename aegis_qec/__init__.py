@@ -33,6 +33,15 @@ from .experiment import (
 )
 from .explain import explain_surface_code_shot, write_shot_explanation
 from .io_decode import predict_observables_from_files
+from .paper import build_submission_package, verify_submission_package
+from .project import (
+    audit_research_project,
+    freeze_research_protocol,
+    load_research_project,
+    run_research_project,
+    verify_protocol_lock,
+    write_research_project_template,
+)
 from .research import run_surface_code_study, wilson_interval, write_study_artifacts
 from .scaling import fit_surface_code_scaling, load_campaign_json, write_scaling_artifacts
 from .template_catalog import (
@@ -51,7 +60,9 @@ __all__ = [
     "DecoderPluginAdapter",
     "DecoderRuntime",
     "RotatedSurfaceLayout",
+    "audit_research_project",
     "available_decoders",
+    "build_submission_package",
     "compare_decoders_exact_shots",
     "create_research_bundle",
     "custom_decoder_registry",
@@ -59,16 +70,19 @@ __all__ = [
     "extract_dem_mechanisms",
     "explain_surface_code_shot",
     "fit_surface_code_scaling",
+    "freeze_research_protocol",
     "generate_qec_dataset",
     "get_experiment_template",
     "inspect_qec_dataset",
     "list_experiment_templates",
     "load_campaign_json",
     "load_experiment_manifest",
+    "load_research_project",
     "normalize_decoder_plugin",
     "predict_observables_from_files",
     "run_campaign",
     "run_experiment_manifest",
+    "run_research_project",
     "run_surface_code_study",
     "validate_decoder_plugin",
     "wilson_interval",
@@ -79,6 +93,9 @@ __all__ = [
     "write_shot_explanation",
     "write_study_artifacts",
     "write_experiment_template",
+    "verify_protocol_lock",
     "verify_research_bundle",
+    "verify_submission_package",
+    "write_research_project_template",
     "__version__",
 ]

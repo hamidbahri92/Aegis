@@ -291,6 +291,25 @@ Generation can stop after a bounded number of chunks and resume later without ch
 
 See [Datasets](https://github.com/hamidbahri92/Aegis/blob/main/docs/DATASETS.md) for the HDF5 schema, integrity model, sparse hyperedge representation, and large-dataset workflow.
 
+## Research projects and publication packages
+
+Aegis can now carry a project from a research question to reviewer-facing evidence:
+
+    aegis project init --out research-project.json --author "Your Name"
+    aegis project freeze research-project.json
+    aegis project run research-project.json --workspace research_out/project
+    aegis project audit research-project.json --require-protocol-lock
+    aegis paper build research-project.json --out submission --require-protocol-lock
+    aegis paper verify submission.zip
+
+Research-project manifests connect hypotheses, experiment manifests, artifacts, and claims. Quantitative result claims can point to exact JSON fields and predicates; unsupported result claims fail the audit.
+
+The publication builder produces LaTeX and Markdown manuscript sources, a claim-to-evidence appendix, reviewer roadmap, reproduction instructions, environment metadata, artifact hashes, a submission checklist, and a verifiable ZIP. Blind-review packaging removes declared authors and local source paths, while still requiring authors to inspect arbitrary artifacts for identity leaks.
+
+Aegis will use Tectonic or latexmk when available, but manuscript-source generation does not require a LaTeX installation.
+
+See [End-to-end research projects](https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_PROJECTS.md).
+
 ## Benchmarking and validation
 
 Aegis deliberately separates different kinds of evidence because decoder-kernel speed, end-to-end application latency, structural correctness, and circuit-level logical performance are not interchangeable.
@@ -368,6 +387,10 @@ aegis verify-bundle
 aegis dataset generate
 aegis dataset inspect
 aegis dataset evaluate
+aegis project init
+aegis project audit
+aegis paper build
+aegis paper verify
 aegis predict
 aegis decoders
 aegis validate-decoder
@@ -460,6 +483,7 @@ See [Contributing](https://github.com/hamidbahri92/Aegis/blob/main/CONTRIBUTING.
 - [Experiments](https://github.com/hamidbahri92/Aegis/blob/main/docs/EXPERIMENTS.md) — version-controlled manifests, hashed run records, portable research bundles, and integrity verification.
 - [Decoder Plug-in SDK](https://github.com/hamidbahri92/Aegis/blob/main/docs/DECODER_PLUGINS.md) — third-party decoder registration, interoperability contract, conformance tests, and deployment into campaigns.
 - [Datasets](https://github.com/hamidbahri92/Aegis/blob/main/docs/DATASETS.md) — resumable HDF5 syndrome datasets, deterministic splits, error-mechanism incidence, and integrity verification.
+- [Research Projects](https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_PROJECTS.md) — protocol freezing, claim-to-evidence audits, LaTeX manuscript generation, blind-review packaging, and reviewer verification.
 
 ## Project scope
 
