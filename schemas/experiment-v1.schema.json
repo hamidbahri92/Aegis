@@ -6,6 +6,9 @@
   "required": ["schema_version", "operation"],
   "additionalProperties": false,
   "properties": {
+    "$schema": {
+      "type": "string"
+    },
     "schema_version": {
       "const": 1
     },
