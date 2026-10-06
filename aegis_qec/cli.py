@@ -813,7 +813,8 @@ def _project_audit(args: argparse.Namespace) -> int:
         print(
             f"Artifacts: {len(report['artifacts'])}; "
             f"claims: {len(report['claims'])}; "
-            f"experiments: {len(report['experiments'])}"
+            f"experiments: {len(report['experiments'])}; "
+            f"discoveries: {len(report.get('discoveries', []))}"
         )
         for error in report["errors"]:
             print(f"ERROR: {error}")
@@ -840,8 +841,14 @@ def _project_run(args: argparse.Namespace) -> int:
     print(f"SHA-256: {report['sha256']}")
     for experiment in report["experiments"]:
         print(
-            f"{experiment['id']}: "
+            f"Experiment {experiment['id']}: "
             f"{experiment['bundle']['path']}"
+        )
+    for discovery in report.get("discoveries", []):
+        print(
+            f"Discovery {discovery['id']}: "
+            f"{discovery['result_path']} "
+            f"(Pareto candidates={discovery['pareto_count']})"
         )
     return 0
 
@@ -868,6 +875,15 @@ def _paper_build(args: argparse.Namespace) -> int:
     print(f"ZIP: {report['zip_path']}")
     print(f"ZIP SHA-256: {report['zip_sha256']}")
     print(f"Audit valid: {'yes' if report['audit_valid'] else 'no'}")
+    print(
+        "Submission ready: "
+        + ("yes" if report.get("submission_ready") else "no")
+    )
+    for failure in report.get("submission_readiness", {}).get(
+        "failures",
+        [],
+    ):
+        print(f"Readiness: {failure['message']}")
     print(
         "PDF: "
         + (
