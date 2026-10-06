@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 pytest.importorskip("streamlit")
-from streamlit.testing.v1 import AppTest
+AppTest = pytest.importorskip("streamlit.testing.v1").AppTest
 
 
 def test_research_studio_renders_headlessly():
