@@ -227,6 +227,26 @@ Third-party research decoders can register through the `aegis_qec.decoders` entr
 
 See [Platform](https://github.com/hamidbahri92/Aegis/blob/main/docs/PLATFORM.md) for the plug-in contract, Sinter architecture, hardware provenance rules, and campaign semantics.
 
+## Version-controlled experiments
+
+For team research, coursework, CI, or results that need to be handed to another lab, put the experiment itself in a JSON manifest:
+
+```bash
+aegis experiment examples/experiment-study.json
+```
+
+Aegis executes the declared operation, records the exact manifest hash and software environment, hashes local inputs and generated artifacts, writes an `aegis-run.json` record, and packages the evidence into a self-verifying `.aegis.zip` research bundle.
+
+Verify a received bundle without extracting it:
+
+```bash
+aegis verify-bundle surface-code-class-project.aegis.zip
+```
+
+Manifest version 1 supports studies, campaigns, exact-shot comparisons, external detector-shot prediction, finite-size scaling, and one-shot explanations. The JSON Schema is in `schemas/experiment-v1.schema.json`.
+
+See [Experiments](https://github.com/hamidbahri92/Aegis/blob/main/docs/EXPERIMENTS.md) for the manifest format, bundle integrity model, team workflow, and Python API.
+
 ## Benchmarking and validation
 
 Aegis deliberately separates different kinds of evidence because decoder-kernel speed, end-to-end application latency, structural correctness, and circuit-level logical performance are not interchangeable.
@@ -297,6 +317,8 @@ aegis campaign
 aegis compare
 aegis scaling
 aegis explain
+aegis experiment
+aegis verify-bundle
 aegis predict
 aegis decoders
 aegis benchmark
@@ -385,6 +407,7 @@ See [Contributing](https://github.com/hamidbahri92/Aegis/blob/main/CONTRIBUTING.
 - [Benchmarking](https://github.com/hamidbahri92/Aegis/blob/main/docs/BENCHMARKING.md) — performance methodology, circuit acceptance, calibration experiments, structural sweeps, and reproducibility.
 - [Research Guide](https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_GUIDE.md) — circuit studies, student projects, practitioner workflows, uncertainty, artifacts, and reproducible reporting.
 - [Platform](https://github.com/hamidbahri92/Aegis/blob/main/docs/PLATFORM.md) — resumable Sinter campaigns, exact shared-shot comparisons, decoder plug-ins, and hardware provenance.
+- [Experiments](https://github.com/hamidbahri92/Aegis/blob/main/docs/EXPERIMENTS.md) — version-controlled manifests, hashed run records, portable research bundles, and integrity verification.
 
 ## Project scope
 

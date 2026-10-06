@@ -44,6 +44,7 @@ jobs:
           tests/test_public_namespace.py
           tests/test_platform_campaign.py
           tests/test_hardware_provenance.py
+          tests/test_experiment_manifest.py
           tests/test_scaling_analysis.py
           tests/test_shot_explainer.py
           tests/test_decode_from_dem_optional.py
@@ -62,6 +63,8 @@ jobs:
           aegis decoders
           aegis compare --decoder aegis-pymatching --distance 3 --p 0.02 --shots 32 --seed 1234 --out-json research_out/compare.json
           aegis explain --distance 3 --p 0.02 --seed 1234 --out-json research_out/explain.json --plot research_out/explain.png
+          aegis experiment examples/experiment-smoke.json --output-dir research_out/manifest-smoke --bundle research_out/manifest-smoke.aegis.zip
+          aegis verify-bundle research_out/manifest-smoke.aegis.zip
           aegis-bench --help
           aegis-bench circuit-acceptance --distance 3 --rounds 3 --shots 32 --p 0.02 --seed 1234
           aegis-bench calibration-advantage --shots 2000 --seed 20260928 --out-json bench_out/calibration_advantage.json --plot bench_out/calibration_advantage.png

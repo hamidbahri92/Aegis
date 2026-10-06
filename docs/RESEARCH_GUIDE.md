@@ -132,6 +132,19 @@ Treat this as model-based evidence, not a magic threshold button. Expand the phy
 
 A simulated circuit-level threshold is not automatically a hardware threshold. A hardware threshold claim requires hardware-derived inputs with validated provenance.
 
+## Make an experiment reviewable
+
+Once an exploratory command matters enough to share, move its parameters into an experiment manifest. A manifest can be committed to Git, reviewed in a pull request, executed in CI, and packaged with the resulting evidence:
+
+```bash
+aegis experiment experiment.json
+aegis verify-bundle research_out/my-experiment/my-experiment.aegis.zip
+```
+
+The bundle contains the exact manifest, run record, local input artifacts, generated results, hashes, and software environment metadata. This is the preferred handoff format for class projects, thesis work, regression evidence, and team-to-team research exchange.
+
+See [Experiments](EXPERIMENTS.md) for the schema and integrity model.
+
 ## Suggested practitioner workflows
 
 Practitioners can use Aegis as an experiment harness around Stim, Sinter, and PyMatching rather than reimplementing reproducibility plumbing.

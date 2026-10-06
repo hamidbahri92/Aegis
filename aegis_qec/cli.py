@@ -424,6 +424,64 @@ def _explain(args: argparse.Namespace) -> int:
     return 0
 
 
+def _experiment(args: argparse.Namespace) -> int:
+    from aegis_qec.experiment import (
+        create_research_bundle,
+        run_experiment_manifest,
+    )
+
+    try:
+        run_record = run_experiment_manifest(
+            args.manifest,
+            output_dir=args.output_dir,
+        )
+        run_path = Path(run_record["run_record"]["path"])
+        bundle_path = (
+            Path(args.bundle).resolve()
+            if args.bundle
+            else run_path.parent / f"{run_record['name']}.aegis.zip"
+        )
+        bundle = create_research_bundle(
+            manifest_path=args.manifest,
+            run_record=run_record,
+            bundle_path=str(bundle_path),
+        )
+    except (
+        KeyError,
+        OSError,
+        RuntimeError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
+        print(f"Experiment could not run: {exc}", file=sys.stderr)
+        return 2
+
+    print("Aegis QEC experiment manifest completed")
+    print(f"Operation: {run_record['operation']}")
+    print(f"Run record: {run_path}")
+    print(f"Bundle: {bundle['path']}")
+    print(f"Bundle SHA-256: {bundle['sha256']}")
+    return 0
+
+
+def _verify_bundle(args: argparse.Namespace) -> int:
+    from aegis_qec.experiment import verify_research_bundle
+
+    try:
+        result = verify_research_bundle(args.bundle)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"Bundle verification could not run: {exc}", file=sys.stderr)
+        return 2
+
+    print("Aegis QEC research bundle verification")
+    print(f"Bundle: {result['path']}")
+    print(f"SHA-256: {result['bundle_sha256']}")
+    print(f"Valid: {'yes' if result['valid'] else 'no'}")
+    for failure in result["failures"]:
+        print(f"Failure: {failure}")
+    return 0 if result["valid"] else 1
+
+
 def _gui(_: argparse.Namespace) -> int:
     from scripts.run_gui import main as run_gui
 
@@ -600,6 +658,28 @@ def _parser() -> argparse.ArgumentParser:
     )
     explain.set_defaults(handler=_explain)
 
+    experiment = sub.add_parser(
+        "experiment",
+        help="Run a version-controlled experiment manifest and create a research bundle.",
+    )
+    experiment.add_argument("manifest", help="Path to an Aegis experiment JSON manifest.")
+    experiment.add_argument(
+        "--output-dir",
+        help="Override the manifest run output directory.",
+    )
+    experiment.add_argument(
+        "--bundle",
+        help="Output .aegis.zip bundle path. Defaults beside the run record.",
+    )
+    experiment.set_defaults(handler=_experiment)
+
+    verify_bundle = sub.add_parser(
+        "verify-bundle",
+        help="Verify hashes and structure of an Aegis research bundle.",
+    )
+    verify_bundle.add_argument("bundle", help="Path to an .aegis.zip research bundle.")
+    verify_bundle.set_defaults(handler=_verify_bundle)
+
     gui = sub.add_parser("gui", help="Launch the optional interactive Streamlit application.")
     gui.set_defaults(handler=_gui)
     return parser
@@ -614,7 +694,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             "\nTry 'aegis doctor', then 'aegis study', 'aegis campaign', "
             "'aegis compare', 'aegis scaling', 'aegis explain', "
-            "'aegis predict', or 'aegis gui'."
+            "'aegis experiment', 'aegis predict', or 'aegis gui'."
         )
         return 0
     return int(handler(args))

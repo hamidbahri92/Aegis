@@ -1,0 +1,13 @@
+{
+  "$schema": "../schemas/experiment-v1.schema.json",
+  "schema_version": 1,
+  "name": "ci-smoke-study",
+  "operation": "study",
+  "parameters": {
+    "distances": [3],
+    "physical_error_rates": [0.02],
+    "shots": 16,
+    "basis": "x",
+    "seed": 1234
+  }
+}
