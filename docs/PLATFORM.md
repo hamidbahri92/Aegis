@@ -124,6 +124,16 @@ class MyDecoder:
 
 Detection-event input and observable predictions follow Sinter's little-endian bit-packed contract.
 
+Aegis now normalizes plug-ins that implement only one Sinter decoder style. A compiled-only decoder automatically gains the file interface needed by `aegis predict`; a file-only decoder automatically gains the compiled batch façade needed by `aegis compare`.
+
+Before publishing a decoder, run:
+
+```bash
+aegis validate-decoder my-decoder
+```
+
+The conformance suite checks bit-packed dtype/shape, a deterministic known-answer decode, file round-trip behavior, and multiprocessing picklability. See [Decoder Plug-in SDK](DECODER_PLUGINS.md).
+
 ## Statistical scaling analysis
 
 Campaign collection and threshold-like interpretation are separate operations. After collecting a sufficiently dense campaign, use:
