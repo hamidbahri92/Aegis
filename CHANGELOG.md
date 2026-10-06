@@ -4,6 +4,18 @@ This file records user-visible changes to Aegis QEC.
 
 ## Unreleased
 
+### End-to-end research projects and publication packages
+
+Added versioned research-project manifests that connect research questions, hypotheses, experiment manifests, evidence artifacts, claims, and manuscript metadata.
+
+Added protocol freezing for confirmatory work. Project audits detect changed locked inputs, missing evidence, unresolved JSON pointers, and failed quantitative predicates.
+
+Added project execution across declared experiment manifests with preserved Aegis experiment bundles and a project-run record.
+
+Added LaTeX and Markdown manuscript generation plus reviewer-grade submission packages containing claim-to-evidence maps, reproduction instructions, environment metadata, artifact inventories, checksums, readiness checklists, and optional PDF compilation through Tectonic or latexmk.
+
+Added blind-review packaging that redacts declared author identity and local source paths, plus directory/ZIP package verification and tamper detection.
+
 ### Paired decoder inference
 
 Fixed-dataset evaluations now report paired logical-failure contingency counts, left-minus-right error-rate differences with 95 percent intervals, and continuity-corrected asymptotic McNemar p-values.
