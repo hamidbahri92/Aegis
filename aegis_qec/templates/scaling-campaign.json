@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "name": "surface-code-scaling-campaign",
+  "operation": "campaign",
+  "parameters": {
+    "distances": [3, 5, 7],
+    "physical_error_rates": [0.004, 0.006, 0.008, 0.01, 0.012],
+    "basis": "x",
+    "decoders": ["pymatching"],
+    "workers": "auto",
+    "max_shots": 200000,
+    "max_errors": 500,
+    "max_batch_seconds": 30,
+    "print_progress": true
+  }
+}
