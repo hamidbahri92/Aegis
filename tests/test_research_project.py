@@ -1,0 +1,202 @@
+from __future__ import annotations
+
+import json
+
+import pytest
+
+from aegis_qec.project import (
+    audit_research_project,
+    freeze_research_protocol,
+    run_research_project,
+    verify_protocol_lock,
+    write_research_project_template,
+)
+
+
+def _write_project(path, *, artifact_path=None):
+    artifacts = []
+    claims = []
+    if artifact_path is not None:
+        artifacts = [
+            {
+                "id": "result",
+                "path": artifact_path.name,
+                "kind": "result-json",
+            }
+        ]
+        claims = [
+            {
+                "id": "C1",
+                "type": "result",
+                "text": "The measured logical error rate is below 0.1.",
+                "evidence": [
+                    {
+                        "artifact": "result",
+                        "json_pointer": "/metrics/logical_error_rate",
+                        "predicate": {"lt": 0.1},
+                    }
+                ],
+            }
+        ]
+
+    project = {
+        "schema_version": 1,
+        "title": "Test research project",
+        "authors": [{"name": "Researcher"}],
+        "research_question": "Does the tested decoder satisfy the target rate?",
+        "hypotheses": [
+            {
+                "id": "H1",
+                "text": "The logical error rate is below 0.1.",
+            }
+        ],
+        "experiments": [],
+        "artifacts": artifacts,
+        "claims": claims,
+        "bibliography_files": [],
+        "paper": {},
+    }
+    path.write_text(
+        json.dumps(project, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def test_project_init_creates_project_and_starter_experiment(tmp_path):
+    project_path = tmp_path / "research-project.json"
+    created = write_research_project_template(
+        str(project_path),
+        author_name="Ada Researcher",
+    )
+
+    assert project_path.is_file()
+    assert (tmp_path / "experiment.json").is_file()
+    assert created["project_path"] == str(project_path.resolve())
+
+    project = json.loads(project_path.read_text(encoding="utf-8"))
+    assert project["authors"][0]["name"] == "Ada Researcher"
+    assert project["experiments"][0]["manifest"] == "experiment.json"
+
+
+def test_claim_to_evidence_audit_and_protocol_lock(tmp_path):
+    artifact = tmp_path / "result.json"
+    artifact.write_text(
+        json.dumps({"metrics": {"logical_error_rate": 0.05}}),
+        encoding="utf-8",
+    )
+    project = tmp_path / "project.json"
+    _write_project(project, artifact_path=artifact)
+
+    lock = freeze_research_protocol(str(project))
+    assert lock["protocol_sha256"]
+
+    report = audit_research_project(
+        str(project),
+        require_protocol_lock=True,
+    )
+    assert report["valid"] is True
+    claim = report["claims"][0]
+    assert claim["passed"] is True
+    assert claim["evidence"][0]["actual"] == pytest.approx(0.05)
+
+    verification = verify_protocol_lock(
+        str(project),
+        str(project.with_suffix(".protocol.lock.json")),
+    )
+    assert verification["valid"] is True
+
+
+def test_claim_predicate_failure_is_a_hard_audit_failure(tmp_path):
+    artifact = tmp_path / "result.json"
+    artifact.write_text(
+        json.dumps({"metrics": {"logical_error_rate": 0.2}}),
+        encoding="utf-8",
+    )
+    project = tmp_path / "project.json"
+    _write_project(project, artifact_path=artifact)
+
+    report = audit_research_project(str(project))
+    assert report["valid"] is False
+    assert any("predicate failed" in error for error in report["errors"])
+
+
+def test_result_claim_without_evidence_fails(tmp_path):
+    project = tmp_path / "project.json"
+    _write_project(project)
+    value = json.loads(project.read_text(encoding="utf-8"))
+    value["claims"] = [
+        {
+            "id": "C1",
+            "type": "result",
+            "text": "Unsupported result claim.",
+            "evidence": [],
+        }
+    ]
+    project.write_text(
+        json.dumps(value, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    report = audit_research_project(str(project))
+    assert report["valid"] is False
+    assert any("has no evidence" in error for error in report["errors"])
+
+
+def test_protocol_lock_detects_project_change(tmp_path):
+    project = tmp_path / "project.json"
+    _write_project(project)
+    freeze_research_protocol(str(project))
+
+    value = json.loads(project.read_text(encoding="utf-8"))
+    value["research_question"] = "A changed question."
+    project.write_text(
+        json.dumps(value, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    verification = verify_protocol_lock(
+        str(project),
+        str(project.with_suffix(".protocol.lock.json")),
+    )
+    assert verification["valid"] is False
+    assert any("locked file changed" in item for item in verification["failures"])
+
+
+def test_project_run_executes_declared_manifest_and_bundle(tmp_path):
+    experiment = tmp_path / "experiment.json"
+    experiment.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "name": "tiny-project-study",
+                "operation": "study",
+                "parameters": {
+                    "distances": [3],
+                    "physical_error_rates": [0.02],
+                    "shots": 8,
+                    "basis": "x",
+                    "seed": 1234,
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    project = tmp_path / "project.json"
+    _write_project(project)
+    value = json.loads(project.read_text(encoding="utf-8"))
+    value["experiments"] = [{"id": "tiny", "manifest": "experiment.json"}]
+    project.write_text(
+        json.dumps(value, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    report = run_research_project(
+        str(project),
+        workspace=str(tmp_path / "workspace"),
+    )
+    assert report["experiments"][0]["id"] == "tiny"
+    assert (tmp_path / "workspace" / "tiny" / "tiny.aegis.zip").is_file()
+    assert (tmp_path / "workspace" / "project-run.json").is_file()
