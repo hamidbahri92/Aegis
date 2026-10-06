@@ -159,7 +159,10 @@ def test_protocol_lock_detects_project_change(tmp_path):
         str(project.with_suffix(".protocol.lock.json")),
     )
     assert verification["valid"] is False
-    assert any("locked file changed" in item for item in verification["failures"])
+    assert any(
+        "scientific protocol changed" in item
+        for item in verification["failures"]
+    )
 
 
 def test_project_run_executes_declared_manifest_and_bundle(tmp_path):
@@ -200,3 +203,53 @@ def test_project_run_executes_declared_manifest_and_bundle(tmp_path):
     assert report["experiments"][0]["id"] == "tiny"
     assert (tmp_path / "workspace" / "tiny" / "tiny.aegis.zip").is_file()
     assert (tmp_path / "workspace" / "project-run.json").is_file()
+
+
+
+def test_manuscript_edits_do_not_invalidate_frozen_protocol(tmp_path):
+    project = tmp_path / "project.json"
+    _write_project(project)
+    freeze_research_protocol(str(project))
+
+    value = json.loads(project.read_text(encoding="utf-8"))
+    value["paper"] = {
+        "abstract": "Edited after the experiment.",
+        "methods": "Clarified wording only.",
+    }
+    value["claims"] = [
+        {
+            "id": "M1",
+            "type": "method",
+            "text": "The manuscript was edited after protocol freeze.",
+            "evidence": [],
+        }
+    ]
+    project.write_text(
+        json.dumps(value, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    verification = verify_protocol_lock(
+        str(project),
+        str(project.with_suffix(".protocol.lock.json")),
+    )
+    assert verification["valid"] is True
+
+
+def test_confirmatory_freeze_requires_analysis_fields(tmp_path):
+    project = tmp_path / "project.json"
+    _write_project(project)
+    value = json.loads(project.read_text(encoding="utf-8"))
+    value["protocol"] = {
+        "mode": "confirmatory",
+        "primary_outcome": "",
+        "analysis_plan": "",
+        "stopping_rule": "",
+    }
+    project.write_text(
+        json.dumps(value, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="confirmatory protocol is missing"):
+        freeze_research_protocol(str(project))
