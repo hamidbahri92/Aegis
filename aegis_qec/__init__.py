@@ -18,19 +18,19 @@ from .dataset import (
     inspect_qec_dataset,
     write_dataset_evaluation_json,
 )
-from .discovery import (
-    load_discovery_manifest,
-    pareto_front,
-    run_discovery,
-    write_discovery_starter,
-    write_discovery_template,
-)
 from .decoder_plugins import (
     DecoderPluginAdapter,
     available_decoders,
     custom_decoder_registry,
     normalize_decoder_plugin,
     validate_decoder_plugin,
+)
+from .discovery import (
+    load_discovery_manifest,
+    pareto_front,
+    run_discovery,
+    write_discovery_starter,
+    write_discovery_template,
 )
 from .experiment import (
     create_research_bundle,
