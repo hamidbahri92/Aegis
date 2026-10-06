@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "qec-regression-campaign",
+  "operation": "campaign",
+  "parameters": {
+    "distances": [3, 5],
+    "physical_error_rates": [0.005, 0.01],
+    "basis": "x",
+    "decoders": [
+      "pymatching",
+      "aegis-pymatching"
+    ],
+    "workers": 1,
+    "max_shots": 5000,
+    "max_errors": 200,
+    "max_batch_seconds": 10,
+    "print_progress": false
+  }
+}

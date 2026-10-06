@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "name": "exact-shot-decoder-comparison",
+  "operation": "compare",
+  "parameters": {
+    "decoders": [
+      "aegis-pymatching",
+      "aegis-pymatching-correlated"
+    ],
+    "shots": 20000,
+    "seed": 1234,
+    "distance": 5,
+    "physical_error_rate": 0.006,
+    "basis": "x"
+  }
+}

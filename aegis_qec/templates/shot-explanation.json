@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "name": "explain-one-surface-code-shot",
+  "operation": "explain",
+  "parameters": {
+    "distance": 5,
+    "physical_error_rate": 0.01,
+    "basis": "x",
+    "seed": 1234
+  }
+}

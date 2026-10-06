@@ -4,6 +4,12 @@ This file records user-visible changes to Aegis QEC.
 
 ## Unreleased
 
+### Experiment catalog
+
+Added experiment templates to the installed wheel plus `aegis templates` and `aegis init-experiment`. Students and research teams can now create a valid study, explanation, decoder comparison, scaling campaign, or regression manifest without cloning the repository.
+
+CI verifies the template resources both from the source checkout and from the built wheel.
+
 ### Decoder plug-in SDK
 
 Normalized third-party decoders across Aegis workflows. A plug-in may implement either Sinter's compiled batch contract or file contract; Aegis supplies the missing compatibility side so the same decoder can participate in campaigns, exact shared-shot comparisons, and detector-file prediction.

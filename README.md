@@ -237,6 +237,16 @@ See [Decoder Plug-in SDK](https://github.com/hamidbahri92/Aegis/blob/main/docs/D
 
 ## Version-controlled experiments
 
+A PyPI installation includes curated starting points:
+
+```bash
+aegis templates
+aegis init-experiment first-study --out experiment.json
+aegis experiment experiment.json
+```
+
+The catalog covers a first surface-code study, one-shot explanation, exact-shot decoder comparison, resumable scaling campaign, and a compact practitioner regression campaign.
+
 For team research, coursework, CI, or results that need to be handed to another lab, put the experiment itself in a JSON manifest:
 
 ```bash
@@ -325,6 +335,8 @@ aegis campaign
 aegis compare
 aegis scaling
 aegis explain
+aegis templates
+aegis init-experiment
 aegis experiment
 aegis verify-bundle
 aegis predict
