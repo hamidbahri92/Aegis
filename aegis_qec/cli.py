@@ -542,6 +542,14 @@ def _dataset_evaluate(args: argparse.Namespace) -> int:
             f"{report['dataset']['selected_shots']} "
             f"({float(row['disagreement_rate']):.6g})"
         )
+    for row in report["paired_failure_statistics"]:
+        ci_low, ci_high = row["left_minus_right_error_rate_ci95_normal"]
+        print(
+            f"paired failures {row['left']} minus {row['right']}: "
+            f"delta={float(row['left_minus_right_error_rate']):.6g} "
+            f"ci95=[{float(ci_low):.6g}, {float(ci_high):.6g}] "
+            f"McNemar p={float(row['mcnemar_p_value_asymptotic']):.6g}"
+        )
     if args.out_json:
         print(f"JSON: {Path(args.out_json).resolve()}")
     print(report["interpretation"])

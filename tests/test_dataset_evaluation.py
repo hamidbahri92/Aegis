@@ -46,6 +46,24 @@ def test_fixed_dataset_evaluation_is_reproducible(tmp_path):
     assert first["dataset"]["selected_observables_sha256"] == second["dataset"]["selected_observables_sha256"]
     assert [row["errors"] for row in first["rows"]] == [row["errors"] for row in second["rows"]]
     assert first["pairwise_disagreements"] == second["pairwise_disagreements"]
+    assert first["paired_failure_statistics"] == second["paired_failure_statistics"]
+
+    paired = first["paired_failure_statistics"][0]
+    total = (
+        paired["both_success"]
+        + paired["left_only_failure"]
+        + paired["right_only_failure"]
+        + paired["both_failure"]
+    )
+    assert total == 48
+    assert 0.0 <= paired["mcnemar_p_value_asymptotic"] <= 1.0
+
+    left_errors = first["rows"][0]["errors"]
+    right_errors = first["rows"][1]["errors"]
+    expected_delta = (left_errors - right_errors) / 48
+    assert paired["left_minus_right_error_rate"] == pytest.approx(
+        expected_delta
+    )
 
 
 def test_fixed_dataset_evaluation_respects_max_shots(tmp_path):

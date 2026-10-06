@@ -168,6 +168,12 @@ aegis dataset evaluate research_out/surface-d5-p006.h5 \
 
 Every decoder receives the identical selected rows in the identical order. The evaluation artifact records SHA-256 values for the exact selected detector and observable rows, logical-error rates with Wilson intervals, decode throughput, and pairwise prediction disagreement.
 
+For every decoder pair, Aegis also records the four paired logical-outcome cells: both succeed, left-only failure, right-only failure, and both fail. From those counts it reports the left-minus-right logical-error-rate difference with a normal-approximation 95 percent interval and a continuity-corrected asymptotic McNemar p-value.
+
+A negative left-minus-right difference means the left decoder failed on fewer of the shared shots. McNemar tests only the discordant failure outcomes and is appropriate because both decoders are evaluated on the same observations.
+
+The risk-difference interval and McNemar p-value are inferential summaries, not proof of superiority outside the sampled dataset. Report the dataset identity, selected-row hashes, split, decoder versions, effect size, and uncertainty together.
+
 Use `--split train`, `--split validation`, `--split test`, or `--split all`. `--max-shots` can bound a quick comparison without changing which rows are selected first from that split.
 
 By default Aegis verifies a completed dataset before evaluation. `--no-verify` skips that full preflight when the dataset has already been verified in the surrounding workflow.
