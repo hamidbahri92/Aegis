@@ -5,7 +5,6 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
-
 _TEMPLATE_METADATA: dict[str, dict[str, str]] = {
     "first-study": {
         "title": "First surface-code study",
