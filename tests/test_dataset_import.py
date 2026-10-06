@@ -5,13 +5,14 @@ import json
 import numpy as np
 import pytest
 
-stim = pytest.importorskip("stim")
-
 from aegis_qec.dataset import (
     evaluate_decoders_on_dataset,
     import_qec_dataset,
     inspect_qec_dataset,
 )
+
+h5py = pytest.importorskip("h5py")
+pytest.importorskip("stim")
 
 
 def _write_dem(path):
@@ -94,8 +95,6 @@ def test_import_combined_b8_streaming_matches_original_rows(tmp_path):
         seed=12,
         chunk_size=2,
     )
-
-    import h5py
 
     with h5py.File(out_path, "r") as handle:
         np.testing.assert_array_equal(handle["syndromes"][:], detectors)
