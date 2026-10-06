@@ -305,7 +305,7 @@ def write_campaign_summary(
     if not plot_path:
         return
 
-    import matplotlib.pyplot as plt
+    from .plotting import new_agg_figure
 
     rows = [
         row
@@ -321,7 +321,7 @@ def write_campaign_summary(
     path = Path(plot_path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=(8.0, 5.0))
+    fig, ax = new_agg_figure(figsize=(8.0, 5.0))
     series = sorted(
         {
             (str(row["decoder"]), int(row["metadata"]["distance"]))
@@ -371,4 +371,4 @@ def write_campaign_summary(
     ax.legend()
     fig.tight_layout()
     fig.savefig(path, dpi=180)
-    plt.close(fig)
+    fig.clear()

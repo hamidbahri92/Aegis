@@ -4,6 +4,12 @@ This file records user-visible changes to Aegis QEC.
 
 ## Unreleased
 
+### Decoder plug-in SDK
+
+Normalized third-party decoders across Aegis workflows. A plug-in may implement either Sinter's compiled batch contract or file contract; Aegis supplies the missing compatibility side so the same decoder can participate in campaigns, exact shared-shot comparisons, and detector-file prediction.
+
+Added `aegis validate-decoder`, a deterministic conformance suite covering multiprocessing picklability, bit-packed batch output, known-answer decoding, and file round trips. Added strict dtype, shape, and output-size validation at the decoder boundary.
+
 ### Version-controlled experiments
 
 Added JSON experiment manifests that can execute studies, Sinter campaigns, exact shared-shot comparisons, detector-shot prediction, finite-size scaling, and one-shot explanations through one reviewable contract.

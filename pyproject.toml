@@ -72,6 +72,7 @@ Issues = "https://github.com/hamidbahri92/Aegis/issues"
 Changelog = "https://github.com/hamidbahri92/Aegis/blob/main/CHANGELOG.md"
 Citation = "https://github.com/hamidbahri92/Aegis/blob/main/CITATION.cff"
 Research = "https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_GUIDE.md"
+"Decoder SDK" = "https://github.com/hamidbahri92/Aegis/blob/main/docs/DECODER_PLUGINS.md"
 PyPI = "https://pypi.org/project/aegis-qec/"
 
 [project.scripts]
