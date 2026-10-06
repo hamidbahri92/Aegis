@@ -4,6 +4,12 @@ This file records user-visible changes to Aegis QEC.
 
 ## Unreleased
 
+### Reusable QEC datasets
+
+Added resumable HDF5 syndrome datasets for decoder benchmarking, ML training, coursework, and regression studies. Datasets preserve syndromes, observables, deterministic train/validation/test labels, circuit and DEM provenance, sparse raw error-mechanism incidence, optional dense mechanism matrices, and content hashes.
+
+Added `aegis dataset generate` and `aegis dataset inspect`. Resume configuration is identity-checked and deterministic chunk sampling produces the same final scientific hashes as uninterrupted generation.
+
 ### Experiment catalog
 
 Added experiment templates to the installed wheel plus `aegis templates` and `aegis init-experiment`. Students and research teams can now create a valid study, explanation, decoder comparison, scaling campaign, or regression manifest without cloning the repository.
