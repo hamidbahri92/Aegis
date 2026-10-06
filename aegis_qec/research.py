@@ -263,12 +263,12 @@ def write_study_artifacts(
                 writer.writerow({name: point.get(name) for name in fieldnames})
 
     if plot_path:
-        import matplotlib.pyplot as plt
+        from .plotting import new_agg_figure
 
         path = Path(plot_path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        fig, ax = plt.subplots(figsize=(7.0, 4.5))
+        fig, ax = new_agg_figure(figsize=(7.0, 4.5))
         distances = sorted({int(point["distance"]) for point in points})
 
         for distance in distances:
@@ -308,4 +308,4 @@ def write_study_artifacts(
             ax.legend(title="Code distance")
         fig.tight_layout()
         fig.savefig(path, dpi=180)
-        plt.close(fig)
+        fig.clear()
