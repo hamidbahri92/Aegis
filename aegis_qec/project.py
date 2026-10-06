@@ -205,6 +205,9 @@ def load_research_project(path: str) -> dict[str, Any]:
     protocol = project.get("protocol", {})
     if not isinstance(protocol, dict):
         raise ValueError("protocol must be an object")
+    mode = str(protocol.get("mode", "exploratory")).lower()
+    if mode not in {"exploratory", "confirmatory"}:
+        raise ValueError("protocol.mode must be exploratory or confirmatory")
 
     paper = project.get("paper", {})
     if not isinstance(paper, dict):
@@ -526,6 +529,18 @@ def freeze_research_protocol(
 
     source = Path(project_path).resolve()
     project = load_research_project(str(source))
+    protocol = project.get("protocol", {})
+    if str(protocol.get("mode", "exploratory")).lower() == "confirmatory":
+        required = ["primary_outcome", "analysis_plan", "stopping_rule"]
+        missing = [
+            name
+            for name in required
+            if not str(protocol.get(name, "")).strip()
+        ]
+        if missing:
+            raise ValueError(
+                "confirmatory protocol is missing: " + ", ".join(missing)
+            )
     files: list[dict[str, Any]] = []
 
     for experiment in project.get("experiments", []):
@@ -573,6 +588,7 @@ def freeze_research_protocol(
     lock["path"] = str(destination)
     lock["file_sha256"] = _sha256_file(destination)
     return lock
+
 
 def verify_protocol_lock(
     project_path: str,
@@ -646,6 +662,7 @@ def verify_protocol_lock(
         "project_protocol_sha256": actual_protocol_hash,
     }
 
+
 def run_research_project(
     project_path: str,
     *,
@@ -709,7 +726,6 @@ def run_research_project(
     project_run["path"] = str(output)
     project_run["sha256"] = _sha256_file(output)
     return project_run
-
 
 
 def write_research_project_template(
