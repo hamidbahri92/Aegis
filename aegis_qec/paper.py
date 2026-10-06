@@ -829,16 +829,21 @@ def _submission_readiness(
             bool(project.get("compute_resources")),
             "Experimental compute resources are documented.",
         )
+        methods_text = str(paper.get("methods", "")).lower()
+        statistical_terms = (
+            "confidence interval",
+            "wilson",
+            "bootstrap",
+            "standard error",
+            "p-value",
+            "p value",
+            "mcnemar",
+            "significance",
+        )
         add(
             "statistical_uncertainty",
-            any(
-                "ci" in str(evidence).lower()
-                or "p_value" in str(evidence).lower()
-                for claim in audit.get("claims", [])
-                for evidence in claim.get("evidence", [])
-            )
-            or bool(project.get("claims")),
-            "Main experimental claims include uncertainty/statistical evidence.",
+            any(term in methods_text for term in statistical_terms),
+            "Methods document uncertainty intervals or significance testing.",
         )
 
     if venue == "neurips-ed" and dataset_ids:
