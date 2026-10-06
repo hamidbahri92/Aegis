@@ -171,9 +171,9 @@ def explain_surface_code_shot(
 
 def shot_explanation_figure(explanation: dict[str, Any]):
     """Build a matplotlib figure for one shot explanation."""
-    import matplotlib.pyplot as plt
+    from .plotting import new_agg_figure
 
-    fig, ax = plt.subplots(figsize=(8.0, 6.0))
+    fig, ax = new_agg_figure(figsize=(8.0, 6.0))
 
     fired = explanation.get("fired_detectors", [])
     x_values = []
@@ -251,10 +251,8 @@ def write_shot_explanation(
     if not plot_path:
         return
 
-    import matplotlib.pyplot as plt
-
     path = Path(plot_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     fig = shot_explanation_figure(explanation)
     fig.savefig(path, dpi=180)
-    plt.close(fig)
+    fig.clear()
