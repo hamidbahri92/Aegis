@@ -155,10 +155,33 @@ A completed dataset stores SHA-256 values over canonical little-endian bit-packe
 
 The HDF5 file itself is also hashed in command output, but the internal sample hashes are the stable evidence identifiers for the sampled arrays. HDF5 container bytes can differ because of metadata or layout even when scientific content is identical.
 
+## Evaluate decoders on a fixed dataset
+
+Once a dataset exists, compare decoders without resampling the experiment:
+
+```bash
+aegis dataset evaluate research_out/surface-d5-p006.h5 \
+  --decoder aegis-pymatching aegis-pymatching-correlated \
+  --split test \
+  --out-json research_out/dataset-evaluation.json
+```
+
+Every decoder receives the identical selected rows in the identical order. The evaluation artifact records SHA-256 values for the exact selected detector and observable rows, logical-error rates with Wilson intervals, decode throughput, and pairwise prediction disagreement.
+
+Use `--split train`, `--split validation`, `--split test`, or `--split all`. `--max-shots` can bound a quick comparison without changing which rows are selected first from that split.
+
+By default Aegis verifies a completed dataset before evaluation. `--no-verify` skips that full preflight when the dataset has already been verified in the surrounding workflow.
+
+This workflow is especially useful when benchmarking new decoder plug-ins: differences cannot be attributed to independent Monte Carlo samples because the detector rows are fixed.
+
 ## Python API
 
 ```python
-from aegis_qec import generate_qec_dataset, inspect_qec_dataset
+from aegis_qec import (
+    evaluate_decoders_on_dataset,
+    generate_qec_dataset,
+    inspect_qec_dataset,
+)
 
 report = generate_qec_dataset(
     "surface-d5.h5",
@@ -170,6 +193,12 @@ report = generate_qec_dataset(
 
 inspection = inspect_qec_dataset("surface-d5.h5")
 assert inspection["valid"]
+
+comparison = evaluate_decoders_on_dataset(
+    "surface-d5.h5",
+    decoders=["aegis-pymatching"],
+    split_name="test",
+)
 ```
 
 The lower-level `extract_dem_mechanisms` function is public for researchers who want Aegis's sparse raw-DEM incidence representation without generating samples.
