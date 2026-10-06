@@ -15,6 +15,7 @@ from .dataset import (
     evaluate_decoders_on_dataset,
     extract_dem_mechanisms,
     generate_qec_dataset,
+    import_qec_dataset,
     inspect_qec_dataset,
     write_dataset_evaluation_json,
 )
@@ -61,6 +62,7 @@ __all__ = [
     "fit_surface_code_scaling",
     "generate_qec_dataset",
     "get_experiment_template",
+    "import_qec_dataset",
     "inspect_qec_dataset",
     "list_experiment_templates",
     "load_campaign_json",
