@@ -276,3 +276,123 @@ def test_confirmatory_audit_requires_protocol_lock(tmp_path):
         "protocol lock required" in error
         for error in report["errors"]
     )
+
+
+def _write_tiny_discovery(tmp_path):
+    base = tmp_path / "search-base.json"
+    base.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "name": "project-discovery-study",
+                "operation": "study",
+                "parameters": {
+                    "distances": [3],
+                    "physical_error_rates": [0.02],
+                    "shots": 8,
+                    "basis": "x",
+                    "rounds": 3,
+                    "seed": 1234,
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    discovery = tmp_path / "discovery.json"
+    discovery.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "base_experiment": "search-base.json",
+                "algorithm": "random",
+                "seed": 7,
+                "budget": 1,
+                "population_size": 1,
+                "parameters": [
+                    {
+                        "path": "/parameters/rounds",
+                        "type": "choice",
+                        "values": [3],
+                    }
+                ],
+                "objectives": [
+                    {
+                        "name": "logical_error_rate",
+                        "json_pointer": "/result/points/0/logical_error_rate",
+                        "direction": "minimize",
+                    }
+                ],
+                "confirmation_overrides": {
+                    "/parameters/shots": 16
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return discovery
+
+
+def test_exploratory_project_runs_declared_discovery(tmp_path):
+    discovery = _write_tiny_discovery(tmp_path)
+    project = tmp_path / "project.json"
+    _write_project(project)
+    value = json.loads(project.read_text(encoding="utf-8"))
+    value["protocol"] = {
+        "mode": "exploratory",
+        "search_plan": "One-point discovery smoke test.",
+    }
+    value["discoveries"] = [
+        {
+            "id": "search",
+            "manifest": discovery.name,
+        }
+    ]
+    project.write_text(
+        json.dumps(value, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    audit = audit_research_project(str(project))
+    assert audit["valid"] is True
+    assert audit["discoveries"][0]["algorithm"] == "random"
+
+    report = run_research_project(
+        str(project),
+        workspace=str(tmp_path / "workspace"),
+    )
+    assert report["discoveries"][0]["id"] == "search"
+    assert report["discoveries"][0]["pareto_count"] == 1
+    assert report["discoveries"][0]["confirmation_manifests"]
+
+
+def test_confirmatory_project_rejects_adaptive_discovery(tmp_path):
+    discovery = _write_tiny_discovery(tmp_path)
+    project = tmp_path / "project.json"
+    _write_project(project)
+    value = json.loads(project.read_text(encoding="utf-8"))
+    value["protocol"] = {
+        "mode": "confirmatory",
+        "primary_outcome": "Logical error rate",
+        "analysis_plan": "Use a fixed Wilson interval.",
+        "stopping_rule": "Exactly eight shots.",
+    }
+    value["discoveries"] = [
+        {
+            "id": "search",
+            "manifest": discovery.name,
+        }
+    ]
+    project.write_text(
+        json.dumps(value, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="confirmatory projects cannot contain adaptive discovery",
+    ):
+        freeze_research_protocol(str(project))
