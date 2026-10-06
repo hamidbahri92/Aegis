@@ -640,6 +640,34 @@ def _copy_experiment_manifests(
     return records
 
 
+def _copy_discovery_manifests(
+    project_path: Path,
+    project: dict[str, Any],
+    root: Path,
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    root.mkdir(parents=True, exist_ok=True)
+    for discovery in project.get("discoveries", []):
+        discovery_id = str(discovery["id"])
+        source = _project_relative_path(
+            project_path,
+            str(discovery["manifest"]),
+        )
+        if not source.is_file():
+            continue
+        target = root / (discovery_id + source.suffix)
+        shutil.copy2(source, target)
+        records.append(
+            {
+                "id": discovery_id,
+                "packaged": str(target.relative_to(root.parent)),
+                "sha256": _sha256_file(target),
+                "bytes": target.stat().st_size,
+            }
+        )
+    return records
+
+
 def _croissant_metadata(
     project: dict[str, Any],
     artifact_spec: dict[str, Any],
@@ -1054,10 +1082,12 @@ def build_submission_package(
     manuscript = destination / "manuscript"
     artifacts = destination / "artifacts"
     experiments = destination / "experiments"
+    discoveries = destination / "discoveries"
     dataset_metadata = destination / "dataset-metadata"
     manuscript.mkdir()
     artifacts.mkdir()
     experiments.mkdir()
+    discoveries.mkdir()
     dataset_metadata.mkdir()
 
     packaged_project = (
@@ -1119,6 +1149,15 @@ def build_submission_package(
     )
     (destination / "experiment-inventory.json").write_text(
         json.dumps(experiment_inventory, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    discovery_inventory = _copy_discovery_manifests(
+        source,
+        project,
+        discoveries,
+    )
+    (destination / "discovery-inventory.json").write_text(
+        json.dumps(discovery_inventory, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
 
@@ -1198,6 +1237,7 @@ def build_submission_package(
         "submission_readiness": readiness,
         "anonymized": bool(anonymize),
         "experiment_count": len(experiment_inventory),
+        "discovery_count": len(discovery_inventory),
         "croissant_count": len(croissant),
         "payload": payload,
     }
@@ -1236,6 +1276,7 @@ def build_submission_package(
         "compile": compile_result,
         "artifact_count": len(inventory),
         "experiment_count": len(experiment_inventory),
+        "discovery_count": len(discovery_inventory),
         "croissant_count": len(croissant),
         "claim_count": len(audit["claims"]),
     }
