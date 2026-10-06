@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -735,6 +736,16 @@ def evaluate_decoders_on_dataset(
         for left_index, left in enumerate(decoders)
         for right in decoders[left_index + 1 :]
     }
+    pairwise_failures = {
+        (left, right): {
+            "both_success": 0,
+            "left_only_failure": 0,
+            "right_only_failure": 0,
+            "both_failure": 0,
+        }
+        for left_index, left in enumerate(decoders)
+        for right in decoders[left_index + 1 :]
+    }
     selected_shots = 0
 
     with h5py.File(file_path, "r") as handle:
@@ -801,6 +812,7 @@ def evaluate_decoders_on_dataset(
             observable_digest.update(observable_packed.tobytes(order="C"))
 
             chunk_predictions: dict[str, np.ndarray] = {}
+            chunk_failures: dict[str, np.ndarray] = {}
             for name in decoders:
                 started = time.perf_counter()
                 predicted = compiled[name].decode_shots_bit_packed(
@@ -815,6 +827,7 @@ def evaluate_decoders_on_dataset(
                     axis=1,
                 )
                 decoder_errors[name] += int(np.count_nonzero(failures))
+                chunk_failures[name] = failures
 
             for pair in pairwise_disagreements:
                 left, right = pair
@@ -828,6 +841,22 @@ def evaluate_decoders_on_dataset(
                 )
                 pairwise_disagreements[pair] += int(
                     np.count_nonzero(disagreement)
+                )
+
+                left_fail = chunk_failures[left]
+                right_fail = chunk_failures[right]
+                counts = pairwise_failures[pair]
+                counts["both_success"] += int(
+                    np.count_nonzero(~left_fail & ~right_fail)
+                )
+                counts["left_only_failure"] += int(
+                    np.count_nonzero(left_fail & ~right_fail)
+                )
+                counts["right_only_failure"] += int(
+                    np.count_nonzero(~left_fail & right_fail)
+                )
+                counts["both_failure"] += int(
+                    np.count_nonzero(left_fail & right_fail)
                 )
 
             selected_shots += int(detector_chunk.shape[0])
@@ -858,6 +887,7 @@ def evaluate_decoders_on_dataset(
         )
 
     disagreements = []
+    paired_failure_statistics = []
     for (left, right), count in pairwise_disagreements.items():
         disagreements.append(
             {
@@ -865,6 +895,43 @@ def evaluate_decoders_on_dataset(
                 "right": right,
                 "disagreement_shots": int(count),
                 "disagreement_rate": float(count / selected_shots),
+            }
+        )
+
+        counts = pairwise_failures[(left, right)]
+        left_only = int(counts["left_only_failure"])
+        right_only = int(counts["right_only_failure"])
+        discordant = left_only + right_only
+        risk_difference = float((left_only - right_only) / selected_shots)
+        second_moment = float(discordant / selected_shots)
+        variance = max(0.0, second_moment - risk_difference * risk_difference)
+        standard_error = math.sqrt(variance / selected_shots)
+        risk_ci_low = max(-1.0, risk_difference - 1.96 * standard_error)
+        risk_ci_high = min(1.0, risk_difference + 1.96 * standard_error)
+
+        if discordant == 0:
+            mcnemar_chi2 = 0.0
+            mcnemar_p = 1.0
+        else:
+            corrected = max(0.0, abs(left_only - right_only) - 1.0)
+            mcnemar_chi2 = float(corrected * corrected / discordant)
+            mcnemar_p = float(
+                math.erfc(math.sqrt(mcnemar_chi2 / 2.0))
+            )
+
+        paired_failure_statistics.append(
+            {
+                "left": left,
+                "right": right,
+                **counts,
+                "discordant_failure_shots": discordant,
+                "left_minus_right_error_rate": risk_difference,
+                "left_minus_right_error_rate_ci95_normal": [
+                    float(risk_ci_low),
+                    float(risk_ci_high),
+                ],
+                "mcnemar_chi2_continuity_corrected": mcnemar_chi2,
+                "mcnemar_p_value_asymptotic": mcnemar_p,
             }
         )
 
@@ -890,6 +957,7 @@ def evaluate_decoders_on_dataset(
         },
         "rows": rows,
         "pairwise_disagreements": disagreements,
+        "paired_failure_statistics": paired_failure_statistics,
         "interpretation": (
             "Every decoder received the identical stored detector-shot rows. "
             "Differences therefore reflect paired decoder behavior on a fixed "
