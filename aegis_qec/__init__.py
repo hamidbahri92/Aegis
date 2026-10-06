@@ -28,6 +28,11 @@ from .explain import explain_surface_code_shot, write_shot_explanation
 from .io_decode import predict_observables_from_files
 from .research import run_surface_code_study, wilson_interval, write_study_artifacts
 from .scaling import fit_surface_code_scaling, load_campaign_json, write_scaling_artifacts
+from .template_catalog import (
+    get_experiment_template,
+    list_experiment_templates,
+    write_experiment_template,
+)
 
 try:
     __version__ = version("aegis-qec")
@@ -45,6 +50,8 @@ __all__ = [
     "custom_decoder_registry",
     "explain_surface_code_shot",
     "fit_surface_code_scaling",
+    "get_experiment_template",
+    "list_experiment_templates",
     "load_campaign_json",
     "load_experiment_manifest",
     "normalize_decoder_plugin",
@@ -59,6 +66,7 @@ __all__ = [
     "write_scaling_artifacts",
     "write_shot_explanation",
     "write_study_artifacts",
+    "write_experiment_template",
     "verify_research_bundle",
     "__version__",
 ]
