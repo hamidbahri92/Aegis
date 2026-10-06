@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import platform
@@ -529,6 +530,28 @@ def _checklist(project: dict[str, Any], audit: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _redacted_protocol_lock(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    redacted = {
+        "schema_version": value.get("schema_version", 1),
+        "lock_type": value.get("lock_type"),
+        "created_utc": value.get("created_utc"),
+        "project_title": value.get("project_title"),
+        "protocol_sha256": value.get("protocol_sha256"),
+        "redacted": True,
+        "files": [],
+    }
+    for item in value.get("files", []):
+        redacted["files"].append(
+            {
+                "role": item.get("role"),
+                "path": Path(str(item.get("path", ""))).name,
+                "sha256": item.get("sha256"),
+            }
+        )
+    return redacted
+
+
 def _copy_artifacts(
     audit: dict[str, Any],
     root: Path,
@@ -706,7 +729,19 @@ def build_submission_package(
     )
     lock = source.with_suffix(".protocol.lock.json")
     if lock.is_file():
-        shutil.copy2(lock, destination / "research-project.protocol.lock.json")
+        packaged_lock = destination / "research-project.protocol.lock.json"
+        if anonymize:
+            packaged_lock.write_text(
+                json.dumps(
+                    _redacted_protocol_lock(lock),
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+        else:
+            shutil.copy2(lock, packaged_lock)
 
     (destination / "audit.json").write_text(
         json.dumps(packaged_audit, indent=2, sort_keys=True) + "\n",
@@ -830,6 +865,17 @@ def verify_submission_package(path: str) -> dict[str, Any]:
                 failures.append("size mismatch: " + str(item["path"]))
             if _sha256_file(payload_path) != str(item["sha256"]):
                 failures.append("hash mismatch: " + str(item["path"]))
+        expected_names = {
+            str(item["path"])
+            for item in manifest.get("payload", [])
+        } | {"MANIFEST.json", "checksums.sha256"}
+        actual_names = {
+            path.relative_to(source).as_posix()
+            for path in source.rglob("*")
+            if path.is_file()
+        }
+        for extra in sorted(actual_names - expected_names):
+            failures.append("unexpected payload: " + extra)
         source_hash = None
     elif source.is_file() and source.suffix.lower() == ".zip":
         source_hash = _sha256_file(source)
@@ -840,6 +886,12 @@ def verify_submission_package(path: str) -> dict[str, Any]:
             manifest = json.loads(
                 archive.read("MANIFEST.json").decode("utf-8")
             )
+            expected_names = {
+                str(item["path"])
+                for item in manifest.get("payload", [])
+            } | {"MANIFEST.json", "checksums.sha256"}
+            for extra in sorted(names - expected_names):
+                failures.append("unexpected payload: " + extra)
             for item in manifest.get("payload", []):
                 name = str(item["path"])
                 if name not in names:
@@ -848,8 +900,6 @@ def verify_submission_package(path: str) -> dict[str, Any]:
                 data = archive.read(name)
                 if len(data) != int(item["bytes"]):
                     failures.append("size mismatch: " + name)
-                import hashlib
-
                 if hashlib.sha256(data).hexdigest() != str(item["sha256"]):
                     failures.append("hash mismatch: " + name)
     else:
