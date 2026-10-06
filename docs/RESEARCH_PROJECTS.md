@@ -229,11 +229,13 @@ The output directory contains:
 - environment.json
 - artifact-inventory.json
 - experiment-inventory.json
+- discovery-inventory.json
 - croissant-inventory.json
 - MANIFEST.json
 - checksums.sha256
 - manuscript/
 - experiments/
+- discoveries/
 - artifacts/
 - dataset-metadata/
 
