@@ -18,6 +18,13 @@ from .dataset import (
     inspect_qec_dataset,
     write_dataset_evaluation_json,
 )
+from .discovery import (
+    load_discovery_manifest,
+    pareto_front,
+    run_discovery,
+    write_discovery_starter,
+    write_discovery_template,
+)
 from .decoder_plugins import (
     DecoderPluginAdapter,
     available_decoders,
@@ -75,12 +82,15 @@ __all__ = [
     "get_experiment_template",
     "inspect_qec_dataset",
     "list_experiment_templates",
+    "load_discovery_manifest",
     "load_campaign_json",
     "load_experiment_manifest",
     "load_research_project",
     "normalize_decoder_plugin",
+    "pareto_front",
     "predict_observables_from_files",
     "run_campaign",
+    "run_discovery",
     "run_experiment_manifest",
     "run_research_project",
     "run_surface_code_study",
@@ -89,6 +99,8 @@ __all__ = [
     "write_campaign_summary",
     "write_comparison_json",
     "write_dataset_evaluation_json",
+    "write_discovery_starter",
+    "write_discovery_template",
     "write_scaling_artifacts",
     "write_shot_explanation",
     "write_study_artifacts",
