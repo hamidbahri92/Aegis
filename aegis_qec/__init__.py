@@ -11,6 +11,11 @@ from a3d import AegisConfig, DecoderRuntime, RotatedSurfaceLayout
 
 from .campaign import run_campaign, write_campaign_summary
 from .comparison import compare_decoders_exact_shots, write_comparison_json
+from .dataset import (
+    extract_dem_mechanisms,
+    generate_qec_dataset,
+    inspect_qec_dataset,
+)
 from .decoder_plugins import (
     DecoderPluginAdapter,
     available_decoders,
@@ -48,9 +53,12 @@ __all__ = [
     "compare_decoders_exact_shots",
     "create_research_bundle",
     "custom_decoder_registry",
+    "extract_dem_mechanisms",
     "explain_surface_code_shot",
     "fit_surface_code_scaling",
+    "generate_qec_dataset",
     "get_experiment_template",
+    "inspect_qec_dataset",
     "list_experiment_templates",
     "load_campaign_json",
     "load_experiment_manifest",
