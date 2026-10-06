@@ -253,3 +253,26 @@ def test_confirmatory_freeze_requires_analysis_fields(tmp_path):
 
     with pytest.raises(ValueError, match="confirmatory protocol is missing"):
         freeze_research_protocol(str(project))
+
+
+def test_confirmatory_audit_requires_protocol_lock(tmp_path):
+    project = tmp_path / "project.json"
+    _write_project(project)
+    value = json.loads(project.read_text(encoding="utf-8"))
+    value["protocol"] = {
+        "mode": "confirmatory",
+        "primary_outcome": "Logical error rate",
+        "analysis_plan": "Use a pre-specified Wilson interval.",
+        "stopping_rule": "Collect exactly 1000 shots.",
+    }
+    project.write_text(
+        json.dumps(value, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    report = audit_research_project(str(project))
+    assert report["valid"] is False
+    assert any(
+        "protocol lock required" in error
+        for error in report["errors"]
+    )
