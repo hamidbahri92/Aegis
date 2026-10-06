@@ -93,6 +93,11 @@ def _anonymize_project(project: dict[str, Any]) -> dict[str, Any]:
             experiment["manifest"] = Path(
                 str(experiment["manifest"])
             ).name
+    for discovery in value.get("discoveries", []):
+        if isinstance(discovery, dict) and discovery.get("manifest"):
+            discovery["manifest"] = Path(
+                str(discovery["manifest"])
+            ).name
     for artifact in value.get("artifacts", []):
         if isinstance(artifact, dict) and artifact.get("path"):
             artifact["path"] = Path(str(artifact["path"])).name
@@ -121,6 +126,11 @@ def _sanitize_audit(
         if experiment.get("manifest_path"):
             experiment["manifest_path"] = Path(
                 experiment["manifest_path"]
+            ).name
+    for discovery in value.get("discoveries", []):
+        if discovery.get("manifest_path"):
+            discovery["manifest_path"] = Path(
+                discovery["manifest_path"]
             ).name
     for bibliography in value.get("bibliography", []):
         if bibliography.get("path"):
@@ -444,8 +454,9 @@ Fast review path:
 2. Read CLAIM_EVIDENCE.md for claim-to-artifact traceability.
 3. Read audit.json for machine-readable evidence checks.
 4. Read REPRODUCE.md for verification commands.
-5. Inspect artifacts/ for declared evidence.
-6. Verify MANIFEST.json or checksums.sha256 before using artifacts.
+5. Inspect experiments/ and discoveries/ for the exact reviewed definitions.
+6. Inspect artifacts/ for declared evidence.
+7. Verify MANIFEST.json or checksums.sha256 before using artifacts.
 
 Scientific boundary:
 
@@ -898,6 +909,11 @@ def _redacted_protocol_lock(path: Path) -> dict[str, Any]:
         if isinstance(experiment, dict) and experiment.get("manifest"):
             experiment["manifest"] = Path(
                 str(experiment["manifest"])
+            ).name
+    for discovery in protocol.get("discoveries", []):
+        if isinstance(discovery, dict) and discovery.get("manifest"):
+            discovery["manifest"] = Path(
+                str(discovery["manifest"])
             ).name
 
     return {
