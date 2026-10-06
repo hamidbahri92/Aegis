@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "first-surface-code-study",
+  "operation": "study",
+  "parameters": {
+    "distances": [3, 5],
+    "physical_error_rates": [0.005, 0.01, 0.02],
+    "shots": 2000,
+    "basis": "x",
+    "seed": 1234
+  }
+}
