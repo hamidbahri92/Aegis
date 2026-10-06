@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import os
 import platform
@@ -77,6 +78,38 @@ def _authors(project: dict[str, Any]) -> str:
         _latex_escape(author["name"])
         for author in project["authors"]
     )
+
+
+def _anonymize_project(project: dict[str, Any]) -> dict[str, Any]:
+    value = copy.deepcopy(project)
+    value["authors"] = [{"name": "Anonymous Authors"}]
+    return value
+
+
+def _sanitize_audit(
+    audit: dict[str, Any],
+    *,
+    anonymize: bool,
+) -> dict[str, Any]:
+    if not anonymize:
+        return copy.deepcopy(audit)
+    value = copy.deepcopy(audit)
+    value["project_path"] = "research-project.json"
+    for artifact in value.get("artifacts", {}).values():
+        if artifact.get("source_path"):
+            artifact["source_path"] = Path(artifact["source_path"]).name
+    for experiment in value.get("experiments", []):
+        if experiment.get("manifest_path"):
+            experiment["manifest_path"] = Path(
+                experiment["manifest_path"]
+            ).name
+    for bibliography in value.get("bibliography", []):
+        if bibliography.get("path"):
+            bibliography["path"] = Path(bibliography["path"]).name
+    lock = value.get("protocol_lock")
+    if isinstance(lock, dict) and lock.get("path"):
+        lock["path"] = Path(lock["path"]).name
+    return value
 
 
 def _hypotheses(project: dict[str, Any]) -> str:
@@ -496,7 +529,12 @@ def _checklist(project: dict[str, Any], audit: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _copy_artifacts(audit: dict[str, Any], root: Path) -> list[dict[str, Any]]:
+def _copy_artifacts(
+    audit: dict[str, Any],
+    root: Path,
+    *,
+    anonymize: bool,
+) -> list[dict[str, Any]]:
     records = []
     for artifact_id in sorted(audit["artifacts"]):
         artifact = audit["artifacts"][artifact_id]
@@ -507,15 +545,15 @@ def _copy_artifacts(audit: dict[str, Any], root: Path) -> list[dict[str, Any]]:
         target_dir.mkdir(parents=True, exist_ok=True)
         target = target_dir / source.name
         shutil.copy2(source, target)
-        records.append(
-            {
-                "id": artifact_id,
-                "source": str(source),
-                "packaged": str(target),
-                "sha256": _sha256_file(target),
-                "bytes": target.stat().st_size,
-            }
-        )
+        record = {
+            "id": artifact_id,
+            "packaged": str(target.relative_to(root.parent)),
+            "sha256": _sha256_file(target),
+            "bytes": target.stat().st_size,
+        }
+        if not anonymize:
+            record["source"] = str(source)
+        records.append(record)
     return records
 
 
@@ -625,6 +663,8 @@ def build_submission_package(
     compile_mode: str = "auto",
     require_protocol_lock: bool = False,
     allow_invalid: bool = False,
+    anonymize: bool = False,
+    overwrite: bool = False,
 ) -> dict[str, Any]:
     source = Path(project_path).resolve()
     project = load_research_project(str(source))
@@ -638,21 +678,38 @@ def build_submission_package(
         )
 
     destination = Path(output_dir).resolve()
-    if destination.exists():
-        shutil.rmtree(destination)
+    zip_path = Path(str(destination) + ".zip")
+    if destination.exists() or zip_path.exists():
+        if not overwrite:
+            raise FileExistsError(
+                "submission output already exists; choose a new path or use overwrite"
+            )
+        if destination.exists():
+            shutil.rmtree(destination)
+        if zip_path.exists():
+            zip_path.unlink()
     destination.mkdir(parents=True)
     manuscript = destination / "manuscript"
     artifacts = destination / "artifacts"
     manuscript.mkdir()
     artifacts.mkdir()
 
-    shutil.copy2(source, destination / "research-project.json")
+    packaged_project = (
+        _anonymize_project(project)
+        if anonymize
+        else copy.deepcopy(project)
+    )
+    packaged_audit = _sanitize_audit(audit, anonymize=anonymize)
+    (destination / "research-project.json").write_text(
+        json.dumps(packaged_project, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     lock = source.with_suffix(".protocol.lock.json")
     if lock.is_file():
         shutil.copy2(lock, destination / "research-project.protocol.lock.json")
 
     (destination / "audit.json").write_text(
-        json.dumps(audit, indent=2, sort_keys=True) + "\n",
+        json.dumps(packaged_audit, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     (destination / "environment.json").write_text(
@@ -660,34 +717,38 @@ def build_submission_package(
         encoding="utf-8",
     )
     (destination / "CLAIM_EVIDENCE.md").write_text(
-        _claim_map(audit) + "\n",
+        _claim_map(packaged_audit) + "\n",
         encoding="utf-8",
     )
     (destination / "REVIEWER_README.md").write_text(
-        _reviewer_readme(project, audit) + "\n",
+        _reviewer_readme(packaged_project, packaged_audit) + "\n",
         encoding="utf-8",
     )
     (destination / "REPRODUCE.md").write_text(
-        _reproduce(source, audit) + "\n",
+        _reproduce(Path("research-project.json"), packaged_audit) + "\n",
         encoding="utf-8",
     )
     (destination / "SUBMISSION_CHECKLIST.md").write_text(
-        _checklist(project, audit) + "\n",
+        _checklist(packaged_project, packaged_audit) + "\n",
         encoding="utf-8",
     )
 
-    inventory = _copy_artifacts(audit, artifacts)
+    inventory = _copy_artifacts(
+        audit,
+        artifacts,
+        anonymize=anonymize,
+    )
     (destination / "artifact-inventory.json").write_text(
         json.dumps(inventory, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
 
     (manuscript / "paper.tex").write_text(
-        _tex(project, audit),
+        _tex(packaged_project, packaged_audit),
         encoding="utf-8",
     )
     (manuscript / "paper.md").write_text(
-        _paper_md(project) + "\n",
+        _paper_md(packaged_project) + "\n",
         encoding="utf-8",
     )
     (manuscript / "references.bib").write_text(
@@ -706,9 +767,10 @@ def build_submission_package(
         "schema_version": 1,
         "package_type": "aegis_qec_submission_package",
         "created_utc": datetime.now(timezone.utc).isoformat(),
-        "project_title": project["title"],
+        "project_title": packaged_project["title"],
         "project_sha256": audit["project_sha256"],
         "audit_valid": audit["valid"],
+        "anonymized": bool(anonymize),
         "payload": payload,
     }
     manifest_path = destination / "MANIFEST.json"
@@ -732,9 +794,6 @@ def build_submission_package(
         encoding="utf-8",
     )
 
-    zip_path = Path(str(destination) + ".zip")
-    if zip_path.exists():
-        zip_path.unlink()
     _zip_directory(destination, zip_path)
 
     return {
@@ -747,4 +806,60 @@ def build_submission_package(
         "compile": compile_result,
         "artifact_count": len(inventory),
         "claim_count": len(audit["claims"]),
+    }
+
+
+
+def verify_submission_package(path: str) -> dict[str, Any]:
+    """Verify payload hashes in a submission directory or ZIP file."""
+
+    source = Path(path).resolve()
+    failures: list[str] = []
+
+    if source.is_dir():
+        manifest_path = source / "MANIFEST.json"
+        if not manifest_path.is_file():
+            raise ValueError("submission directory is missing MANIFEST.json")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        for item in manifest.get("payload", []):
+            payload_path = source / str(item["path"])
+            if not payload_path.is_file():
+                failures.append("missing payload: " + str(item["path"]))
+                continue
+            if payload_path.stat().st_size != int(item["bytes"]):
+                failures.append("size mismatch: " + str(item["path"]))
+            if _sha256_file(payload_path) != str(item["sha256"]):
+                failures.append("hash mismatch: " + str(item["path"]))
+        source_hash = None
+    elif source.is_file() and source.suffix.lower() == ".zip":
+        source_hash = _sha256_file(source)
+        with zipfile.ZipFile(source, "r") as archive:
+            names = set(archive.namelist())
+            if "MANIFEST.json" not in names:
+                raise ValueError("submission ZIP is missing MANIFEST.json")
+            manifest = json.loads(
+                archive.read("MANIFEST.json").decode("utf-8")
+            )
+            for item in manifest.get("payload", []):
+                name = str(item["path"])
+                if name not in names:
+                    failures.append("missing payload: " + name)
+                    continue
+                data = archive.read(name)
+                if len(data) != int(item["bytes"]):
+                    failures.append("size mismatch: " + name)
+                import hashlib
+
+                if hashlib.sha256(data).hexdigest() != str(item["sha256"]):
+                    failures.append("hash mismatch: " + name)
+    else:
+        raise ValueError("submission path must be a directory or .zip file")
+
+    return {
+        "schema_version": 1,
+        "verification_type": "aegis_qec_submission_package",
+        "path": str(source),
+        "valid": not failures,
+        "failures": failures,
+        "zip_sha256": source_hash,
     }
