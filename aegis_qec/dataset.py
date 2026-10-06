@@ -633,6 +633,18 @@ def inspect_qec_dataset(
                 handle.attrs.get("dense_mechanism_matrices", False)
             ),
             "split_counts": _count_split_labels(split),
+            "source_type": str(handle.attrs.get("source_type", "generated")),
+            "source_format": (
+                str(handle.attrs.get("source_format", "")) or None
+            ),
+            "source_detector_data_sha256": (
+                str(handle.attrs.get("source_detector_data_sha256", ""))
+                or None
+            ),
+            "source_observable_data_sha256": (
+                str(handle.attrs.get("source_observable_data_sha256", ""))
+                or None
+            ),
         }
 
         failures: list[str] = []
