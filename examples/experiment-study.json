@@ -1,0 +1,18 @@
+{
+  "$schema": "../schemas/experiment-v1.schema.json",
+  "schema_version": 1,
+  "name": "surface-code-class-project",
+  "operation": "study",
+  "parameters": {
+    "distances": [3, 5, 7],
+    "physical_error_rates": [0.003, 0.006, 0.01],
+    "shots": 5000,
+    "basis": "x",
+    "seed": 1234
+  },
+  "outputs": {
+    "json": "study.json",
+    "csv": "study.csv",
+    "plot": "study.png"
+  }
+}
