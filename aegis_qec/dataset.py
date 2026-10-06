@@ -977,3 +977,520 @@ def write_dataset_evaluation_json(
         json.dumps(evaluation, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+
+
+
+def _import_dataset_identity(
+    *,
+    dem_sha256: str,
+    detector_data_sha256: str,
+    observable_data_sha256: str | None,
+    data_format: str,
+    shots: int,
+    seed: int,
+    train_fraction: float,
+    validation_fraction: float,
+) -> str:
+    value = {
+        "format": _DATASET_FORMAT,
+        "source": "imported-shot-data",
+        "dem_sha256": dem_sha256,
+        "detector_data_sha256": detector_data_sha256,
+        "observable_data_sha256": observable_data_sha256,
+        "data_format": data_format,
+        "shots": int(shots),
+        "seed": int(seed),
+        "train_fraction": float(train_fraction),
+        "validation_fraction": float(validation_fraction),
+    }
+    return _sha256_bytes(_canonical_json(value).encode("utf-8"))
+
+
+def _create_imported_hdf5(
+    *,
+    output_path: Path,
+    dem: Any,
+    dem_text: str,
+    mechanisms: dict[str, np.ndarray],
+    shots: int,
+    seed: int,
+    chunk_size: int,
+    train_fraction: float,
+    validation_fraction: float,
+    identity: str,
+    detector_source: Path,
+    detector_source_sha256: str,
+    observable_source: Path | None,
+    observable_source_sha256: str | None,
+    data_format: str,
+    dense_matrix_max_cells: int,
+):
+    h5py, _ = _require_dependencies()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    if output_path.exists():
+        raise FileExistsError(
+            f"{output_path} already exists; imported datasets are immutable"
+        )
+
+    num_detectors = int(dem.num_detectors)
+    num_observables = int(dem.num_observables)
+    row_chunk = min(max(1, int(chunk_size)), int(shots))
+    string_dtype = h5py.string_dtype(encoding="utf-8")
+
+    handle = h5py.File(output_path, "w")
+    try:
+        handle.attrs["format"] = _DATASET_FORMAT
+        handle.attrs["schema_version"] = 1
+        handle.attrs["identity_sha256"] = identity
+        handle.attrs["target_shots"] = int(shots)
+        handle.attrs["seed"] = int(seed)
+        handle.attrs["chunk_size"] = int(chunk_size)
+        handle.attrs["train_fraction"] = float(train_fraction)
+        handle.attrs["validation_fraction"] = float(validation_fraction)
+        handle.attrs["test_fraction"] = float(
+            1.0 - train_fraction - validation_fraction
+        )
+        handle.attrs["complete"] = False
+        handle.attrs["created_utc"] = datetime.now(timezone.utc).isoformat()
+        handle.attrs["circuit_sha256"] = ""
+        handle.attrs["raw_dem_sha256"] = _sha256_bytes(
+            dem_text.encode("utf-8")
+        )
+        handle.attrs["decoding_dem_sha256"] = handle.attrs["raw_dem_sha256"]
+        handle.attrs["source_type"] = "imported-shot-data"
+        handle.attrs["source_format"] = str(data_format)
+        handle.attrs["source_detector_data_sha256"] = detector_source_sha256
+        handle.attrs["source_observable_data_sha256"] = (
+            observable_source_sha256 or ""
+        )
+
+        handle.create_dataset(
+            "syndromes",
+            shape=(shots, num_detectors),
+            chunks=(row_chunk, num_detectors),
+            dtype=np.bool_,
+            compression="gzip",
+            shuffle=True,
+        )
+        handle.create_dataset(
+            "observables",
+            shape=(shots, num_observables),
+            chunks=(row_chunk, num_observables),
+            dtype=np.bool_,
+            compression="gzip",
+            shuffle=True,
+        )
+        handle.create_dataset(
+            "split",
+            shape=(shots,),
+            chunks=(row_chunk,),
+            dtype=np.uint8,
+            compression="gzip",
+            shuffle=True,
+        )
+        handle.create_dataset("circuit", data="", dtype=string_dtype)
+        handle.create_dataset(
+            "detector_error_model",
+            data=dem_text,
+            dtype=string_dtype,
+        )
+        handle.create_dataset(
+            "decoding_detector_error_model",
+            data=dem_text,
+            dtype=string_dtype,
+        )
+        metadata_value = {
+            "source": {
+                "type": "imported-shot-data",
+                "detector_data_path": str(detector_source),
+                "detector_data_sha256": detector_source_sha256,
+                "observable_data_path": (
+                    str(observable_source)
+                    if observable_source is not None
+                    else None
+                ),
+                "observable_data_sha256": observable_source_sha256,
+                "format": str(data_format),
+            },
+            "format": _DATASET_FORMAT,
+            "num_detectors": num_detectors,
+            "num_observables": num_observables,
+            "num_error_mechanisms": int(len(mechanisms["probabilities"])),
+            "split_labels": {
+                "0": "train",
+                "1": "validation",
+                "2": "test",
+            },
+        }
+        handle.create_dataset(
+            "metadata_json",
+            data=json.dumps(metadata_value, sort_keys=True),
+            dtype=string_dtype,
+        )
+
+        mechanism_group = handle.create_group("error_mechanisms")
+        for name, values in mechanisms.items():
+            mechanism_group.create_dataset(
+                name,
+                data=values,
+                compression="gzip",
+                shuffle=True,
+            )
+        handle.create_dataset(
+            "priors",
+            data=mechanisms["probabilities"],
+            compression="gzip",
+            shuffle=True,
+        )
+
+        cells = num_detectors * len(mechanisms["probabilities"])
+        obs_cells = num_observables * len(mechanisms["probabilities"])
+        if (
+            int(dense_matrix_max_cells) > 0
+            and cells <= int(dense_matrix_max_cells)
+            and obs_cells <= int(dense_matrix_max_cells)
+        ):
+            check_matrix, obs_matrix = _dense_mechanism_matrices(
+                mechanisms,
+                num_detectors=num_detectors,
+                num_observables=num_observables,
+            )
+            handle.create_dataset(
+                "check_matrix",
+                data=check_matrix,
+                compression="gzip",
+                shuffle=True,
+            )
+            handle.create_dataset(
+                "obs_matrix",
+                data=obs_matrix,
+                compression="gzip",
+                shuffle=True,
+            )
+            handle.attrs["dense_mechanism_matrices"] = True
+        else:
+            handle.attrs["dense_mechanism_matrices"] = False
+
+        return handle
+    except Exception:
+        handle.close()
+        if output_path.exists():
+            output_path.unlink()
+        raise
+
+
+def _b8_shot_count(path: Path, bits_per_shot: int) -> int:
+    bytes_per_shot = (int(bits_per_shot) + 7) // 8
+    if bytes_per_shot < 1:
+        raise ValueError("bit-packed shot data must have at least one bit")
+    size = path.stat().st_size
+    if size % bytes_per_shot:
+        raise ValueError(
+            f"{path} has {size} bytes, not divisible by "
+            f"{bytes_per_shot} bytes per shot"
+        )
+    return size // bytes_per_shot
+
+
+def _write_b8_import(
+    *,
+    handle,
+    detector_path: Path,
+    observable_path: Path | None,
+    num_detectors: int,
+    num_observables: int,
+    shots: int,
+    chunk_size: int,
+    seed: int,
+    train_fraction: float,
+    validation_fraction: float,
+) -> None:
+    syndromes = handle["syndromes"]
+    observables = handle["observables"]
+    split = handle["split"]
+
+    if observable_path is None:
+        bits_per_shot = num_detectors + num_observables
+        bytes_per_shot = (bits_per_shot + 7) // 8
+        with detector_path.open("rb") as combined:
+            for chunk_index, start in enumerate(
+                range(0, shots, int(chunk_size))
+            ):
+                count = min(int(chunk_size), shots - start)
+                packed = np.fromfile(
+                    combined,
+                    dtype=np.uint8,
+                    count=count * bytes_per_shot,
+                ).reshape((count, bytes_per_shot))
+                unpacked = np.unpackbits(
+                    packed,
+                    axis=1,
+                    bitorder="little",
+                )[:, :bits_per_shot]
+                syndromes[start : start + count] = unpacked[:, :num_detectors]
+                observables[start : start + count] = unpacked[:, num_detectors:]
+                split[start : start + count] = _split_labels(
+                    count,
+                    seed=seed,
+                    chunk_index=chunk_index,
+                    train_fraction=train_fraction,
+                    validation_fraction=validation_fraction,
+                )
+    else:
+        det_bytes = (num_detectors + 7) // 8
+        obs_bytes = (num_observables + 7) // 8
+        with (
+            detector_path.open("rb") as det_handle,
+            observable_path.open("rb") as obs_handle,
+        ):
+            for chunk_index, start in enumerate(
+                range(0, shots, int(chunk_size))
+            ):
+                count = min(int(chunk_size), shots - start)
+                det_packed = np.fromfile(
+                    det_handle,
+                    dtype=np.uint8,
+                    count=count * det_bytes,
+                ).reshape((count, det_bytes))
+                obs_packed = np.fromfile(
+                    obs_handle,
+                    dtype=np.uint8,
+                    count=count * obs_bytes,
+                ).reshape((count, obs_bytes))
+                syndromes[start : start + count] = np.unpackbits(
+                    det_packed,
+                    axis=1,
+                    bitorder="little",
+                )[:, :num_detectors]
+                observables[start : start + count] = np.unpackbits(
+                    obs_packed,
+                    axis=1,
+                    bitorder="little",
+                )[:, :num_observables]
+                split[start : start + count] = _split_labels(
+                    count,
+                    seed=seed,
+                    chunk_index=chunk_index,
+                    train_fraction=train_fraction,
+                    validation_fraction=validation_fraction,
+                )
+
+
+def import_qec_dataset(
+    output_path: str,
+    *,
+    dem_path: str,
+    detector_data_path: str,
+    data_format: str = "dets",
+    observable_data_path: str | None = None,
+    seed: int = 1234,
+    chunk_size: int = 10000,
+    train_fraction: float = 0.8,
+    validation_fraction: float = 0.1,
+    dense_matrix_max_cells: int = 20_000_000,
+) -> dict[str, Any]:
+    """Import external detector/observable shots into the Aegis HDF5 format."""
+
+    h5py, stim = _require_dependencies()
+    del h5py
+    _validate_split_fractions(train_fraction, validation_fraction)
+    if int(chunk_size) < 1:
+        raise ValueError("chunk_size must be positive")
+
+    dem_source = Path(dem_path).resolve()
+    detector_source = Path(detector_data_path).resolve()
+    observable_source = (
+        Path(observable_data_path).resolve()
+        if observable_data_path is not None
+        else None
+    )
+    for path in [dem_source, detector_source]:
+        if not path.is_file():
+            raise FileNotFoundError(path)
+    if observable_source is not None and not observable_source.is_file():
+        raise FileNotFoundError(observable_source)
+
+    dem = stim.DetectorErrorModel.from_file(dem_source)
+    num_detectors = int(dem.num_detectors)
+    num_observables = int(dem.num_observables)
+    if num_detectors < 1:
+        raise ValueError("imported DEM must contain at least one detector")
+    if num_observables < 1:
+        raise ValueError(
+            "imported benchmark data needs at least one logical observable"
+        )
+
+    dem_text = str(dem)
+    dem_sha256 = _sha256_file(dem_source)
+    detector_sha256 = _sha256_file(detector_source)
+    observable_sha256 = (
+        _sha256_file(observable_source)
+        if observable_source is not None
+        else None
+    )
+
+    fmt = str(data_format).lower()
+    if fmt == "b8":
+        if observable_source is None:
+            shots = _b8_shot_count(
+                detector_source,
+                num_detectors + num_observables,
+            )
+        else:
+            detector_shots = _b8_shot_count(
+                detector_source,
+                num_detectors,
+            )
+            observable_shots = _b8_shot_count(
+                observable_source,
+                num_observables,
+            )
+            if detector_shots != observable_shots:
+                raise ValueError(
+                    "detector and observable b8 files have different shot counts"
+                )
+            shots = detector_shots
+        detector_values = None
+        observable_values = None
+    else:
+        if observable_source is None:
+            detector_values, observable_values = stim.read_shot_data_file(
+                path=str(detector_source),
+                format=fmt,
+                num_measurements=0,
+                num_detectors=num_detectors,
+                num_observables=num_observables,
+                separate_observables=True,
+            )
+        else:
+            detector_values = stim.read_shot_data_file(
+                path=str(detector_source),
+                format=fmt,
+                num_measurements=0,
+                num_detectors=num_detectors,
+                num_observables=0,
+            )
+            observable_values = stim.read_shot_data_file(
+                path=str(observable_source),
+                format=fmt,
+                num_measurements=0,
+                num_detectors=0,
+                num_observables=num_observables,
+            )
+        detector_values = np.asarray(detector_values, dtype=np.bool_)
+        observable_values = np.asarray(observable_values, dtype=np.bool_)
+        if detector_values.shape[0] != observable_values.shape[0]:
+            raise ValueError(
+                "detector and observable files have different shot counts"
+            )
+        shots = int(detector_values.shape[0])
+
+    if shots < 1:
+        raise ValueError("imported shot data is empty")
+
+    mechanisms = extract_dem_mechanisms(dem)
+    identity = _import_dataset_identity(
+        dem_sha256=dem_sha256,
+        detector_data_sha256=detector_sha256,
+        observable_data_sha256=observable_sha256,
+        data_format=fmt,
+        shots=shots,
+        seed=seed,
+        train_fraction=train_fraction,
+        validation_fraction=validation_fraction,
+    )
+
+    destination = Path(output_path).resolve()
+    handle = _create_imported_hdf5(
+        output_path=destination,
+        dem=dem,
+        dem_text=dem_text,
+        mechanisms=mechanisms,
+        shots=shots,
+        seed=seed,
+        chunk_size=chunk_size,
+        train_fraction=train_fraction,
+        validation_fraction=validation_fraction,
+        identity=identity,
+        detector_source=detector_source,
+        detector_source_sha256=detector_sha256,
+        observable_source=observable_source,
+        observable_source_sha256=observable_sha256,
+        data_format=fmt,
+        dense_matrix_max_cells=dense_matrix_max_cells,
+    )
+    try:
+        if fmt == "b8":
+            _write_b8_import(
+                handle=handle,
+                detector_path=detector_source,
+                observable_path=observable_source,
+                num_detectors=num_detectors,
+                num_observables=num_observables,
+                shots=shots,
+                chunk_size=chunk_size,
+                seed=seed,
+                train_fraction=train_fraction,
+                validation_fraction=validation_fraction,
+            )
+        else:
+            handle["syndromes"][:] = detector_values
+            handle["observables"][:] = observable_values
+            for chunk_index, start in enumerate(
+                range(0, shots, int(chunk_size))
+            ):
+                count = min(int(chunk_size), shots - start)
+                handle["split"][start : start + count] = _split_labels(
+                    count,
+                    seed=seed,
+                    chunk_index=chunk_index,
+                    train_fraction=train_fraction,
+                    validation_fraction=validation_fraction,
+                )
+
+        handle.attrs["written_shots"] = shots
+        handle.attrs["complete"] = True
+        handle.attrs["completed_utc"] = datetime.now(timezone.utc).isoformat()
+        handle.attrs["syndromes_sha256"] = _hash_bool_dataset(
+            handle["syndromes"]
+        )
+        handle.attrs["observables_sha256"] = _hash_bool_dataset(
+            handle["observables"]
+        )
+        handle.attrs["split_sha256"] = _hash_uint8_dataset(handle["split"])
+        handle.flush()
+
+        report = {
+            "schema_version": 1,
+            "format": _DATASET_FORMAT,
+            "path": str(destination),
+            "source_type": "imported-shot-data",
+            "source_format": fmt,
+            "complete": True,
+            "target_shots": shots,
+            "written_shots": shots,
+            "num_detectors": num_detectors,
+            "num_observables": num_observables,
+            "num_error_mechanisms": int(len(mechanisms["probabilities"])),
+            "identity_sha256": identity,
+            "raw_dem_sha256": str(handle.attrs["raw_dem_sha256"]),
+            "source_detector_data_sha256": detector_sha256,
+            "source_observable_data_sha256": observable_sha256,
+            "syndromes_sha256": str(handle.attrs["syndromes_sha256"]),
+            "observables_sha256": str(handle.attrs["observables_sha256"]),
+            "split_sha256": str(handle.attrs["split_sha256"]),
+            "dense_mechanism_matrices": bool(
+                handle.attrs["dense_mechanism_matrices"]
+            ),
+        }
+    except Exception:
+        handle.close()
+        if destination.exists():
+            destination.unlink()
+        raise
+    else:
+        handle.close()
+
+    report["file_sha256"] = _sha256_file(destination)
+    report["bytes"] = int(destination.stat().st_size)
+    return report
