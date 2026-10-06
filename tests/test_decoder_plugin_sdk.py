@@ -168,3 +168,22 @@ def test_builtin_decoder_passes_conformance_suite():
     assert result["checks"]["compiled_batch"]["passed"] is True
     assert result["checks"]["file_roundtrip"]["passed"] is True
     assert result["checks"]["multiprocessing_pickle"]["passed"] is True
+
+
+def test_inherited_unimplemented_compile_falls_back_to_file_contract():
+    class FileDecoderWithStub(_FileOnlyDecoder):
+        def compile_decoder_for_dem(self, *, dem):
+            del dem
+            raise NotImplementedError
+
+    decoder = normalize_decoder_plugin(
+        "file-with-stub",
+        FileDecoderWithStub(),
+    )
+    dets = np.asarray([[0], [1], [1], [0]], dtype=np.uint8)
+    predictions = decoder.compile_decoder_for_dem(
+        dem=_known_dem()
+    ).decode_shots_bit_packed(
+        bit_packed_detection_event_data=dets
+    )
+    np.testing.assert_array_equal(predictions, dets)
