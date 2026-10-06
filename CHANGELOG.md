@@ -4,6 +4,10 @@ This file records user-visible changes to Aegis QEC.
 
 ## Unreleased
 
+### Paired decoder inference
+
+Fixed-dataset evaluations now report paired logical-failure contingency counts, left-minus-right error-rate differences with 95 percent intervals, and continuity-corrected asymptotic McNemar p-values.
+
 ### Fixed-dataset decoder evaluation
 
 Added `aegis dataset evaluate` for paired decoder comparison on identical stored syndrome rows. Evaluation artifacts hash the exact selected detector and observable subset and report logical-error intervals, throughput, and pairwise decoder disagreement.
