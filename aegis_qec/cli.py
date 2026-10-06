@@ -447,6 +447,48 @@ def _explain(args: argparse.Namespace) -> int:
     return 0
 
 
+def _dataset_import(args: argparse.Namespace) -> int:
+    from aegis_qec.dataset import import_qec_dataset
+
+    try:
+        report = import_qec_dataset(
+            args.out,
+            dem_path=args.dem,
+            detector_data_path=args.shots,
+            data_format=args.format,
+            observable_data_path=args.observables,
+            seed=args.seed,
+            chunk_size=args.chunk_size,
+            train_fraction=args.train_fraction,
+            validation_fraction=args.validation_fraction,
+            dense_matrix_max_cells=args.dense_matrix_max_cells,
+        )
+    except (FileExistsError, OSError, RuntimeError, ValueError) as exc:
+        print(f"Dataset import could not run: {exc}", file=sys.stderr)
+        return 2
+
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 0
+
+    print("Aegis QEC imported dataset")
+    print(f"Path: {report['path']}")
+    print(f"Source format: {report['source_format']}")
+    print(f"Shots: {report['written_shots']}")
+    print(
+        f"Detectors: {report['num_detectors']}; "
+        f"observables: {report['num_observables']}"
+    )
+    print(f"Dataset identity: {report['identity_sha256']}")
+    print(f"Detector source SHA-256: {report['source_detector_data_sha256']}")
+    if report.get("source_observable_data_sha256"):
+        print(
+            "Observable source SHA-256: "
+            f"{report['source_observable_data_sha256']}"
+        )
+    return 0
+
+
 def _dataset_generate(args: argparse.Namespace) -> int:
     from aegis_qec.dataset import generate_qec_dataset
 
@@ -881,6 +923,46 @@ def _parser() -> argparse.ArgumentParser:
     )
     dataset_sub = dataset.add_subparsers(dest="dataset_command")
 
+    dataset_import = dataset_sub.add_parser(
+        "import",
+        help="Import external Stim detector/observable shots into Aegis HDF5.",
+    )
+    dataset_import.add_argument("--dem", required=True, help="Stim DEM file.")
+    dataset_import.add_argument(
+        "--shots",
+        required=True,
+        help=(
+            "Detector-shot file. Without --observables it must contain both "
+            "detectors and observables in the selected Stim format."
+        ),
+    )
+    dataset_import.add_argument(
+        "--observables",
+        help="Optional separate logical-observable shot file.",
+    )
+    dataset_import.add_argument(
+        "--format",
+        default="dets",
+        help="Stim shot-data format, for example dets, 01, or b8.",
+    )
+    dataset_import.add_argument("--out", required=True, help="HDF5 output path.")
+    dataset_import.add_argument("--seed", type=int, default=1234)
+    dataset_import.add_argument("--chunk-size", type=int, default=10000)
+    dataset_import.add_argument("--train-fraction", type=float, default=0.8)
+    dataset_import.add_argument(
+        "--validation-fraction",
+        type=float,
+        default=0.1,
+    )
+    dataset_import.add_argument(
+        "--dense-matrix-max-cells",
+        type=int,
+        default=20000000,
+        help="Skip dense mechanism matrices above this many cells. Use 0 to disable.",
+    )
+    dataset_import.add_argument("--json", action="store_true")
+    dataset_import.set_defaults(handler=_dataset_import)
+
     dataset_generate = dataset_sub.add_parser(
         "generate",
         help="Generate or resume an HDF5 decoder-training/benchmark dataset.",
@@ -1023,7 +1105,8 @@ def main(argv: list[str] | None = None) -> int:
         print(
             "\nTry 'aegis doctor', then 'aegis study', 'aegis campaign', "
             "'aegis compare', 'aegis scaling', 'aegis explain', "
-            "'aegis dataset generate', 'aegis dataset evaluate', "
+            "'aegis dataset generate', 'aegis dataset import', "
+            "'aegis dataset evaluate', "
             "'aegis templates', 'aegis experiment', "
             "'aegis validate-decoder', 'aegis predict', or 'aegis gui'."
         )
