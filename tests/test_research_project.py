@@ -494,3 +494,42 @@ def test_collect_project_evidence_refuses_tampered_run_file(tmp_path):
     with pytest.raises(ValueError, match="hash mismatch"):
         collect_project_evidence(str(project), run["path"])
     assert project.read_bytes() == before
+
+
+def test_evidence_collection_rejects_changed_experiment_definition(tmp_path):
+    experiment = tmp_path / "experiment.json"
+    experiment.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "name": "manifest-integrity",
+                "operation": "study",
+                "parameters": {
+                    "distances": [3],
+                    "physical_error_rates": [0.02],
+                    "shots": 8,
+                    "basis": "x",
+                    "seed": 1234,
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    project = tmp_path / "project.json"
+    _write_project(project)
+    value = json.loads(project.read_text(encoding="utf-8"))
+    value["experiments"] = [{"id": "tiny", "manifest": experiment.name}]
+    project.write_text(json.dumps(value) + "\n", encoding="utf-8")
+    run = run_research_project(
+        str(project),
+        workspace=str(tmp_path / "workspace"),
+    )
+    before = project.read_bytes()
+    definition = json.loads(experiment.read_text(encoding="utf-8"))
+    definition["parameters"]["shots"] = 100
+    experiment.write_text(json.dumps(definition) + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="executed experiment manifest changed"):
+        collect_project_evidence(str(project), run["path"])
+    assert project.read_bytes() == before
