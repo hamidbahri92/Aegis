@@ -1,0 +1,49 @@
+name: Aegis QEC - GitHub discoverability
+
+# Run manually from Actions. Preview is credential-free; Apply needs one
+# repository-scoped token stored in Actions secret AEGIS_REPO_ADMIN_TOKEN.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Preview only, or apply description, website and GitHub topics'
+        type: choice
+        options:
+          - preview
+          - apply
+        default: preview
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aegis-qec-discoverability
+  cancel-in-progress: false
+
+jobs:
+  update-metadata:
+    # Never expose the admin secret to a branch other than protected main.
+    if: github.repository == 'hamidbahri92/Aegis' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Validate updater locally
+        run: python -m unittest discover -s tests -p test_repository_discoverability.py -v
+      - name: Preview proposed repository metadata (no admin secret)
+        if: inputs.mode == 'preview'
+        env:
+          AEGIS_DISCOVERABILITY_MODE: preview
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/update_repository_discoverability.py
+      - name: Apply and verify repository metadata
+        if: inputs.mode == 'apply'
+        env:
+          AEGIS_DISCOVERABILITY_MODE: apply
+          GITHUB_TOKEN: ${{ github.token }}
+          AEGIS_REPO_ADMIN_TOKEN: ${{ secrets.AEGIS_REPO_ADMIN_TOKEN }}
+        run: python scripts/update_repository_discoverability.py
