@@ -227,3 +227,24 @@ confirmation manifests.
 
 Researchers remain responsible for multiplicity, model-selection uncertainty,
 external validity, and appropriate independent confirmation.
+
+
+## GUI research workbench
+
+Install the GUI extra and run `aegis gui`. Open the **Research lifecycle**
+tab, then choose **Adaptive discovery**. Create a starter definition,
+run or resume it, inspect the Pareto candidates, and download the independent
+confirmation manifests.
+
+The **Projects and evidence** section can freeze and audit a project and run
+its declared experiments. **Submission packages** can generate a LaTeX
+manuscript, reviewer roadmap, checksums, and a ZIP. Drafts that are internally
+consistent can still have a separate submission-readiness failure.
+
+Aegis discovery checkpoints are written using an atomic file replacement.
+On resume, the saved candidate identities, manifests, and successful run-record
+hashes are rechecked before any new evaluation occurs. A modified evidence
+record stops resume rather than silently changing the scientific history.
+
+The GUI does not convert an exploratory claim into confirmation. Researchers
+must still confirm candidate choices with a new protocol and independent data.
