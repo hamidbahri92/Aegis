@@ -93,6 +93,11 @@ def _anonymize_project(project: dict[str, Any]) -> dict[str, Any]:
             experiment["manifest"] = Path(
                 str(experiment["manifest"])
             ).name
+    for discovery in value.get("discoveries", []):
+        if isinstance(discovery, dict) and discovery.get("manifest"):
+            discovery["manifest"] = Path(
+                str(discovery["manifest"])
+            ).name
     for artifact in value.get("artifacts", []):
         if isinstance(artifact, dict) and artifact.get("path"):
             artifact["path"] = Path(str(artifact["path"])).name
@@ -121,6 +126,11 @@ def _sanitize_audit(
         if experiment.get("manifest_path"):
             experiment["manifest_path"] = Path(
                 experiment["manifest_path"]
+            ).name
+    for discovery in value.get("discoveries", []):
+        if discovery.get("manifest_path"):
+            discovery["manifest_path"] = Path(
+                discovery["manifest_path"]
             ).name
     for bibliography in value.get("bibliography", []):
         if bibliography.get("path"):
@@ -444,8 +454,9 @@ Fast review path:
 2. Read CLAIM_EVIDENCE.md for claim-to-artifact traceability.
 3. Read audit.json for machine-readable evidence checks.
 4. Read REPRODUCE.md for verification commands.
-5. Inspect artifacts/ for declared evidence.
-6. Verify MANIFEST.json or checksums.sha256 before using artifacts.
+5. Inspect experiments/ and discoveries/ for the exact reviewed definitions.
+6. Inspect artifacts/ for declared evidence.
+7. Verify MANIFEST.json or checksums.sha256 before using artifacts.
 
 Scientific boundary:
 
@@ -632,6 +643,34 @@ def _copy_experiment_manifests(
         records.append(
             {
                 "id": experiment_id,
+                "packaged": str(target.relative_to(root.parent)),
+                "sha256": _sha256_file(target),
+                "bytes": target.stat().st_size,
+            }
+        )
+    return records
+
+
+def _copy_discovery_manifests(
+    project_path: Path,
+    project: dict[str, Any],
+    root: Path,
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    root.mkdir(parents=True, exist_ok=True)
+    for discovery in project.get("discoveries", []):
+        discovery_id = str(discovery["id"])
+        source = _project_relative_path(
+            project_path,
+            str(discovery["manifest"]),
+        )
+        if not source.is_file():
+            continue
+        target = root / (discovery_id + source.suffix)
+        shutil.copy2(source, target)
+        records.append(
+            {
+                "id": discovery_id,
                 "packaged": str(target.relative_to(root.parent)),
                 "sha256": _sha256_file(target),
                 "bytes": target.stat().st_size,
@@ -871,6 +910,11 @@ def _redacted_protocol_lock(path: Path) -> dict[str, Any]:
             experiment["manifest"] = Path(
                 str(experiment["manifest"])
             ).name
+    for discovery in protocol.get("discoveries", []):
+        if isinstance(discovery, dict) and discovery.get("manifest"):
+            discovery["manifest"] = Path(
+                str(discovery["manifest"])
+            ).name
 
     return {
         "schema_version": value.get("schema_version", 1),
@@ -1054,10 +1098,12 @@ def build_submission_package(
     manuscript = destination / "manuscript"
     artifacts = destination / "artifacts"
     experiments = destination / "experiments"
+    discoveries = destination / "discoveries"
     dataset_metadata = destination / "dataset-metadata"
     manuscript.mkdir()
     artifacts.mkdir()
     experiments.mkdir()
+    discoveries.mkdir()
     dataset_metadata.mkdir()
 
     packaged_project = (
@@ -1119,6 +1165,15 @@ def build_submission_package(
     )
     (destination / "experiment-inventory.json").write_text(
         json.dumps(experiment_inventory, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    discovery_inventory = _copy_discovery_manifests(
+        source,
+        project,
+        discoveries,
+    )
+    (destination / "discovery-inventory.json").write_text(
+        json.dumps(discovery_inventory, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
 
@@ -1198,6 +1253,7 @@ def build_submission_package(
         "submission_readiness": readiness,
         "anonymized": bool(anonymize),
         "experiment_count": len(experiment_inventory),
+        "discovery_count": len(discovery_inventory),
         "croissant_count": len(croissant),
         "payload": payload,
     }
@@ -1236,6 +1292,7 @@ def build_submission_package(
         "compile": compile_result,
         "artifact_count": len(inventory),
         "experiment_count": len(experiment_inventory),
+        "discovery_count": len(discovery_inventory),
         "croissant_count": len(croissant),
         "claim_count": len(audit["claims"]),
     }

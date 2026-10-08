@@ -4,6 +4,14 @@ This file records user-visible changes to Aegis QEC.
 
 ## Unreleased
 
+### Exploratory adaptive discovery
+
+Added resumable random and evolutionary search over Aegis experiment-manifest parameters. Search dimensions and objectives use explicit JSON pointers, candidate experiments keep full run records, failures remain visible, and multi-objective results are reported as Pareto fronts.
+
+Evolutionary discovery uses non-dominated sorting, crowding-distance diversity, crossover, and bounded mutation. Completed assignments are cached in durable state and resume refuses changed search definitions or changed base experiments.
+
+Pareto candidates export fresh-seed, unexecuted confirmation manifests with optional higher-fidelity overrides. Discovery artifacts are explicitly labeled exploratory so search-selected evidence is not silently treated as independent confirmation.
+
 ### End-to-end research projects and publication packages
 
 Added versioned research-project manifests that connect research questions, hypotheses, experiment manifests, evidence artifacts, claims, and manuscript metadata.

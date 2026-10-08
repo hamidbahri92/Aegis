@@ -229,11 +229,13 @@ The output directory contains:
 - environment.json
 - artifact-inventory.json
 - experiment-inventory.json
+- discovery-inventory.json
 - croissant-inventory.json
 - MANIFEST.json
 - checksums.sha256
 - manuscript/
 - experiments/
+- discoveries/
 - artifacts/
 - dataset-metadata/
 
@@ -275,8 +277,8 @@ The strongest use of Aegis is to make those decisions explicit and auditable.
 
 ## Dataset contribution metadata
 
-When a declared artifact has kind §dataset§, Aegis can emit Croissant 1.0
-JSON-LD metadata into §dataset-metadata/<artifact-id>/croissant.json§.
+When a declared artifact has kind `dataset`, Aegis can emit Croissant 1.0
+JSON-LD metadata into `dataset-metadata/<artifact-id>/croissant.json`.
 
 A dataset artifact can declare:
 
@@ -299,8 +301,8 @@ responsible-data questionnaire or hosting requirements.
 
 ## Venue-aware readiness
 
-The project paper field can set §venue§ to §generic§, §joss§, §neurips§, or
-§neurips-ed§.
+The project paper field can set `venue` to `generic`, `joss`, `neurips`, or
+`neurips-ed`.
 
 The generated readiness report adds venue-focused checks while deliberately
 remaining a preparation aid rather than a promise of acceptance. Examples
@@ -310,3 +312,19 @@ methods, and Croissant metadata for dataset contributions.
 
 Venue policies change. Always compare the generated checklist to the current
 official call before submission.
+
+
+## Exploratory adaptive search
+
+Aegis discovery runs can be attached to the exploratory phase of a research
+project. Record the declared search space, objectives, budget, and selection
+rule in the protocol `search_plan`, preserve the generated
+`discovery.json` as evidence, and do not treat the selected Pareto candidate
+as independent confirmation.
+
+When a candidate is worth testing, use one of the unexecuted confirmation
+manifests exported by `aegis discover run`, place it in a confirmatory
+project, and freeze that confirmatory protocol before collecting fresh
+evidence.
+
+See [Discovery](DISCOVERY.md) for the search contract and statistical boundary.

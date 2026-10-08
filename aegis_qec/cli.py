@@ -684,6 +684,72 @@ def _verify_bundle(args: argparse.Namespace) -> int:
     return 0 if result["valid"] else 1
 
 
+def _discover_init(args: argparse.Namespace) -> int:
+    from aegis_qec.discovery import write_discovery_starter
+
+    try:
+        created = write_discovery_starter(
+            args.out,
+            overwrite=args.force,
+        )
+    except (FileExistsError, OSError, RuntimeError, ValueError) as exc:
+        print(f"Discovery starter could not be created: {exc}", file=sys.stderr)
+        return 2
+
+    print("Aegis QEC exploratory discovery project created")
+    print(f"Discovery: {created['discovery_path']}")
+    print(f"Base experiment: {created['base_experiment_path']}")
+    print(
+        f"Next: aegis discover run {created['discovery_path']} "
+        "--out research_out/discovery"
+    )
+    return 0
+
+
+def _discover_run(args: argparse.Namespace) -> int:
+    from aegis_qec.discovery import run_discovery
+
+    try:
+        report = run_discovery(
+            args.discovery,
+            output_dir=args.out,
+        )
+    except (
+        FileNotFoundError,
+        OSError,
+        RuntimeError,
+        TypeError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
+        print(f"Discovery search could not run: {exc}", file=sys.stderr)
+        return 2
+
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 0
+
+    print("Aegis QEC exploratory discovery")
+    print(f"Algorithm: {report['algorithm']}")
+    print(
+        f"Evaluated: {report['evaluated']} / {report['budget']} "
+        f"(success={report['successful']}, failed={report['failed']})"
+    )
+    print(f"Pareto candidates: {len(report['pareto_front'])}")
+    for rank, candidate in enumerate(report["pareto_front"], start=1):
+        print(
+            f"{rank}. {candidate['key']} "
+            f"objectives={json.dumps(candidate['objectives'], sort_keys=True)}"
+        )
+    print(f"Result: {report['path']}")
+    if report["confirmation_manifests"]:
+        print("Independent confirmation manifests:")
+        for item in report["confirmation_manifests"]:
+            print(f"  {item['rank']}. {item['path']}")
+    print(report["interpretation"])
+    return 0
+
+
 def _project_init(args: argparse.Namespace) -> int:
     from aegis_qec.project import write_research_project_template
 
@@ -747,7 +813,8 @@ def _project_audit(args: argparse.Namespace) -> int:
         print(
             f"Artifacts: {len(report['artifacts'])}; "
             f"claims: {len(report['claims'])}; "
-            f"experiments: {len(report['experiments'])}"
+            f"experiments: {len(report['experiments'])}; "
+            f"discoveries: {len(report.get('discoveries', []))}"
         )
         for error in report["errors"]:
             print(f"ERROR: {error}")
@@ -774,8 +841,14 @@ def _project_run(args: argparse.Namespace) -> int:
     print(f"SHA-256: {report['sha256']}")
     for experiment in report["experiments"]:
         print(
-            f"{experiment['id']}: "
+            f"Experiment {experiment['id']}: "
             f"{experiment['bundle']['path']}"
+        )
+    for discovery in report.get("discoveries", []):
+        print(
+            f"Discovery {discovery['id']}: "
+            f"{discovery['result_path']} "
+            f"(Pareto candidates={discovery['pareto_count']})"
         )
     return 0
 
@@ -802,6 +875,15 @@ def _paper_build(args: argparse.Namespace) -> int:
     print(f"ZIP: {report['zip_path']}")
     print(f"ZIP SHA-256: {report['zip_sha256']}")
     print(f"Audit valid: {'yes' if report['audit_valid'] else 'no'}")
+    print(
+        "Submission ready: "
+        + ("yes" if report.get("submission_ready") else "no")
+    )
+    for failure in report.get("submission_readiness", {}).get(
+        "failures",
+        [],
+    ):
+        print(f"Readiness: {failure['message']}")
     print(
         "PDF: "
         + (
@@ -1160,6 +1242,37 @@ def _parser() -> argparse.ArgumentParser:
     verify_bundle.add_argument("bundle", help="Path to an .aegis.zip research bundle.")
     verify_bundle.set_defaults(handler=_verify_bundle)
 
+    discover = sub.add_parser(
+        "discover",
+        help="Run transparent exploratory search over experiment parameters.",
+    )
+    discover_sub = discover.add_subparsers(dest="discover_command")
+
+    discover_init = discover_sub.add_parser(
+        "init",
+        help="Create a runnable multi-objective discovery starter.",
+    )
+    discover_init.add_argument(
+        "--out",
+        default="discovery.json",
+        help="Discovery configuration path.",
+    )
+    discover_init.add_argument("--force", action="store_true")
+    discover_init.set_defaults(handler=_discover_init)
+
+    discover_run = discover_sub.add_parser(
+        "run",
+        help="Run or resume an exploratory random/evolutionary search.",
+    )
+    discover_run.add_argument("discovery", help="Discovery configuration JSON.")
+    discover_run.add_argument(
+        "--out",
+        default="research_out/discovery",
+        help="Discovery workspace.",
+    )
+    discover_run.add_argument("--json", action="store_true")
+    discover_run.set_defaults(handler=_discover_run)
+
     project = sub.add_parser(
         "project",
         help="Create, freeze, run, and audit end-to-end research projects.",
@@ -1279,7 +1392,8 @@ def main(argv: list[str] | None = None) -> int:
             "\nTry 'aegis doctor', then 'aegis study', 'aegis campaign', "
             "'aegis compare', 'aegis scaling', 'aegis explain', "
             "'aegis dataset generate', 'aegis dataset evaluate', "
-            "'aegis templates', 'aegis experiment', 'aegis project init', "
+            "'aegis templates', 'aegis experiment', 'aegis discover init', "
+            "'aegis project init', "
             "'aegis paper build', 'aegis validate-decoder', "
             "'aegis predict', or 'aegis gui'."
         )

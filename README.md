@@ -310,6 +310,34 @@ Aegis will use Tectonic or latexmk when available, but manuscript-source generat
 
 See [End-to-end research projects](https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_PROJECTS.md).
 
+## Exploratory multi-objective discovery
+
+Aegis can search experiment parameters without leaving the reproducibility
+system:
+
+```bash
+aegis discover init --out discovery.json
+aegis discover run discovery.json --out research_out/discovery
+```
+
+Each candidate is a normal Aegis experiment with its own manifest and run
+record. Random search is available as a transparent baseline; the evolutionary
+mode uses non-dominated sorting, crowding-distance diversity, crossover, and
+bounded mutation.
+
+Multiple objectives remain visible as a Pareto front instead of being hidden
+behind one undocumented weighted score. Failed candidates are preserved in the
+search record.
+
+Discovery is explicitly exploratory. Aegis writes fresh-seed, unexecuted
+confirmation manifests for Pareto candidates so the selected design can be
+tested under a frozen confirmatory protocol instead of reusing search-selected
+evidence as confirmation.
+
+See [Discovery](https://github.com/hamidbahri92/Aegis/blob/main/docs/DISCOVERY.md)
+for parameter JSON pointers, objective definitions, durable resume, Pareto
+semantics, and the exploration/confirmation boundary.
+
 ## Benchmarking and validation
 
 Aegis deliberately separates different kinds of evidence because decoder-kernel speed, end-to-end application latency, structural correctness, and circuit-level logical performance are not interchangeable.
@@ -387,6 +415,8 @@ aegis verify-bundle
 aegis dataset generate
 aegis dataset inspect
 aegis dataset evaluate
+aegis discover init
+aegis discover run
 aegis project init
 aegis project audit
 aegis paper build
@@ -484,6 +514,7 @@ See [Contributing](https://github.com/hamidbahri92/Aegis/blob/main/CONTRIBUTING.
 - [Decoder Plug-in SDK](https://github.com/hamidbahri92/Aegis/blob/main/docs/DECODER_PLUGINS.md) — third-party decoder registration, interoperability contract, conformance tests, and deployment into campaigns.
 - [Datasets](https://github.com/hamidbahri92/Aegis/blob/main/docs/DATASETS.md) — resumable HDF5 syndrome datasets, deterministic splits, error-mechanism incidence, and integrity verification.
 - [Research Projects](https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_PROJECTS.md) — protocol freezing, claim-to-evidence audits, LaTeX manuscript generation, blind-review packaging, and reviewer verification.
+- [Discovery](https://github.com/hamidbahri92/Aegis/blob/main/docs/DISCOVERY.md) — resumable random/evolutionary experiment search, Pareto fronts, and independent confirmation manifests.
 
 ## Project scope
 

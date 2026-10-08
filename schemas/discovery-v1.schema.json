@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/hamidbahri92/Aegis/main/schemas/discovery-v1.schema.json",
+  "title": "Aegis QEC discovery search v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "base_experiment",
+    "algorithm",
+    "budget",
+    "parameters",
+    "objectives"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "base_experiment": {
+      "type": "string",
+      "minLength": 1
+    },
+    "algorithm": {
+      "enum": [
+        "random",
+        "evolutionary"
+      ]
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "budget": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "population_size": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "mutation_probability": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "parameters": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "type"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^/"
+          },
+          "type": {
+            "enum": [
+              "choice",
+              "int",
+              "float"
+            ]
+          },
+          "values": {
+            "type": "array",
+            "minItems": 1
+          },
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          },
+          "step": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "scale": {
+            "enum": [
+              "linear",
+              "log"
+            ]
+          },
+          "mutation_scale": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "objectives": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "json_pointer",
+          "direction"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "json_pointer": {
+            "type": "string",
+            "pattern": "^/"
+          },
+          "direction": {
+            "enum": [
+              "minimize",
+              "maximize"
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "confirmation_overrides": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

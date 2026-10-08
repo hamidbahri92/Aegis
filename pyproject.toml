@@ -27,6 +27,8 @@ keywords = [
   "research-platform",
   "reproducible-research",
   "research-software",
+  "adaptive-experiment-design",
+  "multi-objective-optimization",
   "scientific-workflow",
   "research-reproducibility",
   "latex",
@@ -79,6 +81,7 @@ Changelog = "https://github.com/hamidbahri92/Aegis/blob/main/CHANGELOG.md"
 Citation = "https://github.com/hamidbahri92/Aegis/blob/main/CITATION.cff"
 Research = "https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_GUIDE.md"
 "Decoder SDK" = "https://github.com/hamidbahri92/Aegis/blob/main/docs/DECODER_PLUGINS.md"
+Discovery = "https://github.com/hamidbahri92/Aegis/blob/main/docs/DISCOVERY.md"
 "Research Projects" = "https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_PROJECTS.md"
 PyPI = "https://pypi.org/project/aegis-qec/"
 
