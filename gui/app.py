@@ -45,6 +45,264 @@ def _percentile(samples, fraction):
     return ordered[index]
 
 
+def _research_workbench():
+    """Operate research-project and discovery workflows from the local GUI."""
+
+    from pathlib import Path
+
+    st.header("Research lifecycle")
+    st.caption(
+        "From a question to frozen protocols, tracked evidence, exploratory "
+        "discovery, and reviewer-ready manuscript sources."
+    )
+    project_tab, discovery_tab, submission_tab = st.tabs(
+        ["Projects and evidence", "Adaptive discovery", "Submission packages"]
+    )
+
+    with project_tab:
+        st.subheader("Start a research project")
+        with st.form("aegis-project-create"):
+            new_project = st.text_input(
+                "New project file", value="research-project.json"
+            )
+            author = st.text_input("Author name", value="Researcher")
+            overwrite_project = st.checkbox(
+                "Replace existing starter files", value=False
+            )
+            create_project = st.form_submit_button("Create starter project")
+        if create_project:
+            try:
+                from aegis_qec.project import write_research_project_template
+
+                created = write_research_project_template(
+                    new_project,
+                    author_name=author,
+                    overwrite=overwrite_project,
+                )
+                st.success("Research project and runnable experiment created.")
+                st.json(created)
+            except (OSError, RuntimeError, ValueError) as exc:
+                st.error(f"Creation failed: {type(exc).__name__}: {exc}")
+
+        st.subheader("Run or review an existing project")
+        project_file = st.text_input(
+            "Project manifest path", value="research-project.json",
+            key="aegis-project-path",
+        )
+        project_workspace = st.text_input(
+            "Experiment workspace", value="research_out/project",
+        )
+        freeze_col, audit_col, run_col = st.columns(3)
+        with freeze_col:
+            freeze_clicked = st.button("Freeze protocol")
+        with audit_col:
+            audit_clicked = st.button("Audit evidence")
+        with run_col:
+            run_clicked = st.button("Run experiments")
+        if freeze_clicked:
+            try:
+                from aegis_qec.project import freeze_research_protocol
+
+                record = freeze_research_protocol(project_file)
+                st.success("Scientific protocol locked.")
+                st.json(record)
+            except (OSError, RuntimeError, ValueError) as exc:
+                st.error(f"Freeze failed: {type(exc).__name__}: {exc}")
+        if audit_clicked:
+            try:
+                from aegis_qec.project import audit_research_project
+
+                report = audit_research_project(project_file)
+                if report["valid"]:
+                    st.success("Declared claim/evidence audit passed.")
+                else:
+                    st.error("Declared claim/evidence audit failed.")
+                st.json(report)
+            except (OSError, RuntimeError, ValueError) as exc:
+                st.error(f"Audit failed: {type(exc).__name__}: {exc}")
+        if run_clicked:
+            try:
+                from aegis_qec.project import run_research_project
+
+                with st.spinner("Executing declared experiments"):
+                    report = run_research_project(
+                        project_file,
+                        workspace=project_workspace,
+                    )
+                st.success("Experiment run record and bundles written.")
+                st.json(report)
+            except (OSError, RuntimeError, ValueError) as exc:
+                st.error(f"Run failed: {type(exc).__name__}: {exc}")
+
+    with discovery_tab:
+        st.subheader("Explore a transparent multi-objective search")
+        st.info(
+            "Discovery is exploratory. Selected Pareto candidates need "
+            "fresh-data confirmation before confirmatory claims."
+        )
+        with st.form("aegis-discovery-create"):
+            starter_path = st.text_input(
+                "New discovery configuration", value="discovery.json"
+            )
+            overwrite_discovery = st.checkbox(
+                "Replace existing discovery starter", value=False
+            )
+            create_discovery = st.form_submit_button("Create discovery starter")
+        if create_discovery:
+            try:
+                from aegis_qec.discovery import write_discovery_starter
+
+                created = write_discovery_starter(
+                    starter_path,
+                    overwrite=overwrite_discovery,
+                )
+                st.success("Search definition and base experiment created.")
+                st.json(created)
+            except (OSError, RuntimeError, ValueError) as exc:
+                st.error(f"Starter failed: {type(exc).__name__}: {exc}")
+
+        with st.form("aegis-discovery-run"):
+            discovery_file = st.text_input(
+                "Discovery configuration path", value="discovery.json"
+            )
+            discovery_workspace = st.text_input(
+                "Search workspace", value="research_out/discovery"
+            )
+            start_discovery = st.form_submit_button("Run or resume discovery")
+        if start_discovery:
+            try:
+                from aegis_qec.discovery import run_discovery
+
+                with st.spinner("Evaluating search candidates"):
+                    report = run_discovery(
+                        discovery_file,
+                        output_dir=discovery_workspace,
+                    )
+                st.session_state["aegis-discovery-report"] = report
+            except (OSError, RuntimeError, ValueError) as exc:
+                st.error(f"Discovery failed: {type(exc).__name__}: {exc}")
+
+        if st.button("Load saved discovery summary"):
+            path = Path(discovery_workspace) / "discovery.json"
+            try:
+                st.session_state["aegis-discovery-report"] = json.loads(
+                    path.read_text(encoding="utf-8")
+                )
+            except (OSError, ValueError) as exc:
+                st.error(f"Could not load discovery record: {exc}")
+
+        report = st.session_state.get("aegis-discovery-report")
+        if report:
+            measures = st.columns(3)
+            measures[0].metric("Evaluated", report.get("evaluated", 0))
+            measures[1].metric("Successful", report.get("successful", 0))
+            measures[2].metric("Pareto designs", len(report.get("pareto_front", [])))
+            front_rows = []
+            for item in report.get("pareto_front", []):
+                front_rows.append(
+                    {
+                        "candidate": item["key"],
+                        **item["assignment"],
+                        **item["objectives"],
+                    }
+                )
+            if front_rows:
+                st.dataframe(front_rows, use_container_width=True, hide_index=True)
+            st.caption(report.get("interpretation", ""))
+            st.download_button(
+                "Download discovery summary JSON",
+                data=(json.dumps(report, indent=2, sort_keys=True) + "\n").encode(
+                    "utf-8"
+                ),
+                file_name="discovery.json",
+                mime="application/json",
+            )
+            st.subheader("Independent confirmation manifests")
+            for item in report.get("confirmation_manifests", []):
+                confirm_path = Path(item["path"])
+                if confirm_path.is_file():
+                    st.download_button(
+                        f"Download candidate {item['rank']} confirmation manifest",
+                        data=confirm_path.read_bytes(),
+                        file_name=confirm_path.name,
+                        mime="application/json",
+                        key=f"confirm-{item['rank']}-{item['candidate']}",
+                    )
+
+    with submission_tab:
+        st.subheader("Build an auditable manuscript and evidence package")
+        with st.form("aegis-submission-build"):
+            paper_project = st.text_input(
+                "Research project manifest", value="research-project.json"
+            )
+            submission_dir = st.text_input(
+                "Submission output directory", value="submission"
+            )
+            compile_mode = st.selectbox(
+                "LaTeX PDF compilation",
+                ["auto", "never", "required"],
+            )
+            anonymous = st.checkbox("Blind-review package", value=False)
+            require_lock = st.checkbox(
+                "Require frozen protocol", value=True
+            )
+            allow_invalid = st.checkbox(
+                "Allow incomplete draft evidence", value=False
+            )
+            force = st.checkbox(
+                "Overwrite existing submission output", value=False
+            )
+            build_clicked = st.form_submit_button("Build submission package")
+
+        if build_clicked:
+            try:
+                from aegis_qec.paper import build_submission_package
+
+                with st.spinner("Generating the manuscript and reviewer package"):
+                    package = build_submission_package(
+                        paper_project,
+                        output_dir=submission_dir,
+                        compile_mode=compile_mode,
+                        require_protocol_lock=require_lock,
+                        allow_invalid=allow_invalid,
+                        anonymize=anonymous,
+                        overwrite=force,
+                    )
+                st.session_state["aegis-submission-package"] = package
+            except (OSError, RuntimeError, ValueError) as exc:
+                st.error(f"Package build failed: {type(exc).__name__}: {exc}")
+
+        package = st.session_state.get("aegis-submission-package")
+        if package:
+            st.metric(
+                "Scientific submission readiness",
+                "Ready" if package.get("submission_ready") else "Needs work",
+            )
+            st.write("Package:", package["zip_path"])
+            for issue in package.get("submission_readiness", {}).get(
+                "failures", []
+            ):
+                st.warning(issue["message"])
+            zip_path = Path(package["zip_path"])
+            if zip_path.is_file():
+                if zip_path.stat().st_size <= 64 * 1024 * 1024:
+                    st.download_button(
+                        "Download reviewer ZIP",
+                        data=zip_path.read_bytes(),
+                        file_name=zip_path.name,
+                        mime="application/zip",
+                    )
+                else:
+                    st.info(
+                        "ZIP exceeds the 64 MB in-app download threshold; "
+                        "retrieve it from the shown local output path."
+                    )
+        st.caption(
+            "An intact ZIP is not proof of valid scientific conclusions or "
+            "acceptance by a journal. The authors remain responsible for review."
+        )
+
+
 def main():
     if not STREAMLIT_OK:
         print("Aegis QEC GUI requires the optional GUI extra.")
@@ -117,8 +375,15 @@ def main():
         st.error(f"Could not construct this experiment: {type(exc).__name__}: {exc}")
         return 1
 
-    decode_tab, latency_tab, sweep_tab, study_tab, explain_tab = st.tabs(
-        ["Decode", "Latency", "Validation sweep", "Circuit study", "Explain one shot"]
+    decode_tab, latency_tab, sweep_tab, study_tab, explain_tab, research_tab = st.tabs(
+        [
+            "Decode",
+            "Latency",
+            "Validation sweep",
+            "Circuit study",
+            "Explain one shot",
+            "Research lifecycle",
+        ]
     )
 
     with decode_tab:
@@ -528,6 +793,9 @@ def main():
                     file_name="aegis_shot_explanation.json",
                     mime="application/json",
                 )
+
+    with research_tab:
+        _research_workbench()
 
     st.divider()
     st.caption(
