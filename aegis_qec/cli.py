@@ -823,6 +823,30 @@ def _project_audit(args: argparse.Namespace) -> int:
     return 0 if report["valid"] else 1
 
 
+def _project_collect(args: argparse.Namespace) -> int:
+    from aegis_qec.project import collect_project_evidence
+
+    try:
+        report = collect_project_evidence(
+            args.project,
+            args.run_record,
+        )
+    except (OSError, RuntimeError, ValueError, KeyError) as exc:
+        print(f"Evidence collection failed: {exc}", file=sys.stderr)
+        return 2
+
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+    else:
+        print("Aegis QEC research evidence collection")
+        print(f"Project: {report['project_path']}")
+        print(f"New pinned artifacts: {len(report['added'])}")
+        for identifier in report["added"]:
+            print(f"  {identifier}")
+        print("No result claims were created automatically.")
+    return 0
+
+
 def _project_run(args: argparse.Namespace) -> int:
     from aegis_qec.project import run_research_project
 
@@ -1315,6 +1339,18 @@ def _parser() -> argparse.ArgumentParser:
         help="Workspace for experiment outputs and bundles.",
     )
     project_run.set_defaults(handler=_project_run)
+
+    project_collect = project_sub.add_parser(
+        "collect",
+        help="Verify and attach run evidence to a research project.",
+    )
+    project_collect.add_argument("project", help="Research project JSON path.")
+    project_collect.add_argument(
+        "run_record",
+        help="Completed project-run.json path.",
+    )
+    project_collect.add_argument("--json", action="store_true")
+    project_collect.set_defaults(handler=_project_collect)
 
     project_audit = project_sub.add_parser(
         "audit",

@@ -21,6 +21,10 @@ Run every declared experiment:
 
     aegis project run research-project.json --workspace research_out/project
 
+Collect and hash-pin completed experiment evidence into the project:
+
+    aegis project collect research-project.json research_out/project/project-run.json
+
 Audit declared claims and evidence:
 
     aegis project audit research-project.json --require-protocol-lock
@@ -328,3 +332,28 @@ project, and freeze that confirmatory protocol before collecting fresh
 evidence.
 
 See [Discovery](DISCOVERY.md) for the search contract and statistical boundary.
+
+
+## Automatic evidence collection
+
+The **project collect** command bridges experiment execution and publication
+without copying artifact paths or SHA-256 hashes by hand. It validates a
+completed project-run record and the files referenced by each experiment,
+then appends uniquely identified, hash-pinned artifacts to the research
+project. It also records exploratory discovery results and proposed,
+unexecuted confirmation manifests when present.
+
+Collection does not generate result claims. Researchers must interpret the
+measurements, choose sound analyses, and explicitly link each proposed claim
+to the appropriate artifact and JSON pointer. It is safe to run collection
+again on the same run; it returns without adding duplicates.
+
+Every pinned artifact's current bytes are checked against its recorded
+SHA-256 during `aegis project audit`. A modified result therefore fails the
+audit instead of silently changing the evidence behind a manuscript claim.
+A newly generated run is collected only against the exact project revision
+from which that run was executed.
+
+The GUI's **Research lifecycle** tab exposes **Collect evidence** after
+**Run experiments**. The scientific protocol freeze covers experimental
+inputs, so attaching later results does not invalidate the frozen protocol.

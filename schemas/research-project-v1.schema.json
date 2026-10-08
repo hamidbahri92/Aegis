@@ -167,6 +167,10 @@
           },
           "croissant": {
             "type": "boolean"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$"
           }
         },
         "additionalProperties": true
@@ -332,6 +336,13 @@
           }
         },
         "additionalProperties": true
+      }
+    },
+    "evidence_collection_runs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-fA-F0-9]{64}$"
       }
     }
   },

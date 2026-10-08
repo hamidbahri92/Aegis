@@ -43,6 +43,7 @@ from .io_decode import predict_observables_from_files
 from .paper import build_submission_package, verify_submission_package
 from .project import (
     audit_research_project,
+    collect_project_evidence,
     freeze_research_protocol,
     load_research_project,
     run_research_project,
@@ -71,6 +72,7 @@ __all__ = [
     "available_decoders",
     "build_submission_package",
     "compare_decoders_exact_shots",
+    "collect_project_evidence",
     "create_research_bundle",
     "custom_decoder_registry",
     "evaluate_decoders_on_dataset",

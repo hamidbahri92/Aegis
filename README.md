@@ -304,6 +304,8 @@ Aegis can now carry a project from a research question to reviewer-facing eviden
 
 Research-project manifests connect hypotheses, experiment manifests, artifacts, and claims. Quantitative result claims can point to exact JSON fields and predicates; unsupported result claims fail the audit.
 
+After running a project, use `aegis project collect research-project.json research_out/project/project-run.json` to automatically verify and pin its experiment results and bundles into the project's evidence inventory. A later audit detects modified evidence. Aegis does not invent scientific claims from collected measurements.
+
 The publication builder produces LaTeX and Markdown manuscript sources, a claim-to-evidence appendix, reviewer roadmap, reproduction instructions, environment metadata, artifact hashes, a submission checklist, and a verifiable ZIP. Blind-review packaging removes declared authors and local source paths, while still requiring authors to inspect arbitrary artifacts for identity leaks.
 
 Aegis will use Tectonic or latexmk when available, but manuscript-source generation does not require a LaTeX installation.
@@ -419,6 +421,7 @@ aegis discover init
 aegis discover run
 aegis project init
 aegis project audit
+aegis project collect
 aegis paper build
 aegis paper verify
 aegis predict

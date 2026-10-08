@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -259,6 +261,12 @@ def _artifact_inventory(
         else:
             record["sha256"] = _sha256_file(path)
             record["bytes"] = int(path.stat().st_size)
+            pinned_hash = str(artifact.get("sha256", "")).strip().lower()
+            if pinned_hash and pinned_hash != record["sha256"]:
+                errors.append(
+                    f"artifact {artifact_id!r} hash mismatch: "
+                    f"expected {pinned_hash}, got {record['sha256']}"
+                )
         records[artifact_id] = record
     return records, errors
 
@@ -843,6 +851,252 @@ def run_research_project(
     project_run["path"] = str(output)
     project_run["sha256"] = _sha256_file(output)
     return project_run
+
+
+def collect_project_evidence(
+    project_path: str,
+    project_run_path: str,
+) -> dict[str, Any]:
+    """Attach verified run artifacts without altering the scientific protocol.
+
+    This operation never creates scientific result claims. It only records
+    evidence file locations and pins their SHA-256 for later project audits.
+    """
+
+    source = Path(project_path).resolve()
+    run_path = Path(project_run_path).resolve()
+    project = load_research_project(str(source))
+    run = json.loads(run_path.read_text(encoding="utf-8"))
+    if run.get("record_type") != "aegis_qec_research_project_run":
+        raise ValueError("not an Aegis project-run record")
+    if Path(str(run.get("project_path", ""))).resolve() != source:
+        raise ValueError("run record belongs to a different research project")
+
+    run_sha256 = _sha256_file(run_path)
+    run_prefix = "run-" + run_sha256[:12]
+    previous = project.get("evidence_collection_runs", [])
+    if not isinstance(previous, list):
+        raise ValueError("evidence_collection_runs must be a list")
+    previously_collected = run_sha256 in previous
+    if (
+        not previously_collected
+        and str(run.get("project_sha256", "")) != _sha256_file(source)
+    ):
+        raise ValueError(
+            "project changed since the run; collect against its exact source "
+            "revision or execute the updated project"
+        )
+
+    def pin_file(
+        identifier: str,
+        path_value: str,
+        expected_sha256: str,
+        kind: str,
+        description: str,
+    ) -> dict[str, Any]:
+        artifact_path = Path(path_value).resolve()
+        if not artifact_path.is_file():
+            raise ValueError(
+                f"recorded artifact {identifier!r} is missing: {artifact_path}"
+            )
+        digest = _sha256_file(artifact_path)
+        if digest != expected_sha256:
+            raise ValueError(
+                f"recorded artifact {identifier!r} hash mismatch"
+            )
+        try:
+            path = os.path.relpath(artifact_path, source.parent)
+        except ValueError:
+            path = str(artifact_path)
+        return {
+            "id": _require_safe_id(identifier, field="collected artifact id"),
+            "path": str(path),
+            "sha256": digest,
+            "kind": kind,
+            "description": description,
+        }
+
+    expected_experiments = {
+        str(item["id"]): _resolve_path(source, str(item["manifest"]))
+        for item in project.get("experiments", [])
+    }
+    recorded_experiments = run.get("experiments", [])
+    if {
+        str(item["id"]) for item in recorded_experiments
+    } != set(expected_experiments):
+        raise ValueError("executed experiment set differs from project")
+    for item in recorded_experiments:
+        name = str(item["id"])
+        manifest = expected_experiments[name]
+        if (
+            not manifest.is_file()
+            or Path(str(item["manifest_path"])).resolve() != manifest
+            or _sha256_file(manifest) != str(item["manifest_sha256"])
+        ):
+            raise ValueError(
+                f"executed experiment manifest changed: {name}"
+            )
+
+    expected_discoveries = {
+        str(item["id"]): _resolve_path(source, str(item["manifest"]))
+        for item in project.get("discoveries", [])
+    }
+    recorded_discoveries = run.get("discoveries", [])
+    if {
+        str(item["id"]) for item in recorded_discoveries
+    } != set(expected_discoveries):
+        raise ValueError("executed discovery set differs from project")
+    for item in recorded_discoveries:
+        name = str(item["id"])
+        manifest = expected_discoveries[name]
+        if (
+            not manifest.is_file()
+            or Path(str(item["manifest_path"])).resolve() != manifest
+            or _sha256_file(manifest) != str(item["manifest_sha256"])
+        ):
+            raise ValueError(
+                f"executed discovery manifest changed: {name}"
+            )
+
+    proposals = [
+        pin_file(
+            run_prefix,
+            str(run_path),
+            run_sha256,
+            "run-record",
+            "Complete research project execution record.",
+        )
+    ]
+    for experiment in run.get("experiments", []):
+        name = _require_safe_id(
+            str(experiment["id"]),
+            field="experiment id",
+        )
+        record = experiment["run_record"]
+        record_ref = record["run_record"]
+        proposals.append(
+            pin_file(
+                f"{run_prefix}-experiment-{name}-run",
+                str(record_ref["path"]),
+                str(record_ref["sha256"]),
+                "run-record",
+                f"Executed Aegis experiment {name}.",
+            )
+        )
+        bundle = experiment["bundle"]
+        proposals.append(
+            pin_file(
+                f"{run_prefix}-experiment-{name}-bundle",
+                str(bundle["path"]),
+                str(bundle["sha256"]),
+                "research-bundle",
+                f"Verifiable research evidence bundle for {name}.",
+            )
+        )
+        for logical_name, artifact in record.get("artifacts", {}).items():
+            _require_safe_id(str(logical_name), field="experiment artifact")
+            proposals.append(
+                pin_file(
+                    f"{run_prefix}-experiment-{name}-{logical_name}",
+                    str(artifact["path"]),
+                    str(artifact["sha256"]),
+                    "experiment-artifact",
+                    f"Result artifact {logical_name} from experiment {name}.",
+                )
+            )
+
+    for discovery in run.get("discoveries", []):
+        name = _require_safe_id(str(discovery["id"]), field="discovery id")
+        proposals.append(
+            pin_file(
+                f"{run_prefix}-discovery-{name}-result",
+                str(discovery["result_path"]),
+                str(discovery["result_sha256"]),
+                "exploratory-discovery",
+                f"Exploratory multi-objective search {name}, not confirmation.",
+            )
+        )
+        for confirmation in discovery.get("confirmation_manifests", []):
+            rank = int(confirmation["rank"])
+            proposals.append(
+                pin_file(
+                    f"{run_prefix}-discovery-{name}-confirmation-{rank:03d}",
+                    str(confirmation["path"]),
+                    str(confirmation["sha256"]),
+                    "proposed-confirmation",
+                    "Unexecuted confirmation manifest; not result evidence.",
+                )
+            )
+
+    ids = [item["id"] for item in proposals]
+    if len(ids) != len(set(ids)):
+        raise ValueError("duplicate collected artifact IDs in run record")
+
+    existing = {
+        str(artifact["id"]): artifact
+        for artifact in project.get("artifacts", [])
+    }
+    added: list[str] = []
+    for proposal in proposals:
+        identifier = proposal["id"]
+        old = existing.get(identifier)
+        if old:
+            old_path = _resolve_path(source, str(old["path"]))
+            proposed_path = _resolve_path(source, str(proposal["path"]))
+            if (
+                old_path != proposed_path
+                or old.get("sha256") != proposal["sha256"]
+            ):
+                raise ValueError(
+                    f"existing artifact {identifier!r} has a different identity"
+                )
+        else:
+            if previously_collected:
+                raise ValueError(
+                    f"previous collection is missing artifact {identifier!r}"
+                )
+            added.append(identifier)
+
+    if previously_collected:
+        return {
+            "project_path": str(source),
+            "project_run_sha256": run_sha256,
+            "added": [],
+            "unchanged": len(proposals),
+        }
+
+    project.setdefault("artifacts", []).extend(
+        item for item in proposals if item["id"] in added
+    )
+    project["evidence_collection_runs"] = [*previous, run_sha256]
+
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=source.parent,
+            prefix=".aegis-project-",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temporary = Path(handle.name)
+            json.dump(project, handle, indent=2, sort_keys=True)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, source)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+    return {
+        "project_path": str(source),
+        "project_run_sha256": run_sha256,
+        "added": added,
+        "unchanged": len(proposals) - len(added),
+        "project_sha256": _sha256_file(source),
+    }
 
 
 def write_research_project_template(

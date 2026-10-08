@@ -6,6 +6,7 @@ import pytest
 
 from aegis_qec.project import (
     audit_research_project,
+    collect_project_evidence,
     freeze_research_protocol,
     run_research_project,
     verify_protocol_lock,
@@ -396,3 +397,139 @@ def test_confirmatory_project_rejects_adaptive_discovery(tmp_path):
         match="confirmatory projects cannot contain adaptive discovery",
     ):
         freeze_research_protocol(str(project))
+
+
+def test_collect_project_evidence_pins_hashes_and_is_idempotent(tmp_path):
+    experiment = tmp_path / "experiment.json"
+    experiment.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "name": "evidence-collection-study",
+                "operation": "study",
+                "parameters": {
+                    "distances": [3],
+                    "physical_error_rates": [0.02],
+                    "shots": 8,
+                    "basis": "x",
+                    "seed": 1234,
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    project = tmp_path / "project.json"
+    _write_project(project)
+    value = json.loads(project.read_text(encoding="utf-8"))
+    value["experiments"] = [{"id": "tiny", "manifest": experiment.name}]
+    project.write_text(
+        json.dumps(value, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    freeze_research_protocol(str(project))
+
+    run = run_research_project(
+        str(project),
+        workspace=str(tmp_path / "workspace"),
+    )
+    collected = collect_project_evidence(str(project), run["path"])
+    assert any(item.startswith("run-") for item in collected["added"])
+    assert any(
+        item.endswith("-experiment-tiny-study_json")
+        for item in collected["added"]
+    )
+
+    audit = audit_research_project(str(project), require_protocol_lock=True)
+    assert audit["valid"] is True
+    assert all(item["sha256"] for item in audit["artifacts"].values())
+
+    repeated = collect_project_evidence(str(project), run["path"])
+    assert repeated["added"] == []
+
+    result_path = tmp_path / "workspace" / "tiny" / "study.json"
+    result_path.write_text('{"tampered": true}\n', encoding="utf-8")
+    audit = audit_research_project(str(project))
+    assert audit["valid"] is False
+    assert any("hash mismatch" in message for message in audit["errors"])
+
+
+def test_collect_project_evidence_refuses_tampered_run_file(tmp_path):
+    experiment = tmp_path / "experiment.json"
+    experiment.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "name": "tamper-check-study",
+                "operation": "study",
+                "parameters": {
+                    "distances": [3],
+                    "physical_error_rates": [0.02],
+                    "shots": 8,
+                    "basis": "x",
+                    "seed": 1234,
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    project = tmp_path / "project.json"
+    _write_project(project)
+    original = json.loads(project.read_text(encoding="utf-8"))
+    original["experiments"] = [{"id": "tiny", "manifest": "experiment.json"}]
+    project.write_text(
+        json.dumps(original, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    run = run_research_project(
+        str(project),
+        workspace=str(tmp_path / "workspace"),
+    )
+    result_path = tmp_path / "workspace" / "tiny" / "study.json"
+    result_path.write_text('{"tampered": true}\n', encoding="utf-8")
+
+    before = project.read_bytes()
+    with pytest.raises(ValueError, match="hash mismatch"):
+        collect_project_evidence(str(project), run["path"])
+    assert project.read_bytes() == before
+
+
+def test_evidence_collection_rejects_changed_experiment_definition(tmp_path):
+    experiment = tmp_path / "experiment.json"
+    experiment.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "name": "manifest-integrity",
+                "operation": "study",
+                "parameters": {
+                    "distances": [3],
+                    "physical_error_rates": [0.02],
+                    "shots": 8,
+                    "basis": "x",
+                    "seed": 1234,
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    project = tmp_path / "project.json"
+    _write_project(project)
+    value = json.loads(project.read_text(encoding="utf-8"))
+    value["experiments"] = [{"id": "tiny", "manifest": experiment.name}]
+    project.write_text(json.dumps(value) + "\n", encoding="utf-8")
+    run = run_research_project(
+        str(project),
+        workspace=str(tmp_path / "workspace"),
+    )
+    before = project.read_bytes()
+    definition = json.loads(experiment.read_text(encoding="utf-8"))
+    definition["parameters"]["shots"] = 100
+    experiment.write_text(json.dumps(definition) + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="executed experiment manifest changed"):
+        collect_project_evidence(str(project), run["path"])
+    assert project.read_bytes() == before
