@@ -5,8 +5,8 @@ import json
 import pytest
 
 from aegis_qec.project import (
-    collect_project_evidence,
     audit_research_project,
+    collect_project_evidence,
     freeze_research_protocol,
     run_research_project,
     verify_protocol_lock,
