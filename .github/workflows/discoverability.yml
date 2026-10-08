@@ -34,9 +34,16 @@ jobs:
           python-version: '3.12'
       - name: Validate updater locally
         run: python -m unittest discover -s tests -p test_repository_discoverability.py -v
-      - name: Preview or apply verified repository metadata
+      - name: Preview proposed repository metadata (no admin secret)
+        if: inputs.mode == 'preview'
         env:
-          AEGIS_DISCOVERABILITY_MODE: ${{ inputs.mode }}
+          AEGIS_DISCOVERABILITY_MODE: preview
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/update_repository_discoverability.py
+      - name: Apply and verify repository metadata
+        if: inputs.mode == 'apply'
+        env:
+          AEGIS_DISCOVERABILITY_MODE: apply
           GITHUB_TOKEN: ${{ github.token }}
           AEGIS_REPO_ADMIN_TOKEN: ${{ secrets.AEGIS_REPO_ADMIN_TOKEN }}
         run: python scripts/update_repository_discoverability.py
