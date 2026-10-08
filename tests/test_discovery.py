@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from aegis_qec.discovery import (
+    _atomic_json_write,
     load_discovery_manifest,
     pareto_front,
     run_discovery,
@@ -225,3 +226,22 @@ def test_discovery_resume_rejects_changed_candidate_assignment(tmp_path):
 
     with pytest.raises(ValueError, match="assignment changed"):
         run_discovery(str(discovery), output_dir=str(output))
+
+
+def test_checkpoint_replacement_failure_preserves_previous_state(tmp_path, monkeypatch):
+    from aegis_qec import discovery
+
+    state_path = tmp_path / "state.json"
+    _atomic_json_write(state_path, {"completed": 1})
+
+    def fail_replace(source, destination):
+        raise OSError("simulated interrupted replacement")
+
+    monkeypatch.setattr(discovery.os, "replace", fail_replace)
+    with pytest.raises(OSError, match="interrupted"):
+        _atomic_json_write(state_path, {"completed": 2})
+
+    assert json.loads(state_path.read_text(encoding="utf-8")) == {
+        "completed": 1
+    }
+    assert not list(tmp_path.glob(".aegis-discovery-*.tmp"))
