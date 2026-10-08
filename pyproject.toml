@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aegis-qec"
-version = "1.1.1"
-description = "Quantum error correction research platform for surface-code studies, Stim/Sinter campaigns, PyMatching MWPM, decoder plugins, and reproducible benchmarking."
+version = "1.2.0"
+description = "End-to-end quantum error correction research platform: surface-code simulation, decoder benchmarking, evolutionary experiment search, evidence auditing, and LaTeX papers."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
