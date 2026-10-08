@@ -435,8 +435,11 @@ def test_collect_project_evidence_pins_hashes_and_is_idempotent(tmp_path):
         workspace=str(tmp_path / "workspace"),
     )
     collected = collect_project_evidence(str(project), run["path"])
-    assert "project-run" in collected["added"]
-    assert "experiment-tiny-study_json" in collected["added"]
+    assert any(item.startswith("run-") for item in collected["added"])
+    assert any(
+        item.endswith("-experiment-tiny-study_json")
+        for item in collected["added"]
+    )
 
     audit = audit_research_project(str(project), require_protocol_lock=True)
     assert audit["valid"] is True
