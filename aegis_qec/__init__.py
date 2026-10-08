@@ -42,8 +42,8 @@ from .explain import explain_surface_code_shot, write_shot_explanation
 from .io_decode import predict_observables_from_files
 from .paper import build_submission_package, verify_submission_package
 from .project import (
-    collect_project_evidence,
     audit_research_project,
+    collect_project_evidence,
     freeze_research_protocol,
     load_research_project,
     run_research_project,
