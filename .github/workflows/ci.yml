@@ -152,4 +152,4 @@ jobs:
           aegis paper build wheel-project.json --out wheel-submission --compile never --require-protocol-lock
           aegis paper verify wheel-submission.zip --json
           aegis discover init --out wheel-discovery.json
-          python -c "import aegis_qec; assert aegis_qec.__version__ == '1.1.1'"
+          python -c "import aegis_qec; assert aegis_qec.__version__ == '1.2.0'"

@@ -4,6 +4,8 @@ This file records user-visible changes to Aegis QEC.
 
 ## Unreleased
 
+## 1.2.0 — 2026-10-08
+
 ### Automatic research evidence collection
 
 Added `aegis project collect` to verify completed project-run outputs, import experiment/discovery artifacts into the project, pin their SHA-256 hashes, and reject altered evidence or unrelated project revisions. Project audits now enforce declared artifact hashes. Collection is idempotent and available in the Research lifecycle GUI without auto-generating scientific claims.
