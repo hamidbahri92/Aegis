@@ -4,6 +4,8 @@ import copy
 import hashlib
 import json
 import math
+import os
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -11,6 +13,73 @@ from typing import Any
 import numpy as np
 
 from .experiment import load_experiment_manifest, run_experiment_manifest
+
+
+def _atomic_json_write(path: Path, value: dict[str, Any]) -> None:
+    """Write an evidence checkpoint without exposing a partial JSON file."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            prefix=".aegis-discovery-",
+            suffix=".tmp",
+            dir=path.parent,
+            delete=False,
+        ) as handle:
+            temp_path = Path(handle.name)
+            json.dump(value, handle, indent=2, sort_keys=True)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_path, path)
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
+
+
+def _verify_resume_state(state: dict[str, Any]) -> None:
+    """Fail closed when stored candidate data no longer matches run evidence."""
+
+    if state.get("state_type") != "aegis_qec_discovery":
+        raise ValueError("invalid discovery state type")
+    if state.get("schema_version") != 1:
+        raise ValueError("unsupported discovery state schema")
+    order = state.get("evaluation_order")
+    candidates = state.get("candidates")
+    if not isinstance(order, list) or not isinstance(candidates, dict):
+        raise ValueError("discovery state has invalid candidate inventory")
+    if len(order) != len(set(order)) or set(order) != set(candidates):
+        raise ValueError("discovery state candidate inventory is inconsistent")
+
+    for key in order:
+        candidate = candidates[key]
+        if not isinstance(candidate, dict):
+            raise ValueError(f"invalid stored candidate: {key}")
+        if candidate.get("key") != key:
+            raise ValueError(f"stored candidate identity mismatch: {key}")
+        if _assignment_key(candidate["assignment"]) != key:
+            raise ValueError(f"stored candidate assignment changed: {key}")
+        manifest = Path(str(candidate.get("manifest_path", "")))
+        if (
+            not manifest.is_file()
+            or _sha256_bytes(manifest.read_bytes())
+            != candidate.get("manifest_sha256")
+        ):
+            raise ValueError(f"stored candidate manifest changed: {key}")
+        status = candidate.get("status")
+        if status == "success":
+            record = Path(str(candidate.get("run_record_path", "")))
+            if (
+                not record.is_file()
+                or _sha256_bytes(record.read_bytes())
+                != candidate.get("run_record_sha256")
+            ):
+                raise ValueError(f"stored candidate result changed: {key}")
+        elif status != "failed":
+            raise ValueError(f"invalid stored candidate status: {key}")
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -630,6 +699,7 @@ def run_discovery(
             raise ValueError(
                 "base experiment changed since this discovery run started"
             )
+        _verify_resume_state(state)
     else:
         initial = _initial_population(
             discovery,
@@ -672,10 +742,7 @@ def run_discovery(
             evaluated["generation"] = int(state["generation"])
             state["candidates"][key] = evaluated
             state["evaluation_order"].append(key)
-            state_path.write_text(
-                json.dumps(state, indent=2, sort_keys=True) + "\n",
-                encoding="utf-8",
-            )
+            _atomic_json_write(state_path, state)
 
         if len(state["evaluation_order"]) >= budget:
             break
@@ -732,10 +799,7 @@ def run_discovery(
             break
         state["generation"] = int(state["generation"]) + 1
         state["current_population"] = proposals
-        state_path.write_text(
-            json.dumps(state, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        _atomic_json_write(state_path, state)
 
     evaluated = [
         state["candidates"][key]

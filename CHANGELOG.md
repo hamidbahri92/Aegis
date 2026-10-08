@@ -4,6 +4,12 @@ This file records user-visible changes to Aegis QEC.
 
 ## Unreleased
 
+### Research lifecycle GUI and search integrity
+
+Added a guided GUI for research-project creation, protocol freezing, evidence audits, experiment execution, exploratory discovery, Pareto inspection, confirmation-manifest download, and LaTeX/reviewer-package builds.
+
+Discovery resume now uses atomic JSON state checkpoints and validates stored candidate assignments, experiment manifests, and successful run-record hashes before continuing. Regression coverage detects altered candidate evidence.
+
 ### Exploratory adaptive discovery
 
 Added resumable random and evolutionary search over Aegis experiment-manifest parameters. Search dimensions and objectives use explicit JSON pointers, candidate experiments keep full run records, failures remain visible, and multi-objective results are reported as Pareto fronts.
