@@ -5,12 +5,12 @@ type: software
 authors:
   - family-names: "Bahri"
     given-names: "Hamid"
-version: 1.1.1
-date-released: 2026-10-04
+version: 1.2.0
+date-released: 2026-10-08
 license: MIT
 repository-code: "https://github.com/hamidbahri92/Aegis"
 url: "https://pypi.org/project/aegis-qec/"
-abstract: "An open-source Python toolkit for quantum error correction and surface-code decoding using PyMatching sparse-blossom MWPM, explicit Stim detector-error-model inputs, calibrated decoding experiments, correction-edge reconstruction, and reproducible validation and benchmarking workflows."
+abstract: "An open-source quantum error correction research platform integrating surface-code studies, Stim and PyMatching decoding, reusable datasets, paired comparisons, multi-objective adaptive discovery, evidence-bound research projects, and verifiable LaTeX submission packages."
 keywords:
   - quantum error correction
   - QEC
