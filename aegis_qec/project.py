@@ -873,6 +873,7 @@ def collect_project_evidence(
         raise ValueError("run record belongs to a different research project")
 
     run_sha256 = _sha256_file(run_path)
+    run_prefix = "run-" + run_sha256[:12]
     previous = project.get("evidence_collection_runs", [])
     if not isinstance(previous, list):
         raise ValueError("evidence_collection_runs must be a list")
@@ -917,7 +918,7 @@ def collect_project_evidence(
 
     proposals = [
         pin_file(
-            "project-run",
+            run_prefix,
             str(run_path),
             run_sha256,
             "run-record",
@@ -933,7 +934,7 @@ def collect_project_evidence(
         record_ref = record["run_record"]
         proposals.append(
             pin_file(
-                f"experiment-{name}-run",
+                f"{run_prefix}-experiment-{name}-run",
                 str(record_ref["path"]),
                 str(record_ref["sha256"]),
                 "run-record",
@@ -943,7 +944,7 @@ def collect_project_evidence(
         bundle = experiment["bundle"]
         proposals.append(
             pin_file(
-                f"experiment-{name}-bundle",
+                f"{run_prefix}-experiment-{name}-bundle",
                 str(bundle["path"]),
                 str(bundle["sha256"]),
                 "research-bundle",
@@ -954,7 +955,7 @@ def collect_project_evidence(
             _require_safe_id(str(logical_name), field="experiment artifact")
             proposals.append(
                 pin_file(
-                    f"experiment-{name}-{logical_name}",
+                    f"{run_prefix}-experiment-{name}-{logical_name}",
                     str(artifact["path"]),
                     str(artifact["sha256"]),
                     "experiment-artifact",
@@ -966,7 +967,7 @@ def collect_project_evidence(
         name = _require_safe_id(str(discovery["id"]), field="discovery id")
         proposals.append(
             pin_file(
-                f"discovery-{name}-result",
+                f"{run_prefix}-discovery-{name}-result",
                 str(discovery["result_path"]),
                 str(discovery["result_sha256"]),
                 "exploratory-discovery",
@@ -977,7 +978,7 @@ def collect_project_evidence(
             rank = int(confirmation["rank"])
             proposals.append(
                 pin_file(
-                    f"discovery-{name}-confirmation-{rank:03d}",
+                    f"{run_prefix}-discovery-{name}-confirmation-{rank:03d}",
                     str(confirmation["path"]),
                     str(confirmation["sha256"]),
                     "proposed-confirmation",
