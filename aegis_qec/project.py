@@ -916,6 +916,48 @@ def collect_project_evidence(
             "description": description,
         }
 
+    expected_experiments = {
+        str(item["id"]): _resolve_path(source, str(item["manifest"]))
+        for item in project.get("experiments", [])
+    }
+    recorded_experiments = run.get("experiments", [])
+    if {
+        str(item["id"]) for item in recorded_experiments
+    } != set(expected_experiments):
+        raise ValueError("executed experiment set differs from project")
+    for item in recorded_experiments:
+        name = str(item["id"])
+        manifest = expected_experiments[name]
+        if (
+            not manifest.is_file()
+            or Path(str(item["manifest_path"])).resolve() != manifest
+            or _sha256_file(manifest) != str(item["manifest_sha256"])
+        ):
+            raise ValueError(
+                f"executed experiment manifest changed: {name}"
+            )
+
+    expected_discoveries = {
+        str(item["id"]): _resolve_path(source, str(item["manifest"]))
+        for item in project.get("discoveries", [])
+    }
+    recorded_discoveries = run.get("discoveries", [])
+    if {
+        str(item["id"]) for item in recorded_discoveries
+    } != set(expected_discoveries):
+        raise ValueError("executed discovery set differs from project")
+    for item in recorded_discoveries:
+        name = str(item["id"])
+        manifest = expected_discoveries[name]
+        if (
+            not manifest.is_file()
+            or Path(str(item["manifest_path"])).resolve() != manifest
+            or _sha256_file(manifest) != str(item["manifest_sha256"])
+        ):
+            raise ValueError(
+                f"executed discovery manifest changed: {name}"
+            )
+
     proposals = [
         pin_file(
             run_prefix,
