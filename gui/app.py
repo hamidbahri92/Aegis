@@ -92,13 +92,31 @@ def _research_workbench():
         project_workspace = st.text_input(
             "Experiment workspace", value="research_out/project",
         )
-        freeze_col, audit_col, run_col = st.columns(3)
+        freeze_col, audit_col, run_col, collect_col = st.columns(4)
         with freeze_col:
             freeze_clicked = st.button("Freeze protocol")
         with audit_col:
             audit_clicked = st.button("Audit evidence")
         with run_col:
             run_clicked = st.button("Run experiments")
+        with collect_col:
+            collect_clicked = st.button("Collect evidence")
+        if collect_clicked:
+            try:
+                from aegis_qec.project import collect_project_evidence
+
+                run_file = str(
+                    Path(project_workspace).resolve() / "project-run.json"
+                )
+                report = collect_project_evidence(project_file, run_file)
+                st.success(
+                    f"Pinned {len(report['added'])} new evidence artifacts."
+                )
+                st.json(report)
+            except (OSError, RuntimeError, ValueError, KeyError) as exc:
+                st.error(
+                    f"Evidence collection failed: {type(exc).__name__}: {exc}"
+                )
         if freeze_clicked:
             try:
                 from aegis_qec.project import freeze_research_protocol
