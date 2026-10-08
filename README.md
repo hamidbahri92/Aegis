@@ -450,7 +450,11 @@ Installing `aegis-qec[gui]` provides the optional Streamlit workbench:
 aegis gui
 ```
 
-The GUI is intended for interactive exploration. Its Circuit study workflow uses the same research implementation as the CLI and can export the JSON and CSV records needed to reproduce a study. Scripted or published work should still preserve the exact command, version, seed, and exported artifacts.
+The GUI is intended for interactive exploration. Its Circuit study workflow uses the same research implementation as the CLI and can export the JSON and CSV records needed to reproduce a study.
+
+The **Research lifecycle** tab now provides guided project creation, protocol freezing, evidence audits, experiment execution, adaptive discovery with Pareto-front inspection, independent confirmation-manifest downloads, and LaTeX/reviewer submission packages. All operations use the same underlying APIs as the CLI. Long-running computations execute on the local application host, and the GUI never labels exploratory search results as independently confirmed.
+
+Scripted or published work should still preserve the exact command, version, seed, and exported artifacts.
 
 ## Package architecture
 
