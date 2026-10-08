@@ -42,6 +42,7 @@ from .explain import explain_surface_code_shot, write_shot_explanation
 from .io_decode import predict_observables_from_files
 from .paper import build_submission_package, verify_submission_package
 from .project import (
+    collect_project_evidence,
     audit_research_project,
     freeze_research_protocol,
     load_research_project,
@@ -71,6 +72,7 @@ __all__ = [
     "available_decoders",
     "build_submission_package",
     "compare_decoders_exact_shots",
+    "collect_project_evidence",
     "create_research_bundle",
     "custom_decoder_registry",
     "evaluate_decoders_on_dataset",
