@@ -1,0 +1,34 @@
+name: Publish the Aegis QEC welcome discussion
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/publish_welcome_discussion.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  discussions: write
+
+concurrency:
+  group: aegis-qec-welcome-discussion
+  cancel-in-progress: false
+
+jobs:
+  publish-welcome:
+    if: github.repository == 'hamidbahri92/Aegis-QEC' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Validate safe discussion selection and idempotence
+        run: python -m unittest discover -s tests -p test_welcome_discussion.py -v
+      - name: Publish verified discussion once
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/publish_welcome_discussion.py
