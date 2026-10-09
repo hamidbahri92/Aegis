@@ -73,16 +73,16 @@ gui = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/hamidbahri92/Aegis"
+Homepage = "https://github.com/hamidbahri92/Aegis-QEC"
 Documentation = "https://github.com/hamidbahri92/Aegis#readme"
-Repository = "https://github.com/hamidbahri92/Aegis"
-Issues = "https://github.com/hamidbahri92/Aegis/issues"
-Changelog = "https://github.com/hamidbahri92/Aegis/blob/main/CHANGELOG.md"
-Citation = "https://github.com/hamidbahri92/Aegis/blob/main/CITATION.cff"
-Research = "https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_GUIDE.md"
-"Decoder SDK" = "https://github.com/hamidbahri92/Aegis/blob/main/docs/DECODER_PLUGINS.md"
-Discovery = "https://github.com/hamidbahri92/Aegis/blob/main/docs/DISCOVERY.md"
-"Research Projects" = "https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_PROJECTS.md"
+Repository = "https://github.com/hamidbahri92/Aegis-QEC"
+Issues = "https://github.com/hamidbahri92/Aegis-QEC/issues"
+Changelog = "https://github.com/hamidbahri92/Aegis-QEC/blob/main/CHANGELOG.md"
+Citation = "https://github.com/hamidbahri92/Aegis-QEC/blob/main/CITATION.cff"
+Research = "https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/RESEARCH_GUIDE.md"
+"Decoder SDK" = "https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/DECODER_PLUGINS.md"
+Discovery = "https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/DISCOVERY.md"
+"Research Projects" = "https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/RESEARCH_PROJECTS.md"
 PyPI = "https://pypi.org/project/aegis-qec/"
 
 [project.scripts]

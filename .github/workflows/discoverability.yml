@@ -6,11 +6,12 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Preview only, or apply description, website and GitHub topics'
+        description: 'Preview, apply discoverability metadata, or rename the existing repository to Aegis-QEC'
         type: choice
         options:
           - preview
           - apply
+          - rename-to-Aegis-QEC
         default: preview
         required: true
 
@@ -24,7 +25,7 @@ concurrency:
 jobs:
   update-metadata:
     # Never expose the admin secret to a branch other than protected main.
-    if: github.repository == 'hamidbahri92/Aegis' && github.ref == 'refs/heads/main'
+    if: (github.repository == 'hamidbahri92/Aegis' || github.repository == 'hamidbahri92/Aegis-QEC') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -34,6 +35,8 @@ jobs:
           python-version: '3.12'
       - name: Validate updater locally
         run: python -m unittest discover -s tests -p test_repository_discoverability.py -v
+      - name: Validate guarded repository renaming
+        run: python -m unittest discover -s tests -p test_repository_rename.py -v
       - name: Preview proposed repository metadata (no admin secret)
         if: inputs.mode == 'preview'
         env:
@@ -47,3 +50,10 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           AEGIS_REPO_ADMIN_TOKEN: ${{ secrets.AEGIS }}
         run: python scripts/update_repository_discoverability.py
+      - name: Rename existing repository to Aegis-QEC and verify
+        if: inputs.mode == 'rename-to-Aegis-QEC'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          AEGIS_REPO_ADMIN_TOKEN: ${{ secrets.AEGIS }}
+          AEGIS_RENAME_CONFIRM: Aegis-QEC
+        run: python scripts/rename_repository.py
