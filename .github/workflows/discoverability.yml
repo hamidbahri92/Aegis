@@ -3,6 +3,11 @@ name: Aegis QEC - GitHub discoverability
 # Run manually from Actions. Preview is credential-free; Apply needs one
 # repository-scoped token stored in Actions secret AEGIS (case-insensitive).
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/repository-settings.json'
   workflow_dispatch:
     inputs:
       mode:
@@ -51,7 +56,7 @@ jobs:
           AEGIS_REPO_ADMIN_TOKEN: ${{ secrets.AEGIS }}
         run: python scripts/update_repository_discoverability.py
       - name: Rename existing repository to Aegis-QEC and verify
-        if: inputs.mode == 'rename-to-Aegis-QEC'
+        if: inputs.mode == 'rename-to-Aegis-QEC' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         env:
           GITHUB_TOKEN: ${{ github.token }}
           AEGIS_REPO_ADMIN_TOKEN: ${{ secrets.AEGIS }}
