@@ -1,0 +1,4 @@
+# Minimal free-cloud dependencies for the bounded streamlit_app.py demo.
+# Installs Aegis from THIS canonical GitHub checkout; avoids heavy GUI/full extras.
+-e .[gui]
+stim>=1.16,<2
