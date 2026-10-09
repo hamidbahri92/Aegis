@@ -22,5 +22,5 @@
     "surface-code",
     "surface-codes"
   ],
-  "notes": "Repository metadata is applied by the guarded GitHub discoverability workflow; rename the existing repository in place through its explicit Aegis-QEC rename mode. PyPI Trusted Publisher identity is configured separately on PyPI."
+  "notes": "Canonical repository name Aegis-QEC was requested by the owner. Merging this reviewed manifest change triggers the guarded in-place repository-name reconciliation via GitHub Actions. The same repository ID must be preserved; PyPI Trusted Publisher identity is configured separately."
 }
