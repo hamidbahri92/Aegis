@@ -10,11 +10,11 @@ Before merging the Trusted Publishing workflow or creating a release tag, config
 | --- | --- |
 | PyPI project | `aegis-qec` |
 | Owner | `hamidbahri92` |
-| Repository | `Aegis` |
+| Repository | `Aegis-QEC` |
 | Workflow filename | `release-pypi.yml` |
 | Environment | Leave blank |
 
-The workflow filename is the basename of `.github/workflows/release-pypi.yml`. The environment must remain unset: the workflow does not declare a GitHub Actions environment. If the repository owner, repository name, workflow filename, or environment changes later, update the Trusted Publisher record to match before publishing.
+The workflow filename is the basename of `.github/workflows/release-pypi.yml`. The environment must remain unset: the workflow does not declare a GitHub Actions environment. The repository was previously named `Aegis`. After renaming it to `Aegis-QEC`, the PyPI Trusted Publisher identity must be configured to match **`Aegis-QEC`** before the next release. The 1.2.0 release used a separate API-token fallback because OIDC Trusted Publishing was not accepted. Confirm a future OIDC-backed publication before removing any working fallback credential. If the repository owner, repository name, workflow filename, or environment changes later, update the Trusted Publisher record to match before publishing.
 
 This setting belongs to the PyPI project and cannot be created by a repository change. A green pull-request CI run does not prove that it exists.
 
