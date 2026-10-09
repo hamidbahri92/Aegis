@@ -12,7 +12,7 @@ The PyPI distribution is **`aegis-qec`**. The public Python namespace is **`aegi
 
 ## Learn and contribute to quantum error correction
 
-New to quantum error correction, studying surface codes, teaching a course, or testing a decoder? Start with [Learn, test, and contribute](docs/START_HERE.md). It offers a runnable first experiment, clearly distinguishes simulation from hardware results, and invites reproducibility reports, questions, teaching improvements, and small pull requests. See [Contributing](CONTRIBUTING.md) for the development workflow and [Issues](https://github.com/hamidbahri92/Aegis-QEC/issues) to collaborate.
+New to quantum error correction, studying surface codes, teaching a course, or testing a decoder? Start with [Learn, test, and contribute](docs/START_HERE.md). It offers a runnable first experiment, clearly distinguishes simulation from hardware results, and invites reproducibility reports, questions, teaching improvements, and small pull requests. Join our [community discussions](https://github.com/hamidbahri92/Aegis-QEC/discussions/53) for questions, ideas, and collaboration; see [Contributing](CONTRIBUTING.md) for the development workflow and [Issues](https://github.com/hamidbahri92/Aegis-QEC/issues) for reproducible reports and focused tasks.
 
 ## Install Aegis QEC
 
