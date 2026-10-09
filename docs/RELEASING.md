@@ -1,6 +1,6 @@
 # Publishing Aegis QEC to PyPI
 
-This guide describes the repository's tag-triggered release process and its GitHub OIDC connection to PyPI Trusted Publishing. It is for maintainers; package installation and use are covered in the project README.
+This guide describes the repository's tagged-release or reviewed-main release-request process and its GitHub OIDC connection to PyPI Trusted Publishing. It is for maintainers; package installation and use are covered in the project README.
 
 ## Trusted Publisher identity
 
@@ -20,20 +20,20 @@ This setting belongs to the PyPI project and cannot be created by a repository c
 
 ## What the release workflow does
 
-A release starts when a tag matching `v*.*.*` is pushed. The `build` job checks out the tagged source, builds the wheel and source distribution, runs Twine metadata checks, installs and smoke-tests the wheel, and verifies that the tag version equals the version read from the installed `aegis-qec` package metadata. It then uploads those validated distributions as a short-lived workflow artifact.
+A release starts when a tag matching `v*.*.*` is pushed, or when main is updated with `.github/RELEASE_REQUEST` (in which case the workflow resolves or creates the matching immutable tag). The `build` job checks out the tagged source, builds the wheel and source distribution, runs Twine metadata checks, installs and smoke-tests the wheel, and verifies that the tag version equals the version read from the installed `aegis-qec` package metadata. It then uploads those validated distributions as a short-lived workflow artifact.
 
-The dependent `publish` job downloads that artifact and calls `pypa/gh-action-pypi-publish`. It has the workflow's only `id-token: write` permission. The build job has no OIDC permission, and the workflow does not pass a PyPI API token. The publish job is intentionally limited to retrieving the validated files and publishing them.
+The dependent `publish` job downloads that artifact and calls `pypa/gh-action-pypi-publish`. It has the workflow's only `id-token: write` permission. The build job has no OIDC permission. The current publishing job attempts OIDC Trusted Publishing first, but if that action fails it has a legacy Twine upload fallback using the `PYPI_API_TOKEN` Actions secret. A successful overall workflow does not establish that OIDC worked; inspect the publishing steps and PyPI release page.
 
-The workflow is tag-triggered, so a pull-request check exercises the repository's ordinary CI but does not request a PyPI OIDC token or publish a package. The first end-to-end proof is a successful tagged release after the Trusted Publisher has been configured.
+A pull-request check exercises the repository's ordinary CI but does not request a PyPI OIDC token or publish a package. The first end-to-end proof is a successful tagged release after the Trusted Publisher has been configured.
 
 ## Release procedure
 
 First confirm the Trusted Publisher identity above in PyPI, then merge the reviewed workflow change. Choose a new release version, update `[project].version` in `pyproject.toml`, and make sure the package version and release notes are ready on the commit to be released. Push a matching version tag such as `v1.2.0`; the tag must match the package metadata exactly after removing its leading `v`.
 
-Watch the `Release (PyPI)` workflow in GitHub Actions. Do not treat a successful build job as a published release: confirm that the publish job also succeeds and that the new version appears on the `aegis-qec` PyPI project page. If the publish job reports an OIDC or publisher-identity mismatch, check the five PyPI fields above, especially the workflow filename and the blank environment. Do not work around an identity mismatch by restoring a long-lived token to the workflow.
+Watch the `Release (PyPI)` workflow in GitHub Actions. Do not treat a successful build job as a published release: confirm that the publish job also succeeds and that the new version appears on the `aegis-qec` PyPI project page. If the publish job reports an OIDC or publisher-identity mismatch, check the five PyPI fields above, especially the workflow filename and the blank environment. The existing token fallback should not be treated as evidence that OIDC Trusted Publishing is correctly configured.
 
 ## Remove the legacy credential
 
-The default-branch workflow must no longer reference `PYPI_API_TOKEN`. Once the first OIDC-backed publish has succeeded and the published version is visible, remove the `PYPI_API_TOKEN` GitHub Actions secret from the repository and revoke its corresponding API token in PyPI. Removing the GitHub secret does not revoke the PyPI token, and revoking the PyPI token does not remove the GitHub secret; perform and verify both cleanup steps.
+The current default-branch workflow still references `PYPI_API_TOKEN` as a fallback. After a future release has verifiably succeeded through OIDC Trusted Publishing and the package appears on PyPI, plan and review removal of the fallback and revoke its corresponding API token in PyPI. Removing the GitHub secret does not revoke the PyPI token, and revoking the PyPI token does not remove the GitHub secret; perform and verify both cleanup steps.
 
-Do not put a token value in this repository, its issues, pull requests, workflow logs, or this guide. If an OIDC release cannot complete, diagnose and fix the publisher identity or workflow permissions rather than adding a permanent credential back to the workflow.
+Do not put a token value in this repository, its issues, pull requests, workflow logs, or this guide. If an OIDC release cannot complete, diagnose and fix the publisher identity or workflow permissions. Do not silently add or broaden long-lived credentials.
