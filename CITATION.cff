@@ -8,7 +8,7 @@ authors:
 version: 1.2.0
 date-released: 2026-10-08
 license: MIT
-repository-code: "https://github.com/hamidbahri92/Aegis"
+repository-code: "https://github.com/hamidbahri92/Aegis-QEC"
 url: "https://pypi.org/project/aegis-qec/"
 abstract: "An open-source quantum error correction research platform integrating surface-code studies, Stim and PyMatching decoding, reusable datasets, paired comparisons, multi-objective adaptive discovery, evidence-bound research projects, and verifiable LaTeX submission packages."
 keywords:
