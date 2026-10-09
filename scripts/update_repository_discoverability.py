@@ -119,7 +119,8 @@ def main() -> int:
     admin_token = os.environ.get("AEGIS_REPO_ADMIN_TOKEN", "")
     if not admin_token:
         raise RuntimeError(
-            "Apply mode requires repository Actions secret AEGIS (the token "+"must be saved as a secret, not merely named Aegis in token settings). "
+            "Apply mode requires repository Actions secret AEGIS. "
+            "The token must be saved as a secret, not merely named Aegis in token settings. "
             "Create a fine-grained PAT limited to this repository, with "
             "Administration: Read and write; store it only as a GitHub Actions secret."
         )
