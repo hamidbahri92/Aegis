@@ -1,0 +1,45 @@
+name: Enable Aegis QEC community discussions
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/START_HERE.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  community-discussions:
+    if: github.repository == 'hamidbahri92/Aegis-QEC' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enable Discussions on the existing repository only
+        env:
+          GH_TOKEN: ${{ secrets.AEGIS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::Actions repository secret AEGIS is missing"
+            exit 1
+          fi
+          repo_id="$(gh api repos/hamidbahri92/Aegis-QEC --jq '.id')"
+          repo_name="$(gh api repos/hamidbahri92/Aegis-QEC --jq '.full_name')"
+          if [ "$repo_id" != "1052634503" ] || [ "$repo_name" != "hamidbahri92/Aegis-QEC" ]; then
+            echo "::error::Unexpected repository identity; refusing settings mutation"
+            exit 1
+          fi
+          enabled="$(gh api repos/hamidbahri92/Aegis-QEC --jq '.has_discussions')"
+          if [ "$enabled" != "true" ]; then
+            gh api --method PATCH repos/hamidbahri92/Aegis-QEC -F has_discussions=true --silent
+          fi
+          verified="$(gh api repos/hamidbahri92/Aegis-QEC --jq '.has_discussions')"
+          if [ "$verified" != "true" ]; then
+            echo "::error::Discussions enablement was not verified"
+            exit 1
+          fi
+          echo "SUCCESS: GitHub Discussions enabled on existing Aegis QEC repository"

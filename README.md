@@ -10,6 +10,10 @@ Use Aegis when you want to run complete QEC experiments rather than wire togethe
 
 The PyPI distribution is **`aegis-qec`**. The public Python namespace is **`aegis_qec`**. The historical **`a3d`** namespace remains importable for compatibility.
 
+## Learn and contribute to quantum error correction
+
+New to quantum error correction, studying surface codes, teaching a course, or testing a decoder? Start with [Learn, test, and contribute](docs/START_HERE.md). It offers a runnable first experiment, clearly distinguishes simulation from hardware results, and invites reproducibility reports, questions, teaching improvements, and small pull requests. See [Contributing](CONTRIBUTING.md) for the development workflow and [Issues](https://github.com/hamidbahri92/Aegis-QEC/issues) to collaborate.
+
 ## Install Aegis QEC
 
 Install the surface-code QEC toolkit from PyPI and verify the decoder stack immediately:

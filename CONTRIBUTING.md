@@ -6,7 +6,7 @@ Thank you for helping improve Aegis QEC. Contributions are especially useful whe
 
 ```bash
 git clone https://github.com/hamidbahri92/Aegis-QEC.git
-cd Aegis
+cd Aegis-QEC
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev,gui]"
@@ -31,6 +31,12 @@ python -m build .
 ```
 
 Hosted GitHub Actions adds the full Linux and Windows matrix, backend checks, user-facing command checks, Twine package validation, wheel installation, circuit acceptance, and the controlled calibration benchmark.
+
+## First contribution and ways to help
+
+Read [Start here](docs/START_HERE.md) for a first-run experiment and links to the learning and research guides. Contributions from students, educators, independent reviewers, software engineers, and experimentalists are equally welcome. Start with a focused issue describing what you attempted and what should change. Documentation clarity, accessibility, test reproducibility, and accurate attribution are valid contributions; you do not need to implement a new decoder.
+
+For a first local check, install the package, run `aegis doctor`, then use `aegis explain --distance 5 --p 0.01 --basis x --seed 1234`. If it doesn't work or the output is hard to interpret, open an issue including the command, versions, and unexpected behavior. For scientific questions, make a small reproducible study and distinguish measured error rates from assumptions and interpretations.
 
 ## Good pull requests
 
