@@ -51,7 +51,7 @@ You can help without adopting Aegis or writing code. Use it once, tell us where 
 
 ## Get involved
 
-Visit [Issues](https://github.com/hamidbahri92/Aegis-QEC/issues) to ask a question, report a reproducible result, suggest a teaching improvement, or propose an integration. Read [Contributing](../CONTRIBUTING.md) for the development workflow and testing gate. We welcome small corrections and focused pull requests; proposals for major API or scientific changes should begin as an issue.
+Join our [welcome discussion](https://github.com/hamidbahri92/Aegis-QEC/discussions/53) to ask open-ended questions, share teaching needs, and suggest collaborations. Use [Issues](https://github.com/hamidbahri92/Aegis-QEC/issues) for reproducible failures, concrete research reports, or scoped improvements. Read [Contributing](../CONTRIBUTING.md) for the development workflow and testing gate. We welcome small corrections and focused pull requests; proposals for major API or scientific changes should begin as an issue.
 
 Use [CITATION.cff](../CITATION.cff) when citing Aegis and cite the upstream tools that your work depends on. A GitHub star can help other researchers find the project, but a reproducible report or independent review helps the science even more.
 
