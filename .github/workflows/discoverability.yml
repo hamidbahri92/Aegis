@@ -1,7 +1,7 @@
 name: Aegis QEC - GitHub discoverability
 
 # Run manually from Actions. Preview is credential-free; Apply needs one
-# repository-scoped token stored in Actions secret AEGIS_REPO_ADMIN_TOKEN.
+# repository-scoped token stored in Actions secret AEGIS (case-insensitive).
 on:
   workflow_dispatch:
     inputs:
@@ -45,5 +45,5 @@ jobs:
         env:
           AEGIS_DISCOVERABILITY_MODE: apply
           GITHUB_TOKEN: ${{ github.token }}
-          AEGIS_REPO_ADMIN_TOKEN: ${{ secrets.AEGIS_REPO_ADMIN_TOKEN }}
+          AEGIS_REPO_ADMIN_TOKEN: ${{ secrets.AEGIS }}
         run: python scripts/update_repository_discoverability.py
