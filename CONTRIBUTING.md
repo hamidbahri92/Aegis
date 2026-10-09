@@ -5,7 +5,7 @@ Thank you for helping improve Aegis QEC. Contributions are especially useful whe
 ## Set up a development environment
 
 ```bash
-git clone https://github.com/hamidbahri92/Aegis.git
+git clone https://github.com/hamidbahri92/Aegis-QEC.git
 cd Aegis
 python -m venv .venv
 source .venv/bin/activate
