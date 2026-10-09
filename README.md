@@ -2,8 +2,8 @@
 
 [![PyPI](https://img.shields.io/pypi/v/aegis-qec.svg)](https://pypi.org/project/aegis-qec/)
 ![Python](https://img.shields.io/pypi/pyversions/aegis-qec.svg)
-[![CI](https://github.com/hamidbahri92/Aegis/actions/workflows/ci.yml/badge.svg)](https://github.com/hamidbahri92/Aegis/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/hamidbahri92/Aegis/blob/main/LICENSE)
+[![CI](https://github.com/hamidbahri92/Aegis-QEC/actions/workflows/ci.yml/badge.svg)](https://github.com/hamidbahri92/Aegis-QEC/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/hamidbahri92/Aegis-QEC/blob/main/LICENSE)
 **Aegis QEC is an open-source Python toolkit for quantum error correction and surface-code decoding. It connects Stim detector error models to PyMatching sparse-blossom MWPM, adds calibrated and erasure-aware decoding, reproducible benchmarks, explicit validation, and research workflows for fault-tolerant quantum computing.**
 
 Use Aegis when you want to run complete QEC experiments rather than wire together a decoder, noise model, validation layer, benchmark harness, and reporting pipeline yourself. It provides surface-code graph construction, faithful Stim DEM decoding, calibrated edge costs, correction-edge reconstruction, batch execution, controlled decoder comparisons, a Python API, command-line tools, and an optional Streamlit workbench.
@@ -137,7 +137,7 @@ Aegis also includes research paths for:
 
 These experimental paths are useful for decoder research, but they do not all have the same validation status as the default sparse-blossom and direct DEM paths.
 
-See [Algorithms](https://github.com/hamidbahri92/Aegis/blob/main/docs/ALGORITHMS.md) for implementation details and trust boundaries.
+See [Algorithms](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/ALGORITHMS.md) for implementation details and trust boundaries.
 
 ## Explain one QEC shot
 
@@ -168,7 +168,7 @@ The command generates rotated surface-code memory circuits with Stim, samples de
 
 The same workflow is available in the **Circuit study** tab of `aegis gui`, including downloadable reproducibility records.
 
-See the [Research Guide](https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_GUIDE.md) for student project ideas, practitioner workflows, interpretation boundaries, and the Python API.
+See the [Research Guide](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/RESEARCH_GUIDE.md) for student project ideas, practitioner workflows, interpretation boundaries, and the Python API.
 
 ## Research platform and large campaigns
 
@@ -233,7 +233,7 @@ aegis validate-decoder my-decoder
 
 The conformance suite checks bit-packed dtype and shape, a deterministic known-answer decode, file round-trip behavior, and multiprocessing picklability.
 
-See [Decoder Plug-in SDK](https://github.com/hamidbahri92/Aegis/blob/main/docs/DECODER_PLUGINS.md) for the extension contract, and [Platform](https://github.com/hamidbahri92/Aegis/blob/main/docs/PLATFORM.md) for the plug-in contract, Sinter architecture, hardware provenance rules, and campaign semantics.
+See [Decoder Plug-in SDK](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/DECODER_PLUGINS.md) for the extension contract, and [Platform](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/PLATFORM.md) for the plug-in contract, Sinter architecture, hardware provenance rules, and campaign semantics.
 
 ## Version-controlled experiments
 
@@ -263,7 +263,7 @@ aegis verify-bundle surface-code-class-project.aegis.zip
 
 Manifest version 1 supports studies, campaigns, exact-shot comparisons, external detector-shot prediction, finite-size scaling, and one-shot explanations. The JSON Schema is in `schemas/experiment-v1.schema.json`.
 
-See [Experiments](https://github.com/hamidbahri92/Aegis/blob/main/docs/EXPERIMENTS.md) for the manifest format, bundle integrity model, team workflow, and Python API.
+See [Experiments](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/EXPERIMENTS.md) for the manifest format, bundle integrity model, team workflow, and Python API.
 
 ## Reusable syndrome datasets
 
@@ -289,7 +289,7 @@ The file preserves syndromes, logical observables, deterministic train/validatio
 
 Generation can stop after a bounded number of chunks and resume later without changing the resulting scientific sample hashes. Resume requests with incompatible configuration are rejected.
 
-See [Datasets](https://github.com/hamidbahri92/Aegis/blob/main/docs/DATASETS.md) for the HDF5 schema, integrity model, sparse hyperedge representation, and large-dataset workflow.
+See [Datasets](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/DATASETS.md) for the HDF5 schema, integrity model, sparse hyperedge representation, and large-dataset workflow.
 
 ## Research projects and publication packages
 
@@ -310,7 +310,7 @@ The publication builder produces LaTeX and Markdown manuscript sources, a claim-
 
 Aegis will use Tectonic or latexmk when available, but manuscript-source generation does not require a LaTeX installation.
 
-See [End-to-end research projects](https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_PROJECTS.md).
+See [End-to-end research projects](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/RESEARCH_PROJECTS.md).
 
 ## Exploratory multi-objective discovery
 
@@ -336,7 +336,7 @@ confirmation manifests for Pareto candidates so the selected design can be
 tested under a frozen confirmatory protocol instead of reusing search-selected
 evidence as confirmation.
 
-See [Discovery](https://github.com/hamidbahri92/Aegis/blob/main/docs/DISCOVERY.md)
+See [Discovery](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/DISCOVERY.md)
 for parameter JSON pointers, objective definitions, durable resume, Pareto
 semantics, and the exploration/confirmation boundary.
 
@@ -386,7 +386,7 @@ aegis-bench sweep --decoder mwpm --p 0.01 0.02 0.04 --distance 5 --rounds 6 --tr
 
 Structural sweeps test correction-chain behavior on synthetic detector patterns. They are software-validation tools, not physical logical-error-rate or threshold estimators.
 
-Read [Benchmarking](https://github.com/hamidbahri92/Aegis/blob/main/docs/BENCHMARKING.md) before interpreting or publishing results.
+Read [Benchmarking](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/BENCHMARKING.md) before interpreting or publishing results.
 
 ## Sparse-blossom performance attribution
 
@@ -469,7 +469,7 @@ The `bench` package provides reproducible benchmark and acceptance commands.
 
 The `gui` and `scripts` packages provide the optional interactive workbench and launch helpers.
 
-A detailed package-level mental model is available in [Overview](https://github.com/hamidbahri92/Aegis/blob/main/docs/OVERVIEW.md).
+A detailed package-level mental model is available in [Overview](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/OVERVIEW.md).
 
 ## Validation status
 
@@ -498,7 +498,7 @@ Aegis is intentionally explicit about what each benchmark establishes so that st
 ## Develop locally
 
 ```bash
-git clone https://github.com/hamidbahri92/Aegis.git
+git clone https://github.com/hamidbahri92/Aegis-QEC.git
 cd Aegis
 python -m venv .venv
 source .venv/bin/activate
@@ -508,20 +508,20 @@ aegis-ci
 
 On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1`.
 
-See [Contributing](https://github.com/hamidbahri92/Aegis/blob/main/CONTRIBUTING.md) before opening a pull request.
+See [Contributing](https://github.com/hamidbahri92/Aegis-QEC/blob/main/CONTRIBUTING.md) before opening a pull request.
 
 ## Documentation
 
-- [Overview](https://github.com/hamidbahri92/Aegis/blob/main/docs/OVERVIEW.md) — architecture, package identity, graph model, interfaces, and validation surfaces.
-- [Algorithms](https://github.com/hamidbahri92/Aegis/blob/main/docs/ALGORITHMS.md) — sparse-blossom MWPM, graph translation, DEM decoding, erasures, and experimental decoders.
-- [Benchmarking](https://github.com/hamidbahri92/Aegis/blob/main/docs/BENCHMARKING.md) — performance methodology, circuit acceptance, calibration experiments, structural sweeps, and reproducibility.
-- [Research Guide](https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_GUIDE.md) — circuit studies, student projects, practitioner workflows, uncertainty, artifacts, and reproducible reporting.
-- [Platform](https://github.com/hamidbahri92/Aegis/blob/main/docs/PLATFORM.md) — resumable Sinter campaigns, exact shared-shot comparisons, decoder plug-ins, and hardware provenance.
-- [Experiments](https://github.com/hamidbahri92/Aegis/blob/main/docs/EXPERIMENTS.md) — version-controlled manifests, hashed run records, portable research bundles, and integrity verification.
-- [Decoder Plug-in SDK](https://github.com/hamidbahri92/Aegis/blob/main/docs/DECODER_PLUGINS.md) — third-party decoder registration, interoperability contract, conformance tests, and deployment into campaigns.
-- [Datasets](https://github.com/hamidbahri92/Aegis/blob/main/docs/DATASETS.md) — resumable HDF5 syndrome datasets, deterministic splits, error-mechanism incidence, and integrity verification.
-- [Research Projects](https://github.com/hamidbahri92/Aegis/blob/main/docs/RESEARCH_PROJECTS.md) — protocol freezing, claim-to-evidence audits, LaTeX manuscript generation, blind-review packaging, and reviewer verification.
-- [Discovery](https://github.com/hamidbahri92/Aegis/blob/main/docs/DISCOVERY.md) — resumable random/evolutionary experiment search, Pareto fronts, and independent confirmation manifests.
+- [Overview](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/OVERVIEW.md) — architecture, package identity, graph model, interfaces, and validation surfaces.
+- [Algorithms](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/ALGORITHMS.md) — sparse-blossom MWPM, graph translation, DEM decoding, erasures, and experimental decoders.
+- [Benchmarking](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/BENCHMARKING.md) — performance methodology, circuit acceptance, calibration experiments, structural sweeps, and reproducibility.
+- [Research Guide](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/RESEARCH_GUIDE.md) — circuit studies, student projects, practitioner workflows, uncertainty, artifacts, and reproducible reporting.
+- [Platform](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/PLATFORM.md) — resumable Sinter campaigns, exact shared-shot comparisons, decoder plug-ins, and hardware provenance.
+- [Experiments](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/EXPERIMENTS.md) — version-controlled manifests, hashed run records, portable research bundles, and integrity verification.
+- [Decoder Plug-in SDK](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/DECODER_PLUGINS.md) — third-party decoder registration, interoperability contract, conformance tests, and deployment into campaigns.
+- [Datasets](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/DATASETS.md) — resumable HDF5 syndrome datasets, deterministic splits, error-mechanism incidence, and integrity verification.
+- [Research Projects](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/RESEARCH_PROJECTS.md) — protocol freezing, claim-to-evidence audits, LaTeX manuscript generation, blind-review packaging, and reviewer verification.
+- [Discovery](https://github.com/hamidbahri92/Aegis-QEC/blob/main/docs/DISCOVERY.md) — resumable random/evolutionary experiment search, Pareto fronts, and independent confirmation manifests.
 
 ## Project scope
 
@@ -529,10 +529,10 @@ Aegis QEC is built for **quantum error correction**, **surface-code and rotated-
 
 ## Cite Aegis QEC
 
-If Aegis QEC contributes to your research, cite the software and the decoder papers used by your experiment. Machine-readable citation metadata is provided in [CITATION.cff](https://github.com/hamidbahri92/Aegis/blob/main/CITATION.cff).
+If Aegis QEC contributes to your research, cite the software and the decoder papers used by your experiment. Machine-readable citation metadata is provided in [CITATION.cff](https://github.com/hamidbahri92/Aegis-QEC/blob/main/CITATION.cff).
 
 If the project saves you time, a GitHub star helps other quantum-error-correction researchers discover it. Reproducible bug reports, benchmark improvements, decoder implementations, tests, and documentation contributions are welcome.
 
 ## License
 
-Aegis QEC is released under the MIT License. See [LICENSE](https://github.com/hamidbahri92/Aegis/blob/main/LICENSE).
+Aegis QEC is released under the MIT License. See [LICENSE](https://github.com/hamidbahri92/Aegis-QEC/blob/main/LICENSE).
