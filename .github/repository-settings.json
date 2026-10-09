@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "repository_name": "aegis-qec",
+  "repository_name": "Aegis-QEC",
   "product_name": "Aegis QEC",
   "description": "Open-source Python quantum error correction toolkit and research platform for surface-code decoding with Stim, PyMatching MWPM, reproducible campaigns, decoder plugins, benchmarking, and circuit studies.",
   "homepage": "https://pypi.org/project/aegis-qec/",
