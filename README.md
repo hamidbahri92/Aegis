@@ -22,6 +22,9 @@ To put a public demo online, sign in at [Streamlit Community Cloud](https://shar
 
 The demonstration executes the real Stim and PyMatching implementations, but its very small studies must **not** be interpreted as physical thresholds or conclusive decoder comparisons. Run `aegis gui` locally for the full research interface.
 
+For students who want to modify Python code rather than use a hosted web form, [open the educational notebook in Google Colab](https://colab.research.google.com/github/hamidbahri92/Aegis-QEC/blob/main/notebooks/educational_demo.ipynb). Its first cell installs the public package into the temporary Colab session; free CPU access depends on Google's capacity and limits.
+
+
 ## Install Aegis QEC
 
 Install the surface-code QEC toolkit from PyPI and verify the decoder stack immediately:
