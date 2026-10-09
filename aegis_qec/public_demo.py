@@ -20,7 +20,7 @@ STUDY_PROBABILITIES = (0.003, 0.006)
 
 def require_choice(label: str, value: Any, allowed: tuple) -> None:
     """Fail closed even if a caller bypasses the graphical widgets."""
-    if type(value) not in (str, int, float) or value not in allowed:
+    if not any(type(value) is type(choice) and value == choice for choice in allowed):
         raise ValueError(f"{label} must be one of {allowed!r}")
 
 
