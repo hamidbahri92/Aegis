@@ -16,7 +16,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 OWNER = "hamidbahri92"
-REPO = "Aegis"
+REPO = os.environ.get("GITHUB_REPOSITORY", f"{OWNER}/Aegis").partition("/")[2]
 REPO_ID = 1052634503
 API = f"https://api.github.com/repos/{OWNER}/{REPO}"
 DESCRIPTION = (
@@ -91,9 +91,9 @@ def main() -> int:
     if mode not in {"preview", "apply"}:
         raise ValueError("Mode must be preview or apply.")
     actual_repo = os.environ.get("GITHUB_REPOSITORY", f"{OWNER}/{REPO}")
-    if actual_repo != f"{OWNER}/{REPO}":
+    if actual_repo not in {f"{OWNER}/Aegis", f"{OWNER}/Aegis-QEC"}:
         raise RuntimeError(
-            f"Refusing to change metadata outside {OWNER}/{REPO}: {actual_repo}"
+            f"Refusing to change metadata outside the canonical Aegis QEC repository: {actual_repo}"
         )
 
     read_token = os.environ.get("GITHUB_TOKEN", "")
