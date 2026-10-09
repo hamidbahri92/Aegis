@@ -14,6 +14,17 @@ The PyPI distribution is **`aegis-qec`**. The public Python namespace is **`aegi
 
 New to quantum error correction, studying surface codes, teaching a course, or testing a decoder? Start with [Learn, test, and contribute](docs/START_HERE.md). It offers a runnable first experiment, clearly distinguishes simulation from hardware results, and invites reproducibility reports, questions, teaching improvements, and small pull requests. Join our [community discussions](https://github.com/hamidbahri92/Aegis-QEC/discussions/53) for questions, ideas, and collaboration; see [Contributing](CONTRIBUTING.md) for the development workflow and [Issues](https://github.com/hamidbahri92/Aegis-QEC/issues) for reproducible reports and focused tasks.
 
+## Try Aegis in your browser (free community-hosted demo)
+
+Aegis has a separate, small, read-only Streamlit entry point at [streamlit_app.py](streamlit_app.py) for public hosting. It lets visitors explain one simulated surface-code shot or run a four-point teaching study without accessing the full research workbench's filesystem features. The demonstration restricts code distance, error probability, seed, and shot counts, and lets visitors download reproducibility JSON without writing files on the server.
+
+To put a public demo online, sign in at [Streamlit Community Cloud](https://share.streamlit.io/), choose **Create app**, select repository `hamidbahri92/Aegis-QEC`, branch `main`, and entrypoint file `streamlit_app.py`. Select Python 3.12 if the host asks. The repository-root `requirements.txt` installs the existing Aegis engines, Streamlit, and Stim. Once Streamlit confirms a successful deployment, share the **actual** app URL; no permanent live demo URL is claimed here yet. Streamlit's free tier has resource limits and sleeps when unused.
+
+The demonstration executes the real Stim and PyMatching implementations, but its very small studies must **not** be interpreted as physical thresholds or conclusive decoder comparisons. Run `aegis gui` locally for the full research interface.
+
+For students who want to modify Python code rather than use a hosted web form, [open the educational notebook in Google Colab](https://colab.research.google.com/github/hamidbahri92/Aegis-QEC/blob/main/notebooks/educational_demo.ipynb). Its first cell installs the public package into the temporary Colab session; free CPU access depends on Google's capacity and limits.
+
+
 ## Install Aegis QEC
 
 Install the surface-code QEC toolkit from PyPI and verify the decoder stack immediately:
